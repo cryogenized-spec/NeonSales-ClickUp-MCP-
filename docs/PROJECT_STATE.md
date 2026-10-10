@@ -28,6 +28,8 @@
 - `docs/PHASE3_SETUP.md`: **manual** Cloudflare KV, GitHub OAuth App, Worker secret, custom hostname, account test and OAuth acceptance steps. No secrets in repository/chat.
 - `docs/CODEX_REVIEW.md`: require green CI at exact current HEAD before **one** specialist `@codex review`; requesting a review is not completing it.
 
+**GitHub Actions trigger note:** Previous formatter/workflow-bot commits may not trigger a new PR workflow automatically. This human-authorized connector commit intentionally requests fresh CI against the new HEAD. Do not cite any earlier green run as verifying it.
+
 ## Next exact action
 
 1. Run/retrieve GitHub Actions `quality` on the final PR #4 SHA. Verify policy guard, 7 Python regressions, 44 Vitest tests, three TypeScript checks, build, format, lint and audit.
