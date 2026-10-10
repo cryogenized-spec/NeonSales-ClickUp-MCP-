@@ -18,9 +18,17 @@ describe("official MCP SDK v2 in-process transport", () => {
       expect(tools.map((tool) => tool.name)).toEqual(["service_info"]);
       const result = await client.callTool({ name: "service_info", arguments: {} });
       expect(result.isError).not.toBe(true);
-      expect(JSON.stringify(result.content)).toContain('"phase"');
-      expect(JSON.stringify(result.content)).toContain("2");
-      expect(JSON.stringify(result.content)).toContain("false");
+      const block = result.content?.find((item) => item.type === "text");
+      expect(block?.type).toBe("text");
+      if (block?.type !== "text") {
+        throw new Error("SDK did not return a diagnostic text block");
+      }
+      expect(JSON.parse(block.text)).toEqual({
+        phase: 2,
+        liveClickUp: false,
+        authentication: "not-configured",
+        note: "Internal SDK contract test only; no live ClickUp tasks or OAuth.",
+      });
     } finally {
       await client.close();
       await handler.close();
