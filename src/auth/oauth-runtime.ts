@@ -6,7 +6,7 @@ import { handleAuthorizationPage } from "./authorize.js";
 import type { OAuthEnv } from "./env.js";
 
 class AuthorizedMcpHandler extends WorkerEntrypoint<OAuthEnv, { userId: string }> {
-  async fetch(request: Request): Promise<Response> {
+  override async fetch(request: Request): Promise<Response> {
     if (new URL(request.url).pathname !== "/mcp") return new Response(null, { status: 404 });
     // OAuthProvider validates bearer token, issuer, expiry and audience before this class runs.
     // Its context derives from encrypted grant props, never client headers or tool arguments.
