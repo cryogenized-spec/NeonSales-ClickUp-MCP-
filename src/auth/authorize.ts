@@ -4,7 +4,7 @@ import {
   authorizationErrorRedirect,
   type OAuthHelpers,
 } from "@cloudflare/workers-oauth-provider";
-import { renderConsentPage } from "./consent.js";
+import { renderConsentPage, validatedReadOnlyScopes } from "./consent.js";
 import { exchangeGithubIdentity, githubAuthorizeUrl, pkceChallenge } from "./github.js";
 import { parseStaffAllowlist, requireActivePrincipal } from "./staff.js";
 import type { OAuthEnv } from "./env.js";
@@ -32,9 +32,16 @@ async function submitConsent(
     const denied = await oauth.denyConsent(request, handle);
     return new Response(null, { status: 302, headers: denied.headers });
   }
-  const approved = await oauth.approveConsent(request, handle, {
-    scope: form.getAll("scope").map(String),
-  });
+  let approvedScopes: string[];
+  try {
+    approvedScopes = validatedReadOnlyScopes(form.getAll("scope").map(String));
+  } catch {
+    return new Response("Invalid consent scope", {
+      status: 400,
+      headers: { "Cache-Control": "no-store" },
+    });
+  }
+  const approved = await oauth.approveConsent(request, handle, { scope: approvedScopes });
   const verifier = crypto.randomUUID() + crypto.randomUUID();
   const upstream = await oauth.beginUpstream(approved.request, {
     data: { verifier },
