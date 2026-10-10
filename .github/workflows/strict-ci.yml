@@ -77,6 +77,10 @@ jobs:
         if: steps.stage.outputs.application == 'true'
         run: npm run build
 
+      - name: Exercise isolated workerd HTTPS OAuth security smoke
+        if: steps.stage.outputs.application == 'true'
+        run: node scripts/staging-local-smoke.mjs
+
       - name: Fail on high or critical dependency vulnerabilities
         if: steps.stage.outputs.application == 'true'
         run: npm audit --audit-level=high
