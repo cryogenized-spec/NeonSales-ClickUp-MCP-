@@ -53,7 +53,12 @@ vi.mock("@cloudflare/workers-oauth-provider", () => ({
 const origin = "https://mcp.example.com";
 const env = { ALLOWED_GITHUB_IDS: "11,22,33,44" } as OAuthEnv;
 
-function verifiedContext(id: string, overrides: Record<string, unknown> = {}): never {
+type TestContext = Parameters<typeof handleOAuthRequest>[2] & {
+  props: { userId: string };
+  auth: { userId: string; token: string; clientId: string; scope: string[]; audience: string; expiresAt: number };
+};
+
+function verifiedContext(id: string, overrides: Record<string, unknown> = {}): TestContext {
   return {
     props: { userId: "github:" + id },
     auth: {
@@ -65,7 +70,7 @@ function verifiedContext(id: string, overrides: Record<string, unknown> = {}): n
       expiresAt: 1790000000,
       ...overrides,
     },
-  } as never;
+  } as unknown as TestContext;
 }
 
 describe("Codex P1 OAuth integration regressions", () => {
@@ -124,7 +129,7 @@ describe("Codex P1 OAuth integration regressions", () => {
     const mixed = await handleOAuthRequest(
       new Request(origin + "/mcp", { method: "POST" }),
       env,
-      { props: { userId: "github:11" }, auth: { ...verifiedContext("22").auth } } as never,
+      { ...verifiedContext("22"), props: { userId: "github:11" } },
       origin,
     );
     expect([outsider.status, mixed.status]).toEqual([403, 403]);
