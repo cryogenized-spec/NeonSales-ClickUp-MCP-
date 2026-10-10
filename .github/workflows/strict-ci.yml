@@ -90,6 +90,14 @@ jobs:
         if: steps.stage.outputs.application == 'true'
         run: npm run build
 
-      - name: Fail on high or critical dependency vulnerabilities
+      - name: Regression test npm CLI bundle scanner
+        if: steps.stage.outputs.application == 'true'
+        run: node --test .github/scripts/check-npm-cli-bundles.test.cjs
+
+      - name: Fail on high or critical project dependency vulnerabilities
         if: steps.stage.outputs.application == 'true'
         run: npm audit --audit-level=high
+
+      - name: Block known vulnerable npm CLI bundled dependencies
+        if: steps.stage.outputs.application == 'true'
+        run: node .github/scripts/check-npm-cli-bundles.cjs
