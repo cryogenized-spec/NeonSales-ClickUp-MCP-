@@ -1,7 +1,7 @@
 # Project state — single-source handoff
 
 **Checkpoint:** 2026-10-10 SAST (minute not independently measured).
-**Current phase:** Phase 2 SDK foundation — CODE IMPLEMENTED / CI GREEN on pre-checkpoint SHA; **final documentation SHA still requires fresh CI**.
+**Current phase:** Phase 2 SDK foundation — code updated for one Codex P2 acceptance finding; corrected test commit CI green, **final handoff-documentation SHA still requires its own fresh CI before re-review**.
 **Repository:** `cryogenized-spec/NeonSales-ClickUp-MCP-` (GitHub Free; private).
 **Pull requests:** [#1 Standards](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/pull/1) → [#2 Perimeter](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/pull/2) → [#3 Phase 2](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/pull/3). All **DRAFT, STACKED, NOT MERGED**.
 
@@ -11,16 +11,16 @@
 - `src/mcp/create-server.ts`: official **`@modelcontextprotocol/server@2.3.1`**, static `service_info` tool with official `fromJsonSchema` closed object schema. No ClickUp API or secrets.
 - `src/mcp/handler.ts`: official stateless SDK `createMcpHandler`, **in-process test only**. Supports modern 2026-07-28 and compatible legacy clients under SDK behavior.
 - `src/index.ts`: public Worker **denies every /mcp method (503)** until OAuth exists, and 404 elsewhere. No hidden test bypass.
-- `tests/mcp.test.ts` + `tests/worker.test.ts`: official SDK client modern/legacy calls, negative arguments, four concurrent protocol clients, four forged concurrent HTTP users, forbidden methods/paths. This is **NOT evidence four users have authenticated**.
+- `tests/mcp.test.ts` + `tests/worker.test.ts`: official SDK client modern/legacy calls, negative arguments, four concurrent protocol clients, four forged concurrent HTTP users, forbidden methods/paths, and four raw HTTP regression cases for malformed JSON, missing tool, unsupported version and mismatched version. This is **NOT evidence four users have authenticated**.
 - TypeScript 6, ESLint, Prettier, Vitest 5 and Wrangler Cloudflare **dry-run**. No actual deploy.
 - Dated phase design and plan in `docs/superpowers/`. Eight-step roadmap and exact-SHA Codex request process in `docs/phases/ROADMAP.md`, `docs/CODEX_REVIEW.md`.
 
-## Fresh external CI evidence (pre-checkpoint)
+## Fresh external CI evidence (code correction)
 
-- **GitHub Actions `quality`: SUCCESS** [run 38054050247](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/actions/runs/38054050247), on SHA `0eb8fa96c13ad5dc14acb79da5b81d7e7a0e3124`.
-- Actual checks: dependency install `npm ci --ignore-scripts`, Prettier, ESLint, `tsc --noEmit` (strict), **11/11 Vitest tests**, Cloudflare Wrangler dry-run build, `npm audit --audit-level=high` (PASS), policy integrity and Python regression tests.
-- **Adversarial failures found and fixed without bypass:** old TypeScript ESLint peer incompatible with TS6, old schema interface TS2769, mistaken escaped-JSON assertion, vulnerable Wrangler/miniflare/undici/sharp transitive dependency. Each was observed in actual failing CI and corrected. No `--force`, `--legacy-peer-deps` or suppressed audit.
-- A README/state edit after this SHA **requires a NEW green run** before Codex review or approval. Do not cite the older run as coverage of new code.
+- **Latest corrected code CI:** [run 38059463499](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/actions/runs/38059463499), `quality` **SUCCESS**, SHA `e77bfc18b4ed83d6a508bde8f37beebc6e627627`. Ran policy and Python regressions, pinned npm install, Prettier, ESLint, strict TypeScript, **15/15 Vitest tests**, Wrangler dry-run, and high-severity dependency audit.
+- **Codex's Phase 2 review (old SHA `0f444fb`):** one P2 finding in `tests/mcp.test.ts`: required malformed JSON, unknown-tool and wrong-version raw protocol cases were missing. Remediation commit `a5f2db6` added four tests; formatting correction `e77bfc1` passed the full gate above. No MCP handler, Worker entrypoint, ClickUp API or OAuth behaviour was altered.
+- Earlier successful [run 38054050247](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/actions/runs/38054050247) covered 11 tests at SHA `0eb8fa96c13ad5dc14acb79da5b81d7e7a0e3124`. The initial test-change run failed Prettier and was corrected; no quality gate was disabled or waived.
+- This **handoff documentation update** creates a new HEAD SHA, and requires its own completed green `quality` check before a fresh Codex request. That final SHA/run will be written in the PR review request rather than falsely predicted here.
 - **Official MCP conformance runner / MCP Inspector:** NOT YET RUN. **Real authenticated remote transport:** NOT IMPLEMENTED.
 
 ## Identity, rate and security requirements
@@ -32,12 +32,13 @@
 
 ## Review state
 
-- PRs #1 and #2 remain separate foundation/architecture reviews.
-- **Codex specialist review:** Await verified green final HEAD_SHA of PR #3; then a **single** `@codex review` request with precise scope, if Codex cloud is enabled for the repo. A posted comment does not prove Codex accepted or completed the review.
-- No waiver for Critical or Important findings. Rerun all checks after any fix.
+- PRs #1 and #2 remain separate foundation/architecture reviews. PR #3 is still a stacked **draft**, unmerged.
+- **Codex reviewed** [PR #3](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/pull/3) on SHA `0f444fb` (2026-10-10), raised one P2 test-coverage finding. The regression suite has been corrected and mechanically verified; this is **not** a Codex approval of the new HEAD.
+- Ask for ONE fresh read-only Codex review on the final corrected HEAD **only after exact-SHA CI is successful**. Preserve the existing structured request in `docs/CODEX_REVIEW.md`. Address fresh findings before any owner merge decision.
+- No waiver for Critical or Important findings. Human owner retains merge authority.
 
 ## Next exact action
 
-1. Verify the GitHub `quality` job for **the final Phase 2 documentation commit**, recording current HEAD_SHA and run ID without guessing.
-2. If green, issue a single focused Codex PR #3 review request, verify actual acknowledgment/review. Do **not** start Phase 3 until PR #3 and preceding stacked PRs are reviewed/merged or the owner explicitly chooses to continue stacked.
-3. Phase 3 design: remote Worker OAuth with a real provider, login/scopes for four distinct staff, denial of cross-user access, per-request identity, proper resource metadata and subscription compatibility. No real ClickUp data until identity gates are green.
+1. Verify the final handoff-documentation HEAD against the successful `quality` run, and ensure PR #3 has not advanced to a different SHA.
+2. Reply to the P2 review thread with correction and green CI evidence; request a scoped read-only `@codex review` on that exact HEAD SHA with base SHA, spec and the passing run URL.
+3. Continue stacked draft PR review and human merge gates. **Do not** start Phase 3, touch ClickUp production, or deploy without owner authorization.
