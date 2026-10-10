@@ -52,7 +52,6 @@ export function handleOAuthRequest(
       resource: origin + "/mcp",
       authorization_servers: [origin],
       resource_name: "NeonSales ClickUp MCP",
-      scopes_supported: ["mcp:read"],
     },
     clientIdMetadataDocumentEnabled: true,
   });
