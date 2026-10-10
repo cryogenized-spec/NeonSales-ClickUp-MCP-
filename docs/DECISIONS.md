@@ -19,6 +19,10 @@
 | D-012 | 2026-10-10 | ACCEPTED (user direction) | Strict CI with fail-closed mandatory checks and branch protection | CI alone is not enforcement; private GitHub plan may require Pro/Team |
 | D-013 | 2026-10-10 | ACCEPTED (user direction) | Vendor reviewed upstream skill sources with exact revision and hashes | No handwritten agent skills; MIT attribution preserved |
 
+| D-014 | 2026-10-10 | ACCEPTED (user direction) | Implement as discrete phases, CI green on current SHA before specialist Codex review, reserve Codex for complex errors | Avoid reviewer noise and weak evidence |
+| D-015 | 2026-10-10 | ACCEPTED (user direction) | GitHub Free private repo: manual owner merge discipline rather than false claims of enforced branch protection | No paid plan; do not weaken standards |
+| D-016 | 2026-10-10 | ACCEPTED (user direction) | Reuse Elara Relay engineering invariants selectively, not its entire unrelated monolithic review skill | One authority per boundary, evidence-driven exact-SHA certification |
+
 ## Record an accepted decision
 
 Add a new row (or change PROPOSED → ACCEPTED) with the owner's actual review decision, date/time in SAST if known, trade-offs, and affected files. For changed decisions, mark original SUPERSEDED and link the replacement. Don't fabricate approval.
