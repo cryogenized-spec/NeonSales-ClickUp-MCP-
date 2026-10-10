@@ -23,6 +23,7 @@
 - [docs/ARCHITECTURE_PROPOSAL.md](docs/ARCHITECTURE_PROPOSAL.md) — proposed stack, options, boundaries and security model; **requires review before implementation**.
 - [docs/DECISIONS.md](docs/DECISIONS.md) — explicit accepted/proposed/rejected architectural decisions.
 - [docs/DEMO_ACCEPTANCE.md](docs/DEMO_ACCEPTANCE.md) — falsifiable pass/fail criteria.
+- [docs/POC_V0_1_REFERENCE.md](docs/POC_V0_1_REFERENCE.md) — detailed historical README for the earlier *local* JavaScript POC; **source not yet in this GitHub repository**.
 - [docs/WORKFLOW.md](docs/WORKFLOW.md) — repeatable agent workflow / handoff protocol.
 
 These documentation files establish a shared foundation. They do not constitute completion of the implementation.
