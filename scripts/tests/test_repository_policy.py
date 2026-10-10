@@ -37,6 +37,17 @@ class PolicyGateTests(unittest.TestCase):
         self.assertTrue(required.issubset(set(policy.REQUIRED)),
                         f"Mandatory phase docs missing: {sorted(required - set(policy.REQUIRED))}")
 
+    def test_phase3_contract_and_split_strict_type_checks_are_required(self) -> None:
+        required = {
+            "docs/PHASE3_SETUP.md",
+            "docs/superpowers/specs/2026-10-10-phase3-auth-design.md",
+            "docs/superpowers/plans/2026-10-10-phase3-auth.md",
+            "tsconfig.auth.json",
+            "tsconfig.mcp.json",
+        }
+        self.assertTrue(required.issubset(set(policy.REQUIRED)),
+                        f"Phase 3 documents/checks missing: {sorted(required - set(policy.REQUIRED))}")
+
     def test_upstream_pins_match_verbatim_vendor_files(self) -> None:
         policy.verify_skills()
         self.assertEqual([], policy.ERRORS)
