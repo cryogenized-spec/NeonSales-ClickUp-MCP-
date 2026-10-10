@@ -1,5 +1,4 @@
-import { McpServer } from "@modelcontextprotocol/server";
-import { z } from "zod/v4";
+import { McpServer, fromJsonSchema } from "@modelcontextprotocol/server";
 
 const SERVICE_INFO = Object.freeze({
   phase: 2,
@@ -15,7 +14,11 @@ export function createServer(): McpServer {
     "service_info",
     {
       description: "Non-sensitive phase-2 diagnostic. Never indicates live connectivity.",
-      inputSchema: z.strictObject({}),
+      inputSchema: fromJsonSchema<Record<string, never>>({
+        type: "object",
+        properties: {},
+        additionalProperties: false,
+      }),
       annotations: { readOnlyHint: true, destructiveHint: false },
     },
     async () => ({
