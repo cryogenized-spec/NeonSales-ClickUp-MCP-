@@ -19,6 +19,18 @@
 - After that run, additional README, specs, repository policy and checkpoint updates were made. They require **new CI on the final PR #4 HEAD**; the above run is not evidence of later commits. Policy TDD red: [run #38061621439](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/actions/runs/38061621439) failed on the intentionally added Phase3 required-docs assertion, followed by repository policy implementation.
 - **Unverified:** Actual Cloudflare KV bindings/secrets, deployed HTTPS Worker and 401 challenge, GitHub OAuth app and browser login, token revocation in a real environment, OAuth conformance test, ChatGPT personal Plugin and Claude remote connector invocations, 4 real signed-in staff, ClickUp API and shared request budget. Do not claim Phase 3 live acceptance or final MCP compliance.
 
+## Phase 3 consent-scope adversarial hardening (2026-10-10 SAST)
+
+- **Scope:** Separate PR #4 only; no edits to Phase 2 (#3) or other agent's modernization PR #5. Current Phase 3 branch still requires merge-conflict reconciliation with changed Phase 2 baseline.
+- **Root cause:** `submitConsent` previously forwarded all browser-submitted `scope` values directly to Cloudflare's consent helper, and Phase 3 advertised `offline_access` although it never issued that scope. A Node unit test importing the full handler also hit the Cloudflare-only `cloudflare:` module loader; testing was moved to a pure policy boundary.
+- **RED evidence:** [Actions #38066101760](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/actions/runs/38066101760), 5 expected failing scope-policy tests, 41 others passing. Earlier run #38066003572 failed at import boundary, **not** as evidence of a policy failure.
+- **GREEN evidence before this checkpoint:** [Actions #38066186197](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/actions/runs/38066186197) for commit `0cb51d69b2f295a124801a3630165a3a120bd708`: 46/46 Vitest, strict three-part TypeScript checks, Prettier, ESLint, Wrangler dry-run and `npm audit --audit-level=high` (0 vulnerabilities) all SUCCESS.
+- **Fix:** `validatedReadOnlyScopes` rejects unknown, duplicated or empty browser scopes. `submitConsent` returns 400 **before consuming the browser-bound approval handle**. Provider currently advertises only `mcp:read`; refresh/offline authorization is deliberately not claimed in Phase 3.
+- **Remaining warning:** Build emitted Node's `url.parse()` deprecation warning from a dependency/runtime path, despite a clean npm audit. Review with toolchain modernization; no waiver/suppression applied.
+- **CI-only PR:** [#6](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/pull/6) targeted main solely to trigger exact-SHA Actions. It must be closed **without merging** after the final checkpoint commit receives its own successful run.
+- **Codex:** PR #4 previously received “create an environment for this repo”, not a completed review. Other agent handles Codex setup/remediation; do not consume duplicate pings. No production deployment or live OAuth checks.
+- **Final checkpoint caveat:** This documentation change advances HEAD beyond the green SHA above. Verify **latest HEAD** against a new green Actions run before treating PR #4 as mechanically green.
+
 ## Canonical instructions and specifications
 
 - `AGENTS.md` + `CLAUDE.md`: agent instructions and code/test commands.
@@ -32,7 +44,7 @@
 
 ## Next exact action
 
-1. Run/retrieve GitHub Actions `quality` on the final PR #4 SHA. Verify policy guard, 7 Python regressions, 44 Vitest tests, three TypeScript checks, build, format, lint and audit.
+1. Run/retrieve GitHub Actions `quality` on the final PR #4 SHA, then close temporary PR #6 without merging. Verify policy guard, 7 Python regressions, 44 Vitest tests, three TypeScript checks, build, format, lint and audit.
 2. If **all green on exact final SHA**, post ONE scoped Codex review request on PR #4 with that SHA/run. Examine actual reply and remediate Important/Critical findings after further green CI; no duplicate pings.
 3. Owner manually reviews stacked PRs; other agent finishes PR #3; reconcile against changed parent SHA and rerun full PR #4 CI.
 4. For live end-to-end Phase 3 verification, authorized operator must provision Cloudflare Worker HTTPS test hostname/KV/GitHub OAuth App (exact callback), store Worker secrets, use four separate accounts, test token audience/PKCE/revocation and both subscription UIs. No production task access until these checks are passed.
