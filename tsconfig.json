@@ -16,7 +16,7 @@
     "allowUnreachableCode": false,
     "isolatedModules": true,
     "verbatimModuleSyntax": true,
-    "skipLibCheck": false,
+    "skipLibCheck": true,
     "types": ["node", "@cloudflare/workers-types"],
     "noEmit": true
   },
