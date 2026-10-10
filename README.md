@@ -27,6 +27,9 @@
 - [docs/MODULARITY.md](docs/MODULARITY.md) — module boundaries and failure containment.
 - [docs/SKILLS.md](docs/SKILLS.md) — six pinned, upstream-authored development skills and license.
 - [docs/BRANCH_PROTECTION.md](docs/BRANCH_PROTECTION.md) — strict CI, rulesets, plan restrictions and manual enforcement step.
+- [docs/phases/ROADMAP.md](docs/phases/ROADMAP.md) — mandatory one-phase-at-a-time delivery.
+- [docs/SECURITY_PERIMETER.md](docs/SECURITY_PERIMETER.md) — trust boundaries and single-authority design.
+- [docs/CODEX_REVIEW.md](docs/CODEX_REVIEW.md) — after-CI-green exact-SHA specialist review handoff.
 - [docs/POC_V0_1_REFERENCE.md](docs/POC_V0_1_REFERENCE.md) — detailed historical README for the earlier *local* JavaScript POC; **source not yet in this GitHub repository**.
 - [docs/WORKFLOW.md](docs/WORKFLOW.md) — repeatable agent workflow / handoff protocol.
 

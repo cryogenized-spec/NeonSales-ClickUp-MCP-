@@ -19,7 +19,11 @@ REQUIRED = [
     "docs/ARCHITECTURE_PROPOSAL.md", "docs/MCP_COMPLIANCE.md",
     "docs/MODULARITY.md", "docs/SKILLS.md", "docs/BRANCH_PROTECTION.md",
     "docs/DEMO_ACCEPTANCE.md", "docs/WORKFLOW.md",
-    "docs/POC_V0_1_REFERENCE.md", ".github/workflows/strict-ci.yml",
+    "docs/POC_V0_1_REFERENCE.md", "docs/phases/ROADMAP.md",
+    "docs/CODEX_REVIEW.md", "docs/SECURITY_PERIMETER.md",
+    "docs/superpowers/specs/2026-10-10-phase1-perimeter-design.md",
+    "docs/superpowers/plans/2026-10-10-phase1-perimeter.md",
+    ".github/workflows/strict-ci.yml",
     ".github/CODEOWNERS", ".github/dependabot.yml",
 ]
 

@@ -1,7 +1,7 @@
 # Project state — canonical agent handoff
 
 **Checkpoint:** 2026-10-10 (SAST; precise update time not recorded).
-**Phase:** 0 — standards, upstream skills and strict-CI foundation proposed on topic branch; **application deployment:** none.
+**Phase:** Phase 1 perimeter documented + CI-tested on stacked draft PR; **application deployment:** none. PR #1 (standards) remains unmerged.
 **Repository:** `cryogenized-spec/NeonSales-ClickUp-MCP-`, private, default branch `main`.
 
 ## Confirmed in this repository
@@ -66,9 +66,19 @@
 - Six vendored upstream skills **plus seven required supporting/licence files** are tracked and protected by 14 exact upstream Git blob hashes; no custom skills written.
 - Future changes to this checkpoint will create a new commit and require a new green PR run. Do not report the previous run as testing commits made afterward.
 
+## Phase 1 perimeter on stacked PR #2 (2026-10-10 SAST)
+
+- PR: [#2](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/pull/2); branch `phase/01-perimeter`; **base is `chore/standards-skills-ci`, not main**. PRs #1 and #2 are both draft and unmerged.
+- Files: `docs/phases/ROADMAP.md`, `docs/CODEX_REVIEW.md`, `docs/SECURITY_PERIMETER.md`, dated Phase 1 spec and plan; AGENTS/CLAUDE/README/WORKFLOW/DECISIONS/BRANCH_PROTECTION updated; Python guard requires these documents.
+- **Test-first evidence:** [GitHub run 38050760855](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/actions/runs/38050760855) failed as intended due to new mandatory-perimeter regression; after guard fix, [run 38050844108](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/actions/runs/38050844108) succeeded on commit `de589d901c0f594ca6e83bc4ef87bfd3a80d7339`. A further checkpoint commit requires its own green run.
+- **GitHub plan confirmed Free:** private branch rules are NOT enforceable here; therefore the owner must inspect exact SHA and CI manually. Do not claim guaranteed inability to bypass.
+- **Codex review:** Rule documented; **not requested** on documentation-only PR. For code-bearing phases request one focused review only after green CI for the current SHA and an actual connected Codex review app. Codex setup/invocation has not been verified.
+- Review lessons from `Elara-Relay`: evidence before PASS; distinguish trusted authority from adapter; exact SHA; review in isolation; no monolithic copying. No Elara product code copied.
+- TS/npm app scaffold and real MCP SDK code still **not built**; npm registry access unavailable from current local runtime, so no fabricated lockfile. A later reviewed phase must generate an authentic npm lockfile and run all TS gates.
+
 ## Next exact action
 
-**Review/merge the standards-and-CI PR only after successful GitHub Actions `quality` check.** The owner must verify eligibility/configure required branch rules in GitHub Settings; see BRANCH_PROTECTION.md. After review, write the dated application design spec and test-first plan; do not import application code yet.
+**Verify the newest PR #2 HEAD_SHA receives green `quality` after this state edit.** Ask the owner to inspect PRs #1 and #2 in order; do not merge automatically. Then Phase 2 begins only upon a new reviewed, dated spec/plan: authentic npm lockfile, real official SDK v2 TypeScript server, transport discovery and negative tests, with no ClickUp credentials. Use ROADMAP.md and CODEX_REVIEW.md. The first code-bearing Phase 2 PR must reach green TS CI before any Codex review request.
 
 ## Latest documentation evidence
 

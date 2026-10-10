@@ -6,7 +6,7 @@ This is a **human-and-agent operating procedure**, not application behavior. It 
 
 1. Read the complete `AGENTS.md`, `README.md`, `docs/PROJECT_STATE.md`, `docs/DECISIONS.md` (then relevant dated spec/plan).
 2. Inspect repository commits and code relevant to the next action; do not rely on prior chat recollection.
-3. State one deliverable, acceptance criteria and what is **out of scope**.
+3. Read `docs/phases/ROADMAP.md`, `docs/SECURITY_PERIMETER.md`, and `docs/CODEX_REVIEW.md`. State exactly ONE phase, its acceptance criteria and what is **out of scope**.
 4. If the task changes project interfaces or architecture, write/review a spec first. If implementation, insist on an approved plan and test-first cycle.
 5. Ask for secrets via the hosting platform's secret setup instructions **not via chat or GitHub**.
 
@@ -21,7 +21,7 @@ This is a **human-and-agent operating procedure**, not application behavior. It 
 
 ## Before reporting completion
 
-Run fresh verification (tests/lint/types/smoke if relevant). Check diff, potential secrets, actual tool responses and status in the true environment. Report commands and observations, not confidence.
+Run fresh verification (tests/lint/types/smoke if relevant). **Codex must be requested only after a code-bearing PR has green CI for the unchanged exact HEAD_SHA.** Phase 1 docs-only does not consume a Codex review; preserve reviewer effort for complex code, protocol and security errors. Check diff, potential secrets, actual tool responses and status in the true environment. Report commands and observations, not confidence.
 
 Update `docs/PROJECT_STATE.md` with the current stage, the actual commit SHA(s), which acceptance IDs changed, test evidence, blockers and one exact next action. Limit it to a short checkpoint (ideally <100 lines). Keep detail in dated spec, plan or issue.
 
@@ -35,4 +35,4 @@ If available in the executing agent: use `brainstorming` to explore architecture
 
 ## Version control and privacy
 
-Make small commits on reviewable branches once application work begins. Never overwrite the owner's existing files without inspection. Do not publish the private source or proprietary task data. GitHub stores code; runtime credentials belong only in the host's secret manager. Establish staff-specific access controls before team deployment.
+Make small commits on reviewable branches once application work begins. On a GitHub Free private repo, a green action does not enforce a merge barrier; owner review is mandatory as a working agreement but not technically enforceable. Never overwrite the owner's existing files without inspection. Do not publish the private source or proprietary task data. GitHub stores code; runtime credentials belong only in the host's secret manager. Establish staff-specific access controls before team deployment.
