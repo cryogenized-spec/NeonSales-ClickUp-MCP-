@@ -22,7 +22,7 @@ GitHub → repository **Settings → Rules → Rulesets → New branch ruleset**
 ## Workflow `strict-ci.yml`
 
 - Job **`quality`**, triggered on PRs, pushes to main and manually; read-only `GITHUB_TOKEN` permissions.
-- Runs Python 3 standard-library repository policy validator, including byte-for-byte upstream skill pin checks and required docs.
+- Runs Python 3 standard-library repository policy validator, including byte-for-byte upstream skill pin checks and required docs, then **six Python regression tests** that prove tampering and incomplete TS scaffolds are rejected.
 - **Fail-closed application activation:** before TypeScript app exists, policy reports documentation-only and does not claim lint/typechecks are complete. The first addition of `src/**/*.ts`, a `package.json` or lockfile mandates **both** package.json + lockfile, tsconfig, ESLint config and real npm scripts.
 - Once activated, run `npm ci` from the lockfile; `npm run format:check`, `npm run lint`, `npm run typecheck`, `npm test`, `npm run build`, and `npm audit --audit-level=high`. No `continue-on-error`, `|| true`, or hidden test skipping.
 - Production MCP conformance must be a **separate required CI/release gate** once a server exists and test OAuth can be exercised; see `MCP_COMPLIANCE.md`. Do not label docs-only checks 'MCP compliant'.
