@@ -32,14 +32,23 @@ python3 scripts/check_repo_policy.py
 
 **After a real `package.json` and `package-lock.json` are committed:**
 
+For the Node 24 modernization branch, **bootstrap npm BEFORE `npm ci`**: the Node 24.21.0 release includes npm 11.19.0 whereas `package.json` requires npm 12.2.0 and `.npmrc` enforces engines. This is currently **a reproduction workflow only, not a security clearance**: npm 12.2.0 bundles known-vulnerable dependencies (see `docs/NODE_TOOLCHAIN.md`). The merge gate must stay RED until a reviewed patched CLI is available.
+
 ```bash
-npm ci --ignore-scripts
+nvm install
+nvm use
+npm install --global npm@12.2.0 --ignore-scripts --no-audit --no-fund
+node --version  # v24.21.0
+npm --version   # 12.2.0
+npm ci --ignore-scripts --no-audit --no-fund
 npm run format:check
 npm run lint
 npm run typecheck
 npm test
 npm run build
+node --test .github/scripts/check-npm-cli-bundles.test.cjs
 npm audit --audit-level=high
+node .github/scripts/check-npm-cli-bundles.cjs  # known-vulnerable CLI currently FAILS, intentionally
 ```
 
 Every listed command must pass. **Do not substitute** a successful docs-only policy run for TypeScript tests or protocol conformance. See [docs/BRANCH_PROTECTION.md](docs/BRANCH_PROTECTION.md) for enforcement caveats.
