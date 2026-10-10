@@ -19,12 +19,14 @@ export function validatedOAuthOrigin(env: unknown, request: Request): string | n
     !("GITHUB_CLIENT_ID" in env) ||
     typeof env.GITHUB_CLIENT_ID !== "string" ||
     !env.GITHUB_CLIENT_ID
-  ) return null;
+  )
+    return null;
   if (
     !("GITHUB_CLIENT_SECRET" in env) ||
     typeof env.GITHUB_CLIENT_SECRET !== "string" ||
     !env.GITHUB_CLIENT_SECRET
-  ) return null;
+  )
+    return null;
   if (!("OAUTH_KV" in env) || !env.OAUTH_KV || typeof env.OAUTH_KV !== "object") return null;
   if (!("get" in env.OAUTH_KV) || typeof env.OAUTH_KV.get !== "function") return null;
   if (!("put" in env.OAUTH_KV) || typeof env.OAUTH_KV.put !== "function") return null;
@@ -39,7 +41,8 @@ export function validatedOAuthOrigin(env: unknown, request: Request): string | n
       origin.username ||
       origin.password ||
       origin.origin !== env.MCP_PUBLIC_ORIGIN
-    ) return null;
+    )
+      return null;
     if (new URL(request.url).origin !== origin.origin) return null;
     return origin.origin;
   } catch {
