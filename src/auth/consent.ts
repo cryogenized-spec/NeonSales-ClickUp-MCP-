@@ -42,7 +42,10 @@ ${scopes}
 </form></body></html>`;
 }
 
-/** RED-phase implementation: intentionally incomplete until the adversarial test fails. */
-export function validatedReadOnlyScopes(submitted: string[]): string[] {
-  return submitted;
+/** Fail closed: Phase 3 exposes only the diagnostic read-only MCP capability. */
+export function validatedReadOnlyScopes(submitted: readonly string[]): string[] {
+  if (submitted.length !== 1 || submitted[0] !== "mcp:read") {
+    throw new Error("Consent must grant exactly mcp:read");
+  }
+  return ["mcp:read"];
 }
