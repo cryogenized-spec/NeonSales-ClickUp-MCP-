@@ -16,14 +16,15 @@ function configuration(overrides: Record<string, unknown> = {}): Record<string, 
 
 describe("OAuth deployment configuration adversarial boundary", () => {
   it("accepts only the exact configured public HTTPS origin", () => {
-    expect(validatedOAuthOrigin(
-      configuration(), new Request(origin + "/mcp"),
-    )).toBe(origin);
-    expect(validatedOAuthOrigin(
-      configuration(), new Request("https://other.example.org/mcp", {
-        headers: { "X-Forwarded-Host": "neonsales-mcp.example.org" },
-      }),
-    )).toBeNull();
+    expect(validatedOAuthOrigin(configuration(), new Request(origin + "/mcp"))).toBe(origin);
+    expect(
+      validatedOAuthOrigin(
+        configuration(),
+        new Request("https://other.example.org/mcp", {
+          headers: { "X-Forwarded-Host": "neonsales-mcp.example.org" },
+        }),
+      ),
+    ).toBeNull();
   });
 
   it.each([
@@ -36,20 +37,22 @@ describe("OAuth deployment configuration adversarial boundary", () => {
     { GITHUB_CLIENT_SECRET: "" },
     { GITHUB_CLIENT_ID: "" },
   ])("refuses incomplete or unsafe deployment bindings %j", (change) => {
-    expect(validatedOAuthOrigin(
-      configuration(change), new Request(origin + "/mcp"),
-    )).toBeNull();
+    expect(validatedOAuthOrigin(configuration(change), new Request(origin + "/mcp"))).toBeNull();
   });
 
   it("four forged staff requests never activate OAuth without a verified runtime context", async () => {
     const ids = ["11", "22", "33", "44"];
-    const responses = await Promise.all(ids.map((id) =>
-      worker.fetch(new Request(origin + "/mcp", {
-        method: "POST",
-        headers: { "X-User": id, Authorization: "Bearer forged-" + id },
-        body: "{}",
-      })),
-    ));
+    const responses = await Promise.all(
+      ids.map((id) =>
+        worker.fetch(
+          new Request(origin + "/mcp", {
+            method: "POST",
+            headers: { "X-User": id, Authorization: "Bearer forged-" + id },
+            body: "{}",
+          }),
+        ),
+      ),
+    );
     expect(responses.map((x) => x.status)).toEqual([503, 503, 503, 503]);
     for (const response of responses) {
       expect(await response.json()).toEqual({ code: "AUTH_NOT_CONFIGURED" });
