@@ -58,6 +58,14 @@
 4. Define and approve exact read-only tools and report semantics; decide what the test task and change fields will be.
 5. Import the old POC code **only after** plan approval and secret/quality review.
 
+## Current pull request and CI evidence
+
+- **PR:** [#1 — standards, upstream skills, strict CI](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/pull/1), `chore/standards-skills-ci`, **DRAFT; not merged to main**.
+- **Latest verified GitHub Actions run:** [run 38048875051](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/actions/runs/38048875051), for commit `018ba48d0710898c3e92bfc2b7c194945c519681`. Job `quality` **SUCCESS**; repository integrity and 6 Python policy regression tests passed, including intentionally corrupted skill, package lockfile absence and TypeScript suppression.
+- This was a **documentation-only** run: npm lint, TS checking, build, audit and MCP conformance correctly skipped. **Branch ruleset still NOT configured or verified**. The GitHub plan must permit enforcement for a private repository.
+- Six vendored upstream skills **plus seven required supporting/licence files** are tracked and protected by 14 exact upstream Git blob hashes; no custom skills written.
+- Future changes to this checkpoint will create a new commit and require a new green PR run. Do not report the previous run as testing commits made afterward.
+
 ## Next exact action
 
 **Review/merge the standards-and-CI PR only after successful GitHub Actions `quality` check.** The owner must verify eligibility/configure required branch rules in GitHub Settings; see BRANCH_PROTECTION.md. After review, write the dated application design spec and test-first plan; do not import application code yet.
