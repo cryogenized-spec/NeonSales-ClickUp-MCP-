@@ -43,7 +43,8 @@ export function handleOAuthRequest(
           !claims.clientId ||
           claims.audience !== new URL(incoming.url).origin + "/mcp" ||
           typeof claims.expiresAt !== "number" ||
-          !Number.isFinite(claims.expiresAt)
+          !Number.isFinite(claims.expiresAt) ||
+          claims.expiresAt <= Date.now() / 1000
         ) {
           return new Response("Forbidden", { status: 403 });
         }
