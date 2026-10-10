@@ -1,0 +1,6 @@
+{
+  "name": "neonsales-clickup-mcp",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-10",
+  "workers_dev": false
+}
