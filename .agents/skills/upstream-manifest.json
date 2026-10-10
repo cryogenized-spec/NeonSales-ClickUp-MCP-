@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 1,
+  "vendor": "obra/superpowers",
+  "vendorRef": "bb92a77741419a4ab5f06e711a283343f1ada0c3",
+  "license": "MIT",
+  "licenseFile": ".agents/skills/SUPERPOWERS_LICENSE",
+  "entries": [
+    {
+      "path": ".agents/skills/brainstorming/SKILL.md",
+      "source": "https://github.com/obra/superpowers/blob/bb92a77741419a4ab5f06e711a283343f1ada0c3/skills/brainstorming/SKILL.md",
+      "gitBlobSha": "22b98fc5bac68d46bc8f066df90155aa3815262d"
+    },
+    {
+      "path": ".agents/skills/writing-plans/SKILL.md",
+      "source": "https://github.com/obra/superpowers/blob/bb92a77741419a4ab5f06e711a283343f1ada0c3/skills/writing-plans/SKILL.md",
+      "gitBlobSha": "4cf0275d88d67aa4ef09f4bbca9970ed6ff74a00"
+    },
+    {
+      "path": ".agents/skills/test-driven-development/SKILL.md",
+      "source": "https://github.com/obra/superpowers/blob/bb92a77741419a4ab5f06e711a283343f1ada0c3/skills/test-driven-development/SKILL.md",
+      "gitBlobSha": "46838cc9e893c06259e3bdad0fc2425b36242f15"
+    },
+    {
+      "path": ".agents/skills/systematic-debugging/SKILL.md",
+      "source": "https://github.com/obra/superpowers/blob/bb92a77741419a4ab5f06e711a283343f1ada0c3/skills/systematic-debugging/SKILL.md",
+      "gitBlobSha": "62fc752aaef59a8bbed5d305f4cadc60f8ae07ed"
+    },
+    {
+      "path": ".agents/skills/verification-before-completion/SKILL.md",
+      "source": "https://github.com/obra/superpowers/blob/bb92a77741419a4ab5f06e711a283343f1ada0c3/skills/verification-before-completion/SKILL.md",
+      "gitBlobSha": "7d45333cc4a49c57a80df6c1fe2fa777a207afbc"
+    },
+    {
+      "path": ".agents/skills/requesting-code-review/SKILL.md",
+      "source": "https://github.com/obra/superpowers/blob/bb92a77741419a4ab5f06e711a283343f1ada0c3/skills/requesting-code-review/SKILL.md",
+      "gitBlobSha": "68d338a58ecdd8b77bfbb519b781ef223dbbb842"
+    },
+    {
+      "path": ".agents/skills/SUPERPOWERS_LICENSE",
+      "source": "https://github.com/obra/superpowers/blob/bb92a77741419a4ab5f06e711a283343f1ada0c3/LICENSE",
+      "gitBlobSha": "abf0390320aa14406af7a520b9b0739fdda9bf08"
+    }
+  ]
+}
