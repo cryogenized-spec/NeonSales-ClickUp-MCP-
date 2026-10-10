@@ -2,21 +2,6 @@ import { describe, expect, it } from "vitest";
 import { Client, StreamableHTTPClientTransport } from "@modelcontextprotocol/client";
 import { createProtocolHandler } from "../src/mcp/handler.js";
 
-function makeClient(
-  mode: "modern" | "legacy",
-  handler: ReturnType<typeof createProtocolHandler>,
-): Client {
-  const client = new Client(
-    { name: "neonsales-contract-test", version: "0.1.0" },
-    mode === "modern" ? { versionNegotiation: { mode: { pin: "2026-07-28" } } } : {},
-  );
-  const transport = new StreamableHTTPClientTransport(new URL("http://local.test/mcp"), {
-    fetch: async (input, init) => handler.fetch(new Request(input, init)),
-  });
-  void client.connect(transport);
-  return client;
-}
-
 describe("official MCP SDK v2 in-process transport", () => {
   it("negotiates current protocol and discovers exactly one safe diagnostic tool", async () => {
     const handler = createProtocolHandler();
