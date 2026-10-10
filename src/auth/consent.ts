@@ -41,3 +41,8 @@ ${scopes}
 <button name="decision" value="deny">Deny</button>
 </form></body></html>`;
 }
+
+/** RED-phase implementation: intentionally incomplete until the adversarial test fails. */
+export function validatedReadOnlyScopes(submitted: string[]): string[] {
+  return submitted;
+}
