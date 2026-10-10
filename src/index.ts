@@ -1,27 +1,21 @@
+import { configurationUnavailable, validatedOAuthOrigin, type OAuthEnv } from "./auth/env.js";
+
 /**
- * Public Worker is deliberately inert during Phase 2.
- *
- * No alternate path, header, query string, staff identity, or test-mode
- * override is allowed to expose the internal MCP protocol handler.
+ * Public Worker entrypoint. The official Cloudflare OAuth provider is only loaded when the
+ * deployment has a valid HTTPS origin, a real KV binding, upstream credentials and staff list.
+ * No test/header/query-string escape hatch may enable unauthenticated MCP.
  */
 export default {
-  async fetch(request: Request): Promise<Response> {
-    const pathname = new URL(request.url).pathname;
-
-    if (pathname === "/mcp") {
-      return new Response(JSON.stringify({ code: "AUTH_NOT_CONFIGURED" }), {
-        status: 503,
-        headers: {
-          "Content-Type": "application/json; charset=utf-8",
-          "Cache-Control": "no-store",
-          "X-Content-Type-Options": "nosniff",
-        },
+  async fetch(request: Request, env?: OAuthEnv, context?: ExecutionContext): Promise<Response> {
+    const origin = validatedOAuthOrigin(env, request);
+    if (!origin || !env || !context) {
+      if (new URL(request.url).pathname === "/mcp") return configurationUnavailable();
+      return new Response(null, {
+        status: 404,
+        headers: { "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" },
       });
     }
-
-    return new Response(null, {
-      status: 404,
-      headers: { "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" },
-    });
+    const { handleOAuthRequest } = await import("./auth/oauth-runtime.js");
+    return handleOAuthRequest(request, env, context, origin);
   },
 };
