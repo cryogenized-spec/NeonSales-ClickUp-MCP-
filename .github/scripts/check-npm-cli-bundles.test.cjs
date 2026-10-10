@@ -62,7 +62,7 @@ test("fails closed on missing packages or unknown major versions", t => {
   assert.equal(result.problems.length, 2);
   assert.ok(result.problems.some(x => x.includes("Missing bundled ip-address")));
   assert.ok(result.problems.some(x => x.includes("brace-expansion@6.0.0")));
-  assert.equal(isSafe("brace-expansion", "garbage"), false);
+  assert.throws(() => isSafe("brace-expansion", "garbage"), /Invalid\/unexpected version/);
 });
 
 test("rejects wrong CLI root and missing dependency tree", t => {
