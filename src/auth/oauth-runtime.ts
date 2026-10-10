@@ -46,7 +46,7 @@ export function handleOAuthRequest(
     authorizeEndpoint: "/authorize",
     tokenEndpoint: "/oauth/token",
     clientRegistrationEndpoint: "/oauth/register",
-    scopesSupported: ["mcp:read", "offline_access"],
+    scopesSupported: ["mcp:read"],
     requiredScopes: ["mcp:read"],
     resourceMetadata: {
       resource: origin + "/mcp",
