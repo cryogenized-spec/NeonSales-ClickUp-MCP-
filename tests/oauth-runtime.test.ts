@@ -35,7 +35,10 @@ vi.mock("@cloudflare/workers-oauth-provider", () => ({
         fetch: (request: Request, env: OAuthEnv, context: unknown) => Promise<Response>;
       };
     }) {
-      if (config.requiredScopes !== undefined && config.resourceMetadata?.scopes_supported !== undefined) {
+      if (
+        config.requiredScopes !== undefined &&
+        config.resourceMetadata?.scopes_supported !== undefined
+      ) {
         throw new Error("Cannot configure both requiredScopes and scopes_supported");
       }
       this.config = config;
@@ -55,7 +58,14 @@ const env = { ALLOWED_GITHUB_IDS: "11,22,33,44" } as OAuthEnv;
 
 type TestContext = Parameters<typeof handleOAuthRequest>[2] & {
   props: { userId: string };
-  auth: { userId: string; token: string; clientId: string; scope: string[]; audience: string; expiresAt: number };
+  auth: {
+    userId: string;
+    token: string;
+    clientId: string;
+    scope: string[];
+    audience: string;
+    expiresAt: number;
+  };
 };
 
 function verifiedContext(id: string, overrides: Record<string, unknown> = {}): TestContext {
@@ -74,7 +84,9 @@ function verifiedContext(id: string, overrides: Record<string, unknown> = {}): T
 }
 
 describe("Codex P1 OAuth integration regressions", () => {
-  beforeEach(() => { captures.requests.length = 0; });
+  beforeEach(() => {
+    captures.requests.length = 0;
+  });
 
   it("constructs the pinned OAuth provider without conflicting resource scope settings", async () => {
     const response = await handleOAuthRequest(
@@ -110,13 +122,23 @@ describe("Codex P1 OAuth integration regressions", () => {
   });
 
   it("forwards four concurrent staff requests with distinct verified identities", async () => {
-    await Promise.all(["11", "22", "33", "44"].map((id) =>
-      handleOAuthRequest(new Request(origin + "/mcp", { method: "POST" }), env, verifiedContext(id), origin),
-    ));
+    await Promise.all(
+      ["11", "22", "33", "44"].map((id) =>
+        handleOAuthRequest(
+          new Request(origin + "/mcp", { method: "POST" }),
+          env,
+          verifiedContext(id),
+          origin,
+        ),
+      ),
+    );
     expect(captures.requests).toHaveLength(4);
-    expect(captures.requests.map(({ options }) =>
-      (options as { authInfo?: { extra?: { subject?: string } } })?.authInfo?.extra?.subject,
-    )).toEqual(["github:11", "github:22", "github:33", "github:44"]);
+    expect(
+      captures.requests.map(
+        ({ options }) =>
+          (options as { authInfo?: { extra?: { subject?: string } } })?.authInfo?.extra?.subject,
+      ),
+    ).toEqual(["github:11", "github:22", "github:33", "github:44"]);
   });
 
   it("denies unallowlisted and mismatched principal before calling the SDK", async () => {
