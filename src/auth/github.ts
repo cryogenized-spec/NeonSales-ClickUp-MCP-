@@ -42,7 +42,11 @@ export async function exchangeGithubIdentity(
   request: FetchLike = fetch,
 ): Promise<GitHubIdentity> {
   const { clientId, clientSecret, code, verifier, callbackUrl } = params;
-  if (![clientId, clientSecret, code, verifier].every((part) => typeof part === "string" && part.length > 0)) {
+  if (
+    ![clientId, clientSecret, code, verifier].every(
+      (part) => typeof part === "string" && part.length > 0,
+    )
+  ) {
     throw new Error("Missing upstream authorization inputs");
   }
   if (!callbackUrl.startsWith("https://") && !callbackUrl.startsWith("http://localhost:")) {
@@ -62,20 +66,34 @@ export async function exchangeGithubIdentity(
   });
   if (!tokenResponse.ok) throw new Error("GitHub authorization exchange failed");
   const token: unknown = await tokenResponse.json();
-  if (typeof token !== "object" || token === null || !("access_token" in token)
-    || typeof token.access_token !== "string" || !token.access_token) {
+  if (
+    typeof token !== "object" ||
+    token === null ||
+    !("access_token" in token) ||
+    typeof token.access_token !== "string" ||
+    !token.access_token
+  ) {
     throw new Error("GitHub did not provide a valid identity token");
   }
   const profileResponse = await request("https://api.github.com/user", {
-    headers: { Authorization: "Bearer " + token.access_token, Accept: "application/vnd.github+json",
-      "X-GitHub-Api-Version": "2022-11-28", "User-Agent": "NeonSales-MCP" },
+    headers: {
+      Authorization: "Bearer " + token.access_token,
+      Accept: "application/vnd.github+json",
+      "X-GitHub-Api-Version": "2022-11-28",
+      "User-Agent": "NeonSales-MCP",
+    },
     signal: AbortSignal.timeout(10000),
   });
   if (!profileResponse.ok) throw new Error("GitHub identity validation failed");
   const profile: unknown = await profileResponse.json();
-  if (typeof profile !== "object" || profile === null || !("id" in profile)
-    || typeof profile.id !== "number" || !Number.isSafeInteger(profile.id)
-    || profile.id <= 0) {
+  if (
+    typeof profile !== "object" ||
+    profile === null ||
+    !("id" in profile) ||
+    typeof profile.id !== "number" ||
+    !Number.isSafeInteger(profile.id) ||
+    profile.id <= 0
+  ) {
     throw new Error("GitHub returned a malformed user identity");
   }
   return { githubId: String(profile.id) };

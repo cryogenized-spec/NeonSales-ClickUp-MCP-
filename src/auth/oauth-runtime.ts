@@ -18,7 +18,12 @@ class AuthorizedMcpHandler extends WorkerEntrypoint<OAuthEnv, { userId: string }
       return new Response("Forbidden", { status: 403, headers: { "Cache-Control": "no-store" } });
     }
     try {
-      requireActivePrincipal(this.ctx.props, claims.userId, claims.scope, this.env.ALLOWED_GITHUB_IDS);
+      requireActivePrincipal(
+        this.ctx.props,
+        claims.userId,
+        claims.scope,
+        this.env.ALLOWED_GITHUB_IDS,
+      );
     } catch {
       return new Response("Forbidden", { status: 403, headers: { "Cache-Control": "no-store" } });
     }

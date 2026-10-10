@@ -16,10 +16,16 @@ export function renderConsentPage(details: ConsentDisplay, handle: string): stri
   const origin = details.clientDomain
     ? "Published by " + escapeHtml(details.clientDomain) + "."
     : "This application's name is self-declared and has not been independently verified.";
-  const scopes = details.scope.map((scope) =>
-    '<label><input name="scope" type="checkbox" checked value="' + escapeHtml(scope)
-    + '"> ' + escapeHtml(scope) + '</label>',
-  ).join("\n");
+  const scopes = details.scope
+    .map(
+      (scope) =>
+        '<label><input name="scope" type="checkbox" checked value="' +
+        escapeHtml(scope) +
+        '"> ' +
+        escapeHtml(scope) +
+        "</label>",
+    )
+    .join("\n");
   return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>NeonSales OAuth consent</title></head><body>

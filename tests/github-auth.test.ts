@@ -4,7 +4,12 @@ import { exchangeGithubIdentity, githubAuthorizeUrl, pkceChallenge } from "../sr
 describe("upstream GitHub OAuth identity", () => {
   it("creates an upstream redirect bound to state, callback and PKCE S256", async () => {
     const challenge = await pkceChallenge("abcdefghijklmnopqrstuvwxyz0123456789abcdefghijklm");
-    const url = githubAuthorizeUrl("client-id", "server-stored-state", challenge, "https://mcp.example.com/github/callback");
+    const url = githubAuthorizeUrl(
+      "client-id",
+      "server-stored-state",
+      challenge,
+      "https://mcp.example.com/github/callback",
+    );
     expect(url.origin).toBe("https://github.com");
     expect(url.searchParams.get("state")).toBe("server-stored-state");
     expect(url.searchParams.get("redirect_uri")).toBe("https://mcp.example.com/github/callback");
@@ -21,11 +26,16 @@ describe("upstream GitHub OAuth identity", () => {
       }
       return Response.json({ id: 67890, login: "staff-member" });
     });
-    const identity = await exchangeGithubIdentity({
-      clientId: "client-id", clientSecret: "never-log", code: "one-use-code",
-      verifier: "abcdefghijklmnopqrstuvwxyz0123456789abcdefghijklm",
-      callbackUrl: "https://mcp.example.com/github/callback",
-    }, mockedFetch);
+    const identity = await exchangeGithubIdentity(
+      {
+        clientId: "client-id",
+        clientSecret: "never-log",
+        code: "one-use-code",
+        verifier: "abcdefghijklmnopqrstuvwxyz0123456789abcdefghijklm",
+        callbackUrl: "https://mcp.example.com/github/callback",
+      },
+      mockedFetch,
+    );
     expect(identity).toEqual({ githubId: "67890" });
     expect(calls).toEqual([
       "https://github.com/login/oauth/access_token",
@@ -39,20 +49,37 @@ describe("upstream GitHub OAuth identity", () => {
     [new Response("{}", { status: 503 }), "reject"],
   ])("rejects invalid upstream code exchange without issuing identity", async (tokenResponse) => {
     const mockedFetch = vi.fn().mockResolvedValue(tokenResponse);
-    await expect(exchangeGithubIdentity({
-      clientId: "id", clientSecret: "secret", code: "bad", verifier: "verifier",
-      callbackUrl: "https://mcp.example.com/github/callback",
-    }, mockedFetch)).rejects.toThrow();
+    await expect(
+      exchangeGithubIdentity(
+        {
+          clientId: "id",
+          clientSecret: "secret",
+          code: "bad",
+          verifier: "verifier",
+          callbackUrl: "https://mcp.example.com/github/callback",
+        },
+        mockedFetch,
+      ),
+    ).rejects.toThrow();
     expect(mockedFetch).toHaveBeenCalledTimes(1);
   });
 
   it("rejects identity responses without a valid immutable numeric user id", async () => {
-    const mockedFetch = vi.fn()
+    const mockedFetch = vi
+      .fn()
       .mockResolvedValueOnce(Response.json({ access_token: "token" }))
       .mockResolvedValueOnce(Response.json({ id: "impersonated", login: "boss" }));
-    await expect(exchangeGithubIdentity({
-      clientId: "id", clientSecret: "secret", code: "code", verifier: "verifier",
-      callbackUrl: "https://mcp.example.com/github/callback",
-    }, mockedFetch)).rejects.toThrow();
+    await expect(
+      exchangeGithubIdentity(
+        {
+          clientId: "id",
+          clientSecret: "secret",
+          code: "code",
+          verifier: "verifier",
+          callbackUrl: "https://mcp.example.com/github/callback",
+        },
+        mockedFetch,
+      ),
+    ).rejects.toThrow();
   });
 });

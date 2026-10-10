@@ -14,16 +14,34 @@ export function validatedOAuthOrigin(env: unknown, request: Request): string | n
   if (typeof env !== "object" || env === null) return null;
   if (!("MCP_PUBLIC_ORIGIN" in env) || typeof env.MCP_PUBLIC_ORIGIN !== "string") return null;
   if (!("ALLOWED_GITHUB_IDS" in env) || typeof env.ALLOWED_GITHUB_IDS !== "string") return null;
-  if (!("GITHUB_CLIENT_ID" in env) || typeof env.GITHUB_CLIENT_ID !== "string" || !env.GITHUB_CLIENT_ID) return null;
-  if (!("GITHUB_CLIENT_SECRET" in env) || typeof env.GITHUB_CLIENT_SECRET !== "string" || !env.GITHUB_CLIENT_SECRET) return null;
+  if (
+    !("GITHUB_CLIENT_ID" in env) ||
+    typeof env.GITHUB_CLIENT_ID !== "string" ||
+    !env.GITHUB_CLIENT_ID
+  )
+    return null;
+  if (
+    !("GITHUB_CLIENT_SECRET" in env) ||
+    typeof env.GITHUB_CLIENT_SECRET !== "string" ||
+    !env.GITHUB_CLIENT_SECRET
+  )
+    return null;
   if (!("OAUTH_KV" in env) || !env.OAUTH_KV || typeof env.OAUTH_KV !== "object") return null;
   if (!("get" in env.OAUTH_KV) || typeof env.OAUTH_KV.get !== "function") return null;
   if (!("put" in env.OAUTH_KV) || typeof env.OAUTH_KV.put !== "function") return null;
   try {
     parseStaffAllowlist(env.ALLOWED_GITHUB_IDS);
     const origin = new URL(env.MCP_PUBLIC_ORIGIN);
-    if (origin.protocol !== "https:" || origin.pathname !== "/" || origin.search || origin.hash
-      || origin.username || origin.password || origin.origin !== env.MCP_PUBLIC_ORIGIN) return null;
+    if (
+      origin.protocol !== "https:" ||
+      origin.pathname !== "/" ||
+      origin.search ||
+      origin.hash ||
+      origin.username ||
+      origin.password ||
+      origin.origin !== env.MCP_PUBLIC_ORIGIN
+    )
+      return null;
     if (new URL(request.url).origin !== origin.origin) return null;
     return origin.origin;
   } catch {

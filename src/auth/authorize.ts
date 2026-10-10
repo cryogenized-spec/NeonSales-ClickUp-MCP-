@@ -18,27 +18,46 @@ async function showConsent(request: Request, oauth: OAuthHelpers): Promise<Respo
   return new Response(renderConsentPage(details, consent.handle), { headers: consent.headers });
 }
 
-async function submitConsent(request: Request, oauth: OAuthHelpers, env: OAuthEnv, origin: string): Promise<Response> {
+async function submitConsent(
+  request: Request,
+  oauth: OAuthHelpers,
+  env: OAuthEnv,
+  origin: string,
+): Promise<Response> {
   const form = await request.formData();
   const handle = form.get("handle");
-  if (typeof handle !== "string" || !handle) return new Response("Invalid consent request", { status: 400 });
+  if (typeof handle !== "string" || !handle)
+    return new Response("Invalid consent request", { status: 400 });
   if (form.get("decision") !== "approve") {
     const denied = await oauth.denyConsent(request, handle);
     return new Response(null, { status: 302, headers: denied.headers });
   }
-  const approved = await oauth.approveConsent(request, handle, { scope: form.getAll("scope").map(String) });
+  const approved = await oauth.approveConsent(request, handle, {
+    scope: form.getAll("scope").map(String),
+  });
   const verifier = crypto.randomUUID() + crypto.randomUUID();
   const upstream = await oauth.beginUpstream(approved.request, {
     data: { verifier },
     headers: approved.headers,
   });
-  upstream.headers.set("Location", githubAuthorizeUrl(
-    env.GITHUB_CLIENT_ID, upstream.state, await pkceChallenge(verifier), origin + "/github/callback",
-  ).toString());
+  upstream.headers.set(
+    "Location",
+    githubAuthorizeUrl(
+      env.GITHUB_CLIENT_ID,
+      upstream.state,
+      await pkceChallenge(verifier),
+      origin + "/github/callback",
+    ).toString(),
+  );
   return new Response(null, { status: 302, headers: upstream.headers });
 }
 
-async function finishGitHub(request: Request, oauth: OAuthHelpers, env: OAuthEnv, origin: string): Promise<Response> {
+async function finishGitHub(
+  request: Request,
+  oauth: OAuthHelpers,
+  env: OAuthEnv,
+  origin: string,
+): Promise<Response> {
   const upstream = await oauth.finishUpstream<{ verifier: string }>(request);
   const query = new URL(request.url).searchParams;
   if (query.has("error")) {
@@ -74,7 +93,11 @@ async function finishGitHub(request: Request, oauth: OAuthHelpers, env: OAuthEnv
   return new Response(null, { status: 302, headers: upstream.headers });
 }
 
-export async function handleAuthorizationPage(request: Request, env: OAuthEnv, origin: string): Promise<Response> {
+export async function handleAuthorizationPage(
+  request: Request,
+  env: OAuthEnv,
+  origin: string,
+): Promise<Response> {
   const path = new URL(request.url).pathname;
   if (path !== "/authorize" && path !== "/github/callback") {
     return new Response(null, { status: 404, headers: { "Cache-Control": "no-store" } });
@@ -85,7 +108,8 @@ export async function handleAuthorizationPage(request: Request, env: OAuthEnv, o
       return await finishGitHub(request, env.OAUTH_PROVIDER, env, origin);
     }
     if (request.method === "GET") return await showConsent(request, env.OAUTH_PROVIDER);
-    if (request.method === "POST") return await submitConsent(request, env.OAUTH_PROVIDER, env, origin);
+    if (request.method === "POST")
+      return await submitConsent(request, env.OAUTH_PROVIDER, env, origin);
     return new Response(null, { status: 405 });
   } catch (error) {
     if (error instanceof AuthorizationError) {
@@ -96,7 +120,8 @@ export async function handleAuthorizationPage(request: Request, env: OAuthEnv, o
       return new Response("OAuth client identity could not be verified", { status: 400 });
     }
     return new Response("Identity provider temporarily unavailable", {
-      status: 503, headers: { "Cache-Control": "no-store" },
+      status: 503,
+      headers: { "Cache-Control": "no-store" },
     });
   }
 }
