@@ -77,7 +77,7 @@ function verifiedContext(id: string, overrides: Record<string, unknown> = {}): T
       clientId: "client-" + id,
       scope: ["mcp:read"],
       audience: origin + "/mcp",
-      expiresAt: 1790000000,
+      expiresAt: 1990000000,
       ...overrides,
     },
   } as unknown as TestContext;
@@ -114,7 +114,7 @@ describe("Codex P1 OAuth integration regressions", () => {
         token: "secret-token-22",
         clientId: "client-22",
         scopes: ["mcp:read"],
-        expiresAt: 1790000000,
+        expiresAt: 1990000000,
         resource: new URL(origin + "/mcp"),
         extra: expect.objectContaining({ subject: "github:22", githubId: "22" }),
       }),
@@ -139,6 +139,17 @@ describe("Codex P1 OAuth integration regressions", () => {
           (options as { authInfo?: { extra?: { subject?: string } } })?.authInfo?.extra?.subject,
       ),
     ).toEqual(["github:11", "github:22", "github:33", "github:44"]);
+  });
+
+  it("rejects expired provider token facts even for an allowlisted staff member", async () => {
+    const response = await handleOAuthRequest(
+      new Request(origin + "/mcp", { method: "POST" }),
+      env,
+      verifiedContext("11", { expiresAt: 1 }),
+      origin,
+    );
+    expect(response.status).toBe(403);
+    expect(captures.requests).toHaveLength(0);
   });
 
   it("denies unallowlisted and mismatched principal before calling the SDK", async () => {
