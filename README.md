@@ -1,6 +1,6 @@
 # NeonSales ClickUp MCP — phased development
 
-**Project status:** Phase 2 TypeScript SDK foundation in **draft stacked PR #3**, 2026-10-10 SAST. It is **not deployed or authenticated**, cannot access ClickUp, and deliberately returns HTTP 503 on public `/mcp` requests. The genuine SDK tool is available in isolated tests only. The old local v0.1 archive has not been imported.
+**Project status:** Phase 3 OAuth identity code is on **draft stacked PR #4** (2026-10-10 SAST). It is **not deployed**: Cloudflare KV, real GitHub OAuth App credentials, live four-user sign-in, ChatGPT/Claude connectors and ClickUp remain unconfigured/unverified. The Phase 2 SDK still provides only synthetic `service_info`. Public `/mcp` fails closed without valid OAuth deployment bindings. The older local v0.1 archive has not been imported.
 
 **Purpose:** Build a private, authenticated, vendor-neutral remote MCP service that gives ChatGPT and Claude controlled access to NeonSales ClickUp data through ClickUp's official REST API. Prove the workflow against real, permitted records before showing management. This is an internal prototype, not a product offering.
 
@@ -27,6 +27,7 @@
 - [docs/MODULARITY.md](docs/MODULARITY.md) — module boundaries and failure containment.
 - [docs/SKILLS.md](docs/SKILLS.md) — six pinned, upstream-authored development skills and license.
 - [docs/BRANCH_PROTECTION.md](docs/BRANCH_PROTECTION.md) — strict CI, rulesets, plan restrictions and manual enforcement step.
+- [docs/PHASE3_SETUP.md](docs/PHASE3_SETUP.md) — manual Cloudflare KV/GitHub OAuth setup and live multi-user acceptance.
 - [docs/phases/ROADMAP.md](docs/phases/ROADMAP.md) — mandatory one-phase-at-a-time delivery.
 - [docs/SECURITY_PERIMETER.md](docs/SECURITY_PERIMETER.md) — trust boundaries and single-authority design.
 - [docs/CODEX_REVIEW.md](docs/CODEX_REVIEW.md) — after-CI-green exact-SHA specialist review handoff.
@@ -57,7 +58,7 @@ npm run build
 npm audit --audit-level=high
 ```
 
-The Worker HTTP entrypoint intentionally rejects `/mcp` until Phase 3 OAuth. The internal tests drive the genuine SDK from its client package; **neither an externally available server nor real multi-user sign-in is claimed**. See `docs/PROJECT_STATE.md` for current SHA and CI evidence.
+The Worker rejects `/mcp` when the Phase 3 OAuth deployment bindings are missing; when configured, Cloudflare's official OAuthProvider guards the genuine SDK endpoint. **No deployed endpoint, real user sign-in or real ClickUp operation is claimed.** Phase 3 adds the `@cloudflare/workers-oauth-provider` module and tests, with 2–4 independent numeric GitHub staff IDs verified against an allowlist. See `docs/PROJECT_STATE.md` for current SHA and CI evidence.
 
 ## Planned capabilities (not all implemented)
 
