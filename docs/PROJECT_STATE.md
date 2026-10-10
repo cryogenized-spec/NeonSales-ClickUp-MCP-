@@ -1,8 +1,18 @@
 # Project state — canonical handoff
 
-**Checkpoint:** Saturday 2026-10-10, SAST (minute not independently verified).
-**Current work:** Phase 3 individual staff OAuth implementation, draft PR [#4](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/pull/4) on `phase/03-oauth-identity`; base is `phase/02-sdk-foundation`, not `main`.
-**Review/merge:** PR [#1](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/pull/1) → [#2](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/pull/2) → [#3](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/pull/3) → [#4](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/pull/4) are **stacked drafts**, not merged. GitHub Free private repo: CI is not technically enforced by branch protection; human manually approves merges. PR #3's four missing malformed-frame regressions are now incorporated by the conflict-resolution merge into the isolated Phase 3 integration candidate. Do not mutate the foundation PR.
+**Checkpoint:** 2026-10-10 SAST (time not independently captured). **Current Phase 3:** draft PR [#4](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/pull/4), now based on **main**.
+**Merged foundation:** PRs [#1](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/pull/1), [#2](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/pull/2), and [#3](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/pull/3) are already merged into main at commit `914c5e69e7366b465f823787225861c3ac40ad29`. Phase 4 design-only PR [#8](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/pull/8) remains stacked on #4. Unsafe Node/npm modernization PR #5 is CLOSED without merge.
+**Live release status:** NO GO. There is no verified Cloudflare staging account/Worker public HTTPS hostname, real KV namespace, GitHub OAuth App callback/credentials, live personal ChatGPT/Claude connections, or four distinct real employee sign-ins. **No ClickUp reads or production writes.**
+**Merge gate:** Maintainer-authorized code merge may be considered separately from release, but current Phase 3 OAuth **live acceptance** is not complete. Do not claim live readiness, deploy or enable ClickUp without the staging runbook tests.
+
+## Latest Phase 3 workerd security smoke (2026-10-10)
+
+- Executable `scripts/staging-local-smoke.mjs` starts the **actual pinned Wrangler/workerd** over loopback-only HTTPS with an ephemeral, self-signed test certificate and **fake nonfunctional** GitHub OAuth app values. In-memory/local KV binding ID is never a real Cloudflare resource. It does NOT contact production services or require runtime secrets.
+- CI now runs it after Wrangler build. Missing local KV -> fail-closed **503**. Proper local KV -> unauthenticated **401 Bearer OAuth challenge**; RFC 9728 protected-resource metadata and RFC 8414 authorization-server metadata discoverable with correct issuer, audience and `mcp:read`; forged bearer, spoofed headers and query bypass remain unauthorized.
+- Verified first all-green integrated test [run #38081428776](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/actions/runs/38081428776), SHA `3edb5e9ccdc0646d4a4cf5a72fac6582881c9258`. **56/56 Vitest**, 9 Python policy regressions, isolated Workerd smoke, strict triple TS, formatting, lint, reproducible Wrangler build and project high-severity npm audit all SUCCESS.
+- First smoke run [#38081351855](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/actions/runs/38081351855) was RED because pinned Wrangler CLI did not support a newer documented flag; test code was corrected without relaxing expected OAuth results. No production source files were changed.
+- **Next action:** Verify quality on this documentation's exact new SHA; request a focused specialist review of the local HTTPS smoke (if final green), then request operator-provisioned isolated Cloudflare/GitHub OAuth staging and actual independent account tests. Do NOT merge and declare Phase 3 operational based on local tests alone.
+- Historical handoff notes below describe earlier work and earlier commit states; where those statements conflict with this checkpoint, this current section is authoritative.
 
 ## Verified implementation inventory
 
@@ -11,7 +21,7 @@
 - **Identity adapter**: GitHub OAuth App `/authorize` consent → PKCE-bound upstream GitHub login → `/github/callback` → authenticated `GET /user` immutable numeric ID → up to four unique `github:<id>` staff members. This is a POC identity choice: employees need separate GitHub logins in addition to their own ChatGPT/Claude subscriptions. No shared chatbot account.
 - **Security**: browser-bound Cloudflare consent/upstream state helpers, escaping user-controlled client metadata, reject forged/expired IDs and missing/invalid token scope. `global_fetch_strictly_public` enables SSRF restrictions for CIMD. No `/mcp` when secrets/KV are unconfigured. No ClickUp keys, production changes, OAuth test backdoors or public deployments.
 - **Build**: exact npm-generated lockfile, no temporary write-privileged workflow retained. Three compiler checks: `tsconfig.auth.json` and `tsconfig.mcp.json` each `skipLibCheck:false` plus full app `strict:true` with `skipLibCheck:true` **only to resolve colliding third-party Cloudflare and Node declarations**. Repository policy now requires all three checks and Phase 3 documents.
-- **Testing**: 44 deterministic Vitest tests, including 4 simultaneous staff identities, forged forwarded-host/ID, removed/duplicate/invalid users, network/upstream identity failures, HTML injection, unauthenticated Worker rejection, MCP tools. Tests use fixtures. No real token or multi-user subscription sessions.
+- **Testing**: 56 deterministic Vitest tests plus isolated real workerd HTTPS security smoke; includes 4 simultaneous staff identities, forged headers/bearers, expired scopes, missing KV, OAuth challenge/metadata and real SDK callbacks. No real OAuth token or multi-user subscription sessions.
 
 ## Fresh CI evidence (before last policy/documentation commit)
 
