@@ -46,7 +46,7 @@ npm run lint
 npm run typecheck
 npm test
 npm run build
-node --test .github/scripts/check-npm-cli-bundles.test.cjs
+node --test .github/scripts/bundle-guard-fixtures.cjs
 npm audit --audit-level=high
 node .github/scripts/check-npm-cli-bundles.cjs  # known-vulnerable CLI currently FAILS, intentionally
 ```
