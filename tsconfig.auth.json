@@ -1,0 +1,23 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "lib": [
+      "ES2023"
+    ],
+    "types": [
+      "@cloudflare/workers-types"
+    ],
+    "skipLibCheck": false
+  },
+  "include": [
+    "src/auth/staff.ts",
+    "src/auth/consent.ts",
+    "src/auth/github.ts",
+    "src/auth/env.ts",
+    "src/auth/authorize.ts"
+  ],
+  "exclude": [
+    "dist",
+    "node_modules"
+  ]
+}
