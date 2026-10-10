@@ -14,6 +14,13 @@
 | GitHub PR/CI content | Potentially attacker-controlled | May be inspected in disposable runners; no secret-bearing PR jobs |
 | GitHub Free repository owner/admin | Can bypass ordinary CI if authorized to write | **Procedural**, not enforceable merge security |
 
+## Multi-user separation, shared underlying rate limit
+
+- POC target is **2–4 authorized, independent NeonSales staff accounts**, each using their own ChatGPT or Claude subscription. Never share account sessions, impersonate a staff member, or treat model-provided `userId` as authenticated identity.
+- Only the OAuth verifier may create immutable request-scoped principals. Link principal to allowed Workspace/List and operation scopes server-side; verify the association for **every** invocation, including parallel calls.
+- A single company ClickUp API token, when used by authorized staff, imposes a **shared 100/min/token budget** on Free Forever, not 100/min per employee. Bursts and retries must be coordinated cross-instance using a durable coordinator (e.g. Durable Object) and backoff. No independent per-isolate counters pretending to be global.
+- Audit trails and approval decisions must include the verified acting human principal and be segregated by scope. A shared ClickUp backend token must not erase attribution.
+
 ## Invariants
 
 **Single authority for each decision:** MCP SDK owns protocol parsing; OAuth verifier owns identity/authentication; application service owns scope decisions; ClickUp adapter owns external transport; a transactional approval store owns single-use write authorization. No duplicated token verifier or alternate REST update path.
