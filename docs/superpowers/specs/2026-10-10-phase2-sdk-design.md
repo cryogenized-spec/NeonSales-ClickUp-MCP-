@@ -14,7 +14,7 @@ The intended product serves **2–4 different authorized NeonSales staff**, conn
 
 ## Architecture decisions
 
-- **MCP library:** official SDK v2 stable; `McpServer`, `registerTool`, `createMcpHandler`, and Zod 4; not v1 or handwritten JSON-RPC parsing. References: https://ts.sdk.modelcontextprotocol.io/v2/migration/support-2026-07-28 and https://ts.sdk.modelcontextprotocol.io/v2/get-started/first-server
+- **MCP library:** official SDK v2 stable; `McpServer`, `registerTool`, `createMcpHandler`, and the official `fromJsonSchema` adapter for the closed empty-input diagnostic (rather than an incompatible older Zod StandardJSONSchema interface); not v1 or handwritten JSON-RPC parsing. References: https://ts.sdk.modelcontextprotocol.io/v2/migration/support-2026-07-28 and https://ts.sdk.modelcontextprotocol.io/v2/get-started/first-server
 - **SDK factory:** `src/mcp/create-server.ts` exports `createServer()` with one static diagnostic tool `service_info`. No secrets or task data. Each invocation gets fresh server state.
 - **Transport:** `src/mcp/handler.ts` constructs a stateless `createMcpHandler(createServer)` for tests/internal inspection. Only the SDK owns JSON-RPC.
 - **HTTP entrypoint:** `src/index.ts` exports Cloudflare Worker `fetch` which returns 404 outside `/mcp` and returns 503/denied on `/mcp` while OAuth is not configured. It must not provide `?test=1`, magic headers, environment bypass or synthetic administrator identity. The genuine MCP handler is deliberately **not exposed** by this public entrypoint in Phase 2.
