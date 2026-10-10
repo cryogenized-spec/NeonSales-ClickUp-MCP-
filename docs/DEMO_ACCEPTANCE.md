@@ -17,6 +17,9 @@
 | A11 | No secret leakage and safe logs | DESIGN RULES only | Repo scan, runtime config review and negative tests |
 | A12 | Costs, request budgets, limitations evidenced | NOT DONE | Actual counts, pricing sources, exception cases |
 
+| A13 | Four distinct subscription users cannot see or act as each other | NOT TESTED | Four separate OAuth identities, distinct scopes, parallel calls, audit provenance and denial tests |
+| A14 | Coordinated budget handles burst and API 429 safely across Worker instances | NOT TESTED | Four-client burst, 429/Retry-After and cross-instance coordination tests |
+
 **GO / NO-GO:** Do not call the project a working *cross-client* POC until A4, A5, A7, A8 and A9 pass. Do not claim write capability until A10 passes. Do not pitch business outcomes until those claims have reproducible evidence.
 
 **Disclaimers:** 100 REST API requests/minute/token on ClickUp Free Forever is a rate limit, not free unlimited operations. `date_updated` reflects ClickUp task metadata; no claim of employee inactivity is implied. Subscription features depend on account/workspace availability and must be verified.
