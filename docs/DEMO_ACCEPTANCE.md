@@ -20,6 +20,10 @@
 | A14 | Coordinated budget handles burst and API 429 safely across Worker instances | NOT TESTED | Four-client burst, 429/Retry-After and cross-instance coordination tests |
 | A15 | SDK v2 internal diagnostics, public HTTP denial, strict TS and audit | PASS **on Phase 2 pre-checkpoint SHA only** | [GitHub Actions #38054050247](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/actions/runs/38054050247): 11 tests, typed lint, TS, build, high audit green. Does NOT validate OAuth or official conformance |
 
+| A16 | Phase 3 OAuth identity logic, upstream consent and fail-closed configuration tests | UNIT TESTS PASS; LIVE NOT TESTED | Draft PR #4 and GitHub `quality` 44/44 tests on Phase 3 pre-documentation SHA; real Cloudflare KV/PKCE/ChatGPT/Claude round trip still NOT TESTED |
+| A17 | Four real individuals authenticate and keep sessions isolated | NOT TESTED | 4 separate GitHub OAuth sign-ins; app-specific consent, expired/revoked token denial and cross-user controls |
+| A18 | OAuth 2026-07-28 conformance and live resource metadata | NOT TESTED | Official conformance, authenticated 401 challenge/resource metadata, real ChatGPT and Claude client connections |
+
 **GO / NO-GO:** Do not call the project a working *cross-client* POC until A4, A5, A7, A8 and A9 pass. Do not claim write capability until A10 passes. Do not pitch business outcomes until those claims have reproducible evidence.
 
 **Disclaimers:** 100 REST API requests/minute/token on ClickUp Free Forever is a rate limit, not free unlimited operations. `date_updated` reflects ClickUp task metadata; no claim of employee inactivity is implied. Subscription features depend on account/workspace availability and must be verified.
