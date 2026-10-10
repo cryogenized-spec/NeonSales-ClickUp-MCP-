@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import { Client, StreamableHTTPClientTransport } from "@modelcontextprotocol/client";
 import { createProtocolHandler } from "../src/mcp/handler.js";
 
-
 /** Drive raw HTTP frames directly through the real SDK handler, without Client sanitization. */
 function rawPost(
   handler: ReturnType<typeof createProtocolHandler>,
@@ -114,14 +113,15 @@ describe("official MCP SDK v2 in-process transport", () => {
       await handler.close();
     }
   });
+
   it("rejects malformed raw JSON instead of dispatching an SDK request", async () => {
     const handler = createProtocolHandler();
     try {
-      const response = await rawPost(
-        handler,
-        '{"jsonrpc":"2.0","id":7,"method":',
-        { "MCP-Protocol-Version": "2026-07-28", "Mcp-Method": "tools/list" },
-      );
+      const headers = {
+        "MCP-Protocol-Version": "2026-07-28",
+        "Mcp-Method": "tools/list",
+      };
+      const response = await rawPost(handler, '{"jsonrpc":"2.0","id":7,"method":', headers);
       expect(response.status).toBe(400);
       expect(await response.json()).toMatchObject({
         jsonrpc: "2.0",
@@ -186,5 +186,4 @@ describe("official MCP SDK v2 in-process transport", () => {
       await handler.close();
     }
   });
-
 });
