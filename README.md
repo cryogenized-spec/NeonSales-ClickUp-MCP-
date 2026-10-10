@@ -1,6 +1,6 @@
-# NeonSales ClickUp MCP — planning repository
+# NeonSales ClickUp MCP — phased development
 
-**Project status:** Documentation and architecture-planning stage as of 2026-10-10 (South Africa Standard Time, UTC+02:00). This repository is **not** a deployed integration and contains **no application code yet**. A separate, local POC v0.1 archive was prepared during the earlier conversation; its code has not yet been imported to this repository.
+**Project status:** Phase 2 TypeScript SDK foundation in **draft stacked PR #3**, 2026-10-10 SAST. It is **not deployed or authenticated**, cannot access ClickUp, and deliberately returns HTTP 503 on public `/mcp` requests. The genuine SDK tool is available in isolated tests only. The old local v0.1 archive has not been imported.
 
 **Purpose:** Build a private, authenticated, vendor-neutral remote MCP service that gives ChatGPT and Claude controlled access to NeonSales ClickUp data through ClickUp's official REST API. Prove the workflow against real, permitted records before showing management. This is an internal prototype, not a product offering.
 
@@ -35,13 +35,29 @@
 
 These documentation files establish a shared foundation. They do not constitute completion of the implementation.
 
-## Initial engineering proposal — subject to approval
+## Approved technology / implementation still phased
 
 Use an approved **TypeScript / Node.js / npm** development toolchain and target **Cloudflare Workers** for a small remote HTTPS MCP service. Keep ClickUp REST access in a small isolated adapter; use an established MCP SDK and an OAuth implementation compatible with both ChatGPT and Claude. Keep the server provider-neutral: **one MCP service, two subscription clients**. Use GitHub for source control and CI, not as a permanent web server.
 
 Why npm? Node is the runtime; npm installs and locks dependencies and runs scripts; `npx` runs package executables. No separate AI API key or model API billing is required for *interactive calls from the supported subscription interfaces*. Deployment, ClickUp access and AI usage-plan restrictions remain separate.
 
-This stack was **approved by the owner on 2026-10-10**, but detailed app design, OAuth and deployment are **not yet approved or implemented**. The older local starter was dependency-free JavaScript with Node's test runner and is retained only as a reference; importing it is a separate reviewed step.
+The TypeScript/npm/Cloudflare stack was approved on 2026-10-10. Phase 2 uses the **official MCP SDK 2.3.1** and an authentic npm lockfile; OAuth, live ClickUp reads, cloud deployment and user-specific authorization are **not yet implemented**. The target is 2–4 separately authenticated NeonSales staff using their own ChatGPT/Claude subscriptions. The older local starter was dependency-free JavaScript with Node's test runner and is retained only as a reference; importing it is a separate reviewed step.
+
+## Phase 2 commands and verification
+
+For the code in [draft PR #3](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/pull/3):
+
+```bash
+npm ci --ignore-scripts --no-audit --no-fund
+npm run format:check
+npm run lint
+npm run typecheck
+npm test
+npm run build
+npm audit --audit-level=high
+```
+
+The Worker HTTP entrypoint intentionally rejects `/mcp` until Phase 3 OAuth. The internal tests drive the genuine SDK from its client package; **neither an externally available server nor real multi-user sign-in is claimed**. See `docs/PROJECT_STATE.md` for current SHA and CI evidence.
 
 ## Planned capabilities (not all implemented)
 
