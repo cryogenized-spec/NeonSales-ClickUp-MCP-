@@ -49,7 +49,7 @@ def verify_skills() -> None:
     if manifest.get("vendor") != "obra/superpowers" or not re.fullmatch(r"[a-f0-9]{40}", ref):
         error("Unexpected or unpinned upstream vendor")
     entries = manifest.get("entries")
-    if not isinstance(entries, list) or len(entries) != 7:
+    if not isinstance(entries, list) or len(entries) != 14:
         error("Unexpected number of pinned skills/license entries")
         return
     found: set[str] = set()
@@ -76,9 +76,10 @@ def verify_skills() -> None:
                     and re.search(r"^description:\s*\S+", text, re.M)):
                 error("Malformed SKILL.md frontmatter: " + path)
     stray = {p.relative_to(ROOT).as_posix()
-             for p in (ROOT / ".agents/skills").rglob("SKILL.md")} - found
+             for p in (ROOT / ".agents/skills").rglob("*")
+             if p.is_file() and p.name != "upstream-manifest.json"} - found
     if stray:
-        error("Unpinned agent skill(s): " + ", ".join(sorted(stray)))
+        error("Unpinned upstream skill file(s): " + ", ".join(sorted(stray)))
 
 def verify_application() -> None:
     excluded = {".git", ".github", ".agents", "node_modules", "dist", "build", "coverage"}
