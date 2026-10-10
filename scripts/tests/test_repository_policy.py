@@ -48,6 +48,10 @@ class PolicyGateTests(unittest.TestCase):
         self.assertTrue(required.issubset(set(policy.REQUIRED)),
                         f"Phase 3 documents/checks missing: {sorted(required - set(policy.REQUIRED))}")
 
+    def test_oauth_typecheck_shortcut_is_rejected(self) -> None:
+        policy.verify_phase3_typecheck({"typecheck": "tsc -p tsconfig.json --noEmit"})
+        self.assertTrue(any("strict auth + MCP + combined TS" in e for e in policy.ERRORS))
+
     def test_upstream_pins_match_verbatim_vendor_files(self) -> None:
         policy.verify_skills()
         self.assertEqual([], policy.ERRORS)
