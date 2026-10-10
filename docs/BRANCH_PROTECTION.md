@@ -2,6 +2,8 @@
 
 ## Critical caveat
 
+**Confirmed 2026-10-10:** user uses GitHub Free. On this private repository CI can detect failures but branch rules cannot be claimed technically enforced. Human review remains mandatory before any merge or deployment.
+
 A YAML workflow **runs tests**; it does NOT, by itself, prevent merges or direct pushes. **GitHub branch protection/rulesets must require passing checks** and prevent bypassing. GitHub's official docs say rulesets on **private repositories require GitHub Pro, Team or Enterprise Cloud**; a private repo on GitHub Free cannot be assumed to have enforced branch rules. Verify the actual account plan before claiming 'unskippable' gates.
 
 Source: https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/about-rulesets

@@ -16,6 +16,9 @@
 | A10 | Independently approved disposable test task update | NOT TESTED live | Owner approval, task audit, replay denial |
 | A11 | No secret leakage and safe logs | DESIGN RULES only | Repo scan, runtime config review and negative tests |
 | A12 | Costs, request budgets, limitations evidenced | NOT DONE | Actual counts, pricing sources, exception cases |
+| A13 | Four distinct subscription users cannot see or act as each other | NOT TESTED | Four separate OAuth identities, distinct scopes, parallel calls, audit provenance and denial tests |
+| A14 | Coordinated budget handles burst and API 429 safely across Worker instances | NOT TESTED | Four-client burst, 429/Retry-After and cross-instance coordination tests |
+| A15 | SDK v2 internal diagnostics, public HTTP denial, strict TS and audit | PASS **on Phase 2 pre-checkpoint SHA only** | [GitHub Actions #38054050247](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/actions/runs/38054050247): 11 tests, typed lint, TS, build, high audit green. Does NOT validate OAuth or official conformance |
 
 **GO / NO-GO:** Do not call the project a working *cross-client* POC until A4, A5, A7, A8 and A9 pass. Do not claim write capability until A10 passes. Do not pitch business outcomes until those claims have reproducible evidence.
 
