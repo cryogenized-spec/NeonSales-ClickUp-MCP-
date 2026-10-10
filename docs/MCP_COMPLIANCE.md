@@ -36,3 +36,9 @@ The *same* URL, registered tool definitions and backend adapter must be usable f
 7. Refuse deployment or 'fully compliant' claim if a required protocol, auth or conformance test fails. Never use `continue-on-error` or baseline known failures to conceal failures.
 
 **Implementation update, 2026-10-10:** Phase 2 uses the official `@modelcontextprotocol/server@2.3.1` factory and actual `@modelcontextprotocol/client` to verify tool listing, modern 2026-07-28 handshake, legacy path, invalid argument rejection and four concurrent protocol test clients. These passed on [CI run 38054050247](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/actions/runs/38054050247). The public Worker deliberately DENIES access (HTTP 503) pending Phase 3 OAuth. **The official conformance runner, MCP Inspector and two real subscription clients have not been tested. Do not claim conformance certification.**
+
+## Phase 3 OAuth verification status (2026-10-10 SAST)
+
+OAuth code was added with upstream Cloudflare Workers OAuthProvider v1.2.3, its `/mcp` protected route, client-metadata discovery support, per-client consent helpers, GitHub PKCE upstream sign-in and read-only per-request staff allowlist. No homemade token issuance, no GitHub token passthrough to ClickUp or models.
+
+**What CI proves:** strict TypeScript app checks including separate `skipLibCheck:false` Cloudflare and MCP profiles, combined project check, unit/adversarial tests and build/audit. **What it does not prove:** a deployed Cloudflare Worker with KV and GitHub OAuth credentials, end-to-end 401/redirect/token flow, both subscription clients, or the official MCP conformance suite. These require the manual acceptance gates in [PHASE3_SETUP.md](PHASE3_SETUP.md). No MCP conformance certification is asserted.
