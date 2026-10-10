@@ -92,7 +92,7 @@ jobs:
 
       - name: Regression test npm CLI bundle scanner
         if: steps.stage.outputs.application == 'true'
-        run: node --test .github/scripts/check-npm-cli-bundles.test.cjs
+        run: node --test .github/scripts/bundle-guard-fixtures.cjs
 
       - name: Fail on high or critical project dependency vulnerabilities
         if: steps.stage.outputs.application == 'true'
