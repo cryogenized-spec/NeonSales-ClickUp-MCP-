@@ -1,7 +1,7 @@
 # Project state — canonical agent handoff
 
 **Checkpoint:** 2026-10-10 (SAST; precise update time not recorded).
-**Phase:** 0 — planning/repository documentation. **Application deployment:** none.
+**Phase:** 0 — standards, upstream skills and strict-CI foundation proposed on topic branch; **application deployment:** none.
 **Repository:** `cryogenized-spec/NeonSales-ClickUp-MCP-`, private, default branch `main`.
 
 ## Confirmed in this repository
@@ -11,7 +11,7 @@
 - `docs/POC_V0_1_REFERENCE.md` preserves the previous POC operating README as **archived guidance only**; source still outside GitHub.
 - `AGENTS.md` establishes agent startup, security, review, testing and handoff rules.
 - `CLAUDE.md` will point Claude at the same source of truth.
-- Design and technology selections below are **proposals**, not implementation approval.
+- Owner explicitly accepted TypeScript/npm/Cloudflare Workers, official MCP SDK v2, modular boundaries and strict CI on 2026-10-10. Detailed application feature design and deployment are **not approved**.
 
 ## Prior local reference POC (outside this repo)
 
@@ -32,7 +32,16 @@
 | Real disposable test-task write with separate approval | NOT TESTED |
 | Security review, logs, authorization and throttling | NOT COMPLETE |
 
-## Proposed technical direction — review required
+## Standards foundation in review (branch `chore/standards-skills-ci`)
+
+- Root `AGENTS.md` revised to be a short OpenAI/AAIF AGENTS.md-compatible map with concrete startup/CI commands.
+- Six *verbatim*, professional Superpowers `SKILL.md` files vendored in `.agents/skills/`, pinned to `obra/superpowers@bb92a77741419a4ab5f06e711a283343f1ada0c3`; upstream MIT licence and source blob hashes recorded. Their activation in every client is **not automatic**.
+- `docs/MCP_COMPLIANCE.md`: official MCP spec **2026-07-28**, TypeScript SDK v2 and official conformance required; nothing has passed conformance yet.
+- `docs/MODULARITY.md` sets module boundaries; `docs/BRANCH_PROTECTION.md` documents GitHub private-plan enforcement limitations.
+- `.github/workflows/strict-ci.yml` + `scripts/check_repo_policy.py`: policy/skill checksum checks and conditional fail-closed npm quality checks once app code exists. `.github/CODEOWNERS` and Dependabot added. **CI result and branch protections not yet verified in this checkpoint.**
+- Existing JS v0.1 remains outside GitHub as reference.
+
+## Approved technical direction; implementation details still require design review
 
 - Single provider-neutral remote Streamable HTTP MCP service on Cloudflare Workers, with HTTPS and proper OAuth.
 - TypeScript + npm + Wrangler for the new implementation, using established SDKs where feasible; compare with retaining original no-dependency JavaScript starter before migrating.
@@ -43,7 +52,7 @@
 
 ## Decisions and open issues
 
-1. **Owner review needed:** confirm Cloudflare Workers + TypeScript/npm vs simple JavaScript Worker vs alternative hosting.
+1. **Approved:** Cloudflare Workers, TypeScript/npm, official MCP SDK v2; detailed architecture, exact dependencies and OAuth configuration still need an accepted spec.
 2. **Owner review needed:** confirm POC initially single-operator and one approved ClickUp List; employee-level OAuth later.
 3. Verify the two subscription-account UIs and the authentication flows on actual accounts before assuming feature availability.
 4. Define and approve exact read-only tools and report semantics; decide what the test task and change fields will be.
@@ -51,7 +60,7 @@
 
 ## Next exact action
 
-**Review [docs/ARCHITECTURE_PROPOSAL.md](ARCHITECTURE_PROPOSAL.md) and [docs/DECISIONS.md](DECISIONS.md) with the owner.** Get explicit approval or revisions. Then write a dated design spec under `docs/superpowers/specs/` and a test-first implementation plan under `docs/superpowers/plans/`; no application-code import yet.
+**Review/merge the standards-and-CI PR only after successful GitHub Actions `quality` check.** The owner must verify eligibility/configure required branch rules in GitHub Settings; see BRANCH_PROTECTION.md. After review, write the dated application design spec and test-first plan; do not import application code yet.
 
 ## Latest documentation evidence
 
