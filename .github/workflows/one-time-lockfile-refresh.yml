@@ -1,0 +1,63 @@
+# TEMPORARY. Remove immediately after generating the npm lockfile.
+# Triggered only by this file's creation on the owner-controlled toolchain branch.
+name: One-time npm 12 lockfile regeneration
+
+on:
+  push:
+    branches:
+      - chore/node24-toolchain-refresh
+    paths:
+      - .github/workflows/one-time-lockfile-refresh.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: one-time-node24-lockfile
+  cancel-in-progress: false
+
+jobs:
+  lockfile:
+    if: github.repository == 'cryogenized-spec/NeonSales-ClickUp-MCP-' && github.ref == 'refs/heads/chore/node24-toolchain-refresh'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout only the fixed topic branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: chore/node24-toolchain-refresh
+          persist-credentials: true
+      - name: Set up pinned Node 24
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24.21.0'
+          package-manager-cache: false
+      - name: Generate registry-backed npm 12 lockfile without package scripts
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --global npm@12.2.0 --ignore-scripts --no-audit --no-fund
+          test "$(node --version)" = "v24.21.0"
+          test "$(npm --version)" = "12.2.0"
+          npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+          git diff --exit-code -- package.json
+          npm ci --ignore-scripts --no-audit --no-fund
+          npm run format:check
+          npm run lint
+          npm run typecheck
+          npm test
+          npm run build
+          npm audit --audit-level=high
+      - name: Commit ONLY the actual generated package lockfile
+        shell: bash
+        run: |
+          set -euo pipefail
+          git add -- package-lock.json
+          if git diff --cached --quiet; then
+            echo "No lockfile changes" >&2
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m "build(lockfile): regenerate Node 24 npm 12 dependencies"
+          git push origin HEAD:refs/heads/chore/node24-toolchain-refresh
