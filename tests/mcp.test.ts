@@ -48,8 +48,9 @@ describe("official MCP SDK v2 in-process transport", () => {
 
   it("supports four independent read-only protocol clients concurrently", async () => {
     const handler = createProtocolHandler();
-    const clients = Array.from({ length: 4 }, (_, i) =>
-      new Client({ name: "staff-" + i, version: "0.1.0" }),
+    const clients = Array.from(
+      { length: 4 },
+      (_, i) => new Client({ name: "staff-" + i, version: "0.1.0" }),
     );
     try {
       const transports = clients.map(
