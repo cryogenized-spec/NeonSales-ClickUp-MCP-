@@ -39,6 +39,41 @@
       "path": ".agents/skills/SUPERPOWERS_LICENSE",
       "source": "https://github.com/obra/superpowers/blob/bb92a77741419a4ab5f06e711a283343f1ada0c3/LICENSE",
       "gitBlobSha": "abf0390320aa14406af7a520b9b0739fdda9bf08"
+    },
+    {
+      "path": ".agents/skills/brainstorming/builder-check-prompt.md",
+      "source": "https://github.com/obra/superpowers/blob/bb92a77741419a4ab5f06e711a283343f1ada0c3/skills/brainstorming/builder-check-prompt.md",
+      "gitBlobSha": "136e9c1d516ee1852abc5e556e76ce1b085d3827"
+    },
+    {
+      "path": ".agents/skills/brainstorming/visual-companion.md",
+      "source": "https://github.com/obra/superpowers/blob/bb92a77741419a4ab5f06e711a283343f1ada0c3/skills/brainstorming/visual-companion.md",
+      "gitBlobSha": "8dca065bd9adb9d4fa82a66acbb4176ea23259c6"
+    },
+    {
+      "path": ".agents/skills/test-driven-development/writing-good-tests.md",
+      "source": "https://github.com/obra/superpowers/blob/bb92a77741419a4ab5f06e711a283343f1ada0c3/skills/test-driven-development/writing-good-tests.md",
+      "gitBlobSha": "d3c4482fd30b4f9084bb61545fe73939a7502c28"
+    },
+    {
+      "path": ".agents/skills/systematic-debugging/root-cause-tracing.md",
+      "source": "https://github.com/obra/superpowers/blob/bb92a77741419a4ab5f06e711a283343f1ada0c3/skills/systematic-debugging/root-cause-tracing.md",
+      "gitBlobSha": "0e72e8f9566b7ef85e814633d1feacad9d0c5868"
+    },
+    {
+      "path": ".agents/skills/systematic-debugging/defense-in-depth.md",
+      "source": "https://github.com/obra/superpowers/blob/bb92a77741419a4ab5f06e711a283343f1ada0c3/skills/systematic-debugging/defense-in-depth.md",
+      "gitBlobSha": "e2483354dc2b62478a2624e34ca18bc0efe887b2"
+    },
+    {
+      "path": ".agents/skills/systematic-debugging/condition-based-waiting.md",
+      "source": "https://github.com/obra/superpowers/blob/bb92a77741419a4ab5f06e711a283343f1ada0c3/skills/systematic-debugging/condition-based-waiting.md",
+      "gitBlobSha": "70994f777c586f7d4c43033aac34c7cf0da6688b"
+    },
+    {
+      "path": ".agents/skills/requesting-code-review/code-reviewer.md",
+      "source": "https://github.com/obra/superpowers/blob/bb92a77741419a4ab5f06e711a283343f1ada0c3/skills/requesting-code-review/code-reviewer.md",
+      "gitBlobSha": "6d358b5d7d450c83cacbe450b7dbd4e673b694ad"
     }
   ]
 }
