@@ -2,6 +2,41 @@ import { describe, expect, it } from "vitest";
 import { Client, StreamableHTTPClientTransport } from "@modelcontextprotocol/client";
 import { createProtocolHandler } from "../src/mcp/handler.js";
 
+/** Drive raw HTTP frames directly through the real SDK handler, without Client sanitization. */
+function rawPost(
+  handler: ReturnType<typeof createProtocolHandler>,
+  body: string,
+  headers: Record<string, string> = {},
+): Promise<Response> {
+  return handler.fetch(
+    new Request("http://local.test/mcp", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json, text/event-stream",
+        ...headers,
+      },
+      body,
+    }),
+  );
+}
+
+function modernFrame(version: string, toolName?: string): string {
+  return JSON.stringify({
+    jsonrpc: "2.0",
+    id: 42,
+    method: toolName === undefined ? "tools/list" : "tools/call",
+    params: {
+      ...(toolName === undefined ? {} : { name: toolName, arguments: {} }),
+      _meta: {
+        "io.modelcontextprotocol/protocolVersion": version,
+        "io.modelcontextprotocol/clientInfo": { name: "raw-frame-test", version: "0.1.0" },
+        "io.modelcontextprotocol/clientCapabilities": {},
+      },
+    },
+  });
+}
+
 describe("official MCP SDK v2 in-process transport", () => {
   it("negotiates current protocol and discovers exactly one safe diagnostic tool", async () => {
     const handler = createProtocolHandler();
@@ -75,6 +110,79 @@ describe("official MCP SDK v2 in-process transport", () => {
       expect(values.every((value) => !value.isError)).toBe(true);
     } finally {
       await Promise.all(clients.map((client) => client.close()));
+      await handler.close();
+    }
+  });
+
+  it("rejects malformed raw JSON instead of dispatching an SDK request", async () => {
+    const handler = createProtocolHandler();
+    try {
+      const headers = {
+        "MCP-Protocol-Version": "2026-07-28",
+        "Mcp-Method": "tools/list",
+      };
+      const response = await rawPost(handler, '{"jsonrpc":"2.0","id":7,"method":', headers);
+      expect(response.status).toBe(400);
+      expect(await response.json()).toMatchObject({
+        jsonrpc: "2.0",
+        error: { code: -32700 },
+      });
+    } finally {
+      await handler.close();
+    }
+  });
+
+  it("rejects raw calls to unregistered tools without running a tool", async () => {
+    const handler = createProtocolHandler();
+    try {
+      const response = await rawPost(handler, modernFrame("2026-07-28", "nonexistent_tool"), {
+        "MCP-Protocol-Version": "2026-07-28",
+        "Mcp-Method": "tools/call",
+        "Mcp-Name": "nonexistent_tool",
+      });
+      expect(response.status).toBe(200);
+      expect(await response.json()).toMatchObject({
+        jsonrpc: "2.0",
+        id: 42,
+        error: { code: -32602 },
+      });
+    } finally {
+      await handler.close();
+    }
+  });
+
+  it("rejects an unsupported modern protocol version without legacy fallback", async () => {
+    const handler = createProtocolHandler();
+    try {
+      const response = await rawPost(handler, modernFrame("2030-01-01"), {
+        "MCP-Protocol-Version": "2030-01-01",
+        "Mcp-Method": "tools/list",
+      });
+      expect(response.status).toBe(400);
+      expect(await response.json()).toMatchObject({
+        jsonrpc: "2.0",
+        id: 42,
+        error: { code: -32022 },
+      });
+    } finally {
+      await handler.close();
+    }
+  });
+
+  it("rejects header/body protocol-version disagreement before dispatch", async () => {
+    const handler = createProtocolHandler();
+    try {
+      const response = await rawPost(handler, modernFrame("2026-07-28"), {
+        "MCP-Protocol-Version": "2030-01-01",
+        "Mcp-Method": "tools/list",
+      });
+      expect(response.status).toBe(400);
+      expect(await response.json()).toMatchObject({
+        jsonrpc: "2.0",
+        id: 42,
+        error: { code: -32020 },
+      });
+    } finally {
       await handler.close();
     }
   });

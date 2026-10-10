@@ -2,7 +2,7 @@
 
 **Checkpoint:** Saturday 2026-10-10, SAST (minute not independently verified).
 **Current work:** Phase 3 individual staff OAuth implementation, draft PR [#4](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/pull/4) on `phase/03-oauth-identity`; base is `phase/02-sdk-foundation`, not `main`.
-**Review/merge:** PR [#1](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/pull/1) → [#2](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/pull/2) → [#3](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/pull/3) → [#4](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/pull/4) are **stacked drafts**, not merged. GitHub Free private repo: CI is not technically enforced by branch protection; human manually approves merges. Second agent owns PR #3 Codex remediation: do not modify its files or assume its HEAD is unchanged. Reconcile/rebase Phase 3 after reviewed Phase 2 repairs.
+**Review/merge:** PR [#1](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/pull/1) → [#2](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/pull/2) → [#3](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/pull/3) → [#4](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/pull/4) are **stacked drafts**, not merged. GitHub Free private repo: CI is not technically enforced by branch protection; human manually approves merges. PR #3's four missing malformed-frame regressions are now incorporated by the conflict-resolution merge into the isolated Phase 3 integration candidate. Do not mutate the foundation PR.
 
 ## Verified implementation inventory
 
@@ -21,7 +21,7 @@
 
 ## Phase 3 consent-scope adversarial hardening (2026-10-10 SAST)
 
-- **Scope:** Separate PR #4 only; no edits to Phase 2 (#3) or other agent's modernization PR #5. Current Phase 3 branch still requires merge-conflict reconciliation with changed Phase 2 baseline.
+- **Scope:** Separate PR #4 only; no edits to Phase 2 (#3) or other agent's modernization PR #5. The Phase 3 integration candidate includes the corrected Phase 2 protocol regressions; original Phase 3 is updated only following a verified conflict-free merge and safe coordination.
 - **Root cause:** `submitConsent` previously forwarded all browser-submitted `scope` values directly to Cloudflare's consent helper, and Phase 3 advertised `offline_access` although it never issued that scope. A Node unit test importing the full handler also hit the Cloudflare-only `cloudflare:` module loader; testing was moved to a pure policy boundary.
 - **RED evidence:** [Actions #38066101760](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/actions/runs/38066101760), 5 expected failing scope-policy tests, 41 others passing. Earlier run #38066003572 failed at import boundary, **not** as evidence of a policy failure.
 - **GREEN evidence before this checkpoint:** [Actions #38066186197](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/actions/runs/38066186197) for commit `0cb51d69b2f295a124801a3630165a3a120bd708`: 46/46 Vitest, strict three-part TypeScript checks, Prettier, ESLint, Wrangler dry-run and `npm audit --audit-level=high` (0 vulnerabilities) all SUCCESS.
@@ -46,5 +46,13 @@
 
 1. Run/retrieve GitHub Actions `quality` on the final PR #4 SHA, then close temporary PR #6 without merging. Verify policy guard, 7 Python regressions, 44 Vitest tests, three TypeScript checks, build, format, lint and audit.
 2. If **all green on exact final SHA**, post ONE scoped Codex review request on PR #4 with that SHA/run. Examine actual reply and remediate Important/Critical findings after further green CI; no duplicate pings.
-3. Owner manually reviews stacked PRs; other agent finishes PR #3; reconcile against changed parent SHA and rerun full PR #4 CI.
+3. Owner manually reviews stacked PRs; verify merged Phase 2 and Phase 3 code plus preserved staff isolation against the exact integration SHA before moving PR #4.
 4. For live end-to-end Phase 3 verification, authorized operator must provision Cloudflare Worker HTTPS test hostname/KV/GitHub OAuth App (exact callback), store Worker secrets, use four separate accounts, test token audience/PKCE/revocation and both subscription UIs. No production task access until these checks are passed.
+
+## Phase 2 / Phase 3 conflict-resolution checkpoint (2026-10-10 SAST)
+
+- Integration branch `integration/phase2-oauth-merge-20261010` uses **both** corrected Phase 2 parent `b62d3a438ee5816adc1ae730a94d7cae2e3f8fbf` and Phase 3 OAuth parent `1afe8498547d083a986c37d6e995a1ffc6bd65f0`. The merge retains all Phase 3 OAuth sources, scoped consent verification, Cloudflare Worker bindings, per-staff GitHub identity, and its test/toolchain manifests.
+- Conflict resolution: `tests/mcp.test.ts` is restored verbatim from the reviewed Phase 2 foundation; this adds FOUR raw negative MCP transport regressions without deleting Phase 3's 46 authentication tests. This handoff doc retains the advanced Phase 3 checkpoints and adds the foundation resolution. No npm lockfile splicing, no runtime secrets.
+- **Do not merge PR #5 here.** Its npm 12.2.0 CLI bundles have a confirmed upstream vulnerability and its supply-chain CI gate currently intentionally fails. OAuth integration stays on its approved npm 10/Node 22 base until the modernization branch is independently corrected and approved.
+- The target architecture remains **2–4 independently authenticated staff members**, ChatGPT/Claude integration against one protected MCP backend, server-side ClickUp rights, shared token budget and manual approval before production writes. Real account OAuth/client-conformance checks and Cloudflare provisioning remain outstanding.
+- Fresh normal CI on the **exact merge commit** is mandatory before any green/mergeability claim. Test completion alone does not approve deployment or human merge. PRs #1–#4 remain drafts.
