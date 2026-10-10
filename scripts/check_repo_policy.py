@@ -81,15 +81,17 @@ def verify_skills() -> None:
         error("Unpinned agent skill(s): " + ", ".join(sorted(stray)))
 
 def verify_application() -> None:
-    ts_files = [
-        file for dirname in ("src", "test", "tests")
-        for ext in ("*.ts", "*.tsx")
-        for file in (ROOT / dirname).rglob(ext)
-        if file.is_file()
+    excluded = {".git", ".github", ".agents", "node_modules", "dist", "build", "coverage"}
+    code_files = [
+        p for p in ROOT.rglob("*")
+        if p.is_file()
+        and p.suffix in {".ts", ".tsx", ".mts", ".cts", ".js", ".jsx", ".mjs", ".cjs"}
+        and not any(part in excluded for part in p.relative_to(ROOT).parts)
     ]
+    ts_files = [p for p in code_files if p.suffix in {".ts", ".tsx", ".mts", ".cts"}]
     package = ROOT / "package.json"
     lockfile = ROOT / "package-lock.json"
-    if not (ts_files or package.exists() or lockfile.exists()):
+    if not (code_files or package.exists() or lockfile.exists()):
         print("Docs-only stage: TypeScript checks are NOT yet applicable.")
         return
     for name in ("package.json", "package-lock.json", "tsconfig.json", "eslint.config.js"):
