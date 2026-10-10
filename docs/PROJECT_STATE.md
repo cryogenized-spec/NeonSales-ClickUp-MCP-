@@ -8,6 +8,7 @@
 
 - Repository was empty at beginning of this documentation session.
 - `README.md` introduced project objective, nonclaims, draft architecture, subscription tests and reference documents.
+- `docs/POC_V0_1_REFERENCE.md` preserves the previous POC operating README as **archived guidance only**; source still outside GitHub.
 - `AGENTS.md` establishes agent startup, security, review, testing and handoff rules.
 - `CLAUDE.md` will point Claude at the same source of truth.
 - Design and technology selections below are **proposals**, not implementation approval.
@@ -52,4 +53,8 @@
 
 **Review [docs/ARCHITECTURE_PROPOSAL.md](ARCHITECTURE_PROPOSAL.md) and [docs/DECISIONS.md](DECISIONS.md) with the owner.** Get explicit approval or revisions. Then write a dated design spec under `docs/superpowers/specs/` and a test-first implementation plan under `docs/superpowers/plans/`; no application-code import yet.
 
-**Session close protocol:** replace only the *checkpoint/verified status/next action* with fresh evidence; keep historical decisions in DECISIONS.md and dated specs. Include the last commit IDs once available.
+## Latest documentation evidence
+
+GitHub connector writes verified during 2026-10-10: `README.md`, `AGENTS.md`, `CLAUDE.md`, `docs/PROJECT_STATE.md`, `docs/ARCHITECTURE_PROPOSAL.md`, `docs/DECISIONS.md`, `docs/DEMO_ACCEPTANCE.md`, `docs/WORKFLOW.md`, `docs/POC_V0_1_REFERENCE.md`. Recent commits include `5e2c41243a75993ae8e23a16d3d3a395c7467017` (WORKFLOW), `ad883e315ef3bf28eeac148010f38ff1ce31087e` (archived POC reference), and the README link update after those commits. All are documentation changes, not runtime code.
+
+**Session close protocol:** replace only the *checkpoint/verified status/next action* with fresh evidence; keep historical decisions in DECISIONS.md and dated specs. Never invent missing verification.
