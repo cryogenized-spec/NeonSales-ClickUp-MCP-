@@ -1,4 +1,5 @@
 name: One-time lockfile bootstrap
+# Retry: corrected TS6-compatible typescript-eslint peer.
 # Trusted branch only. Generates a REAL lockfile from npm registry; no dependency scripts.
 # REMOVE THIS WORKFLOW from the branch after the lockfile is committed.
 on:
