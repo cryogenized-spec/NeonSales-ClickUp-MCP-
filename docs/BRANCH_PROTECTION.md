@@ -17,6 +17,8 @@ GitHub → repository **Settings → Rules → Rulesets → New branch ruleset**
 5. Restrict who can deploy and set production environment reviewers separately; CI success alone must **not** deploy automatically to a live ClickUp-connected server.
 6. Test the gate: create a throwaway failing PR and verify it **cannot merge**. Retain screenshot or settings evidence before advertising enforcement.
 
+**User confirmed GitHub Free on 2026-10-10.** As long as this private repo stays on Free, treat branch protection as unavailable; this runbook is the procedure to apply after an eligible upgrade. CI green is advisory evidence and **cannot** stop a user with write permission from pushing/merging. Human owner must explicitly check the latest SHA and CI before merging. Never claim this is an unbypassable gate.
+
 **Owner action required:** No GitHub Settings enforcement has been applied by this document or by committing a workflow. Connection currently exposes GitHub file/PR operations, not ruleset administration. Mark enforcement status **NOT VERIFIED** until the above is configured and probed.
 
 ## Workflow `strict-ci.yml`
