@@ -9,7 +9,7 @@
 | D-003 | 2026-10-10 | ACCEPTED (user direction) | Support **both** ChatGPT subscription plugin and Claude subscription connector | One integration should serve both |
 | D-004 | 2026-10-10 | ACCEPTED (user direction) | Establish `README.md`, `AGENTS.md` and memory-efficient working documentation **before** more app coding | Context reliability and reviewability |
 | D-005 | 2026-10-10 | ACCEPTED (user direction) | Use TypeScript/npm/Node locally, Cloudflare Workers + Wrangler for deployment, official MCP SDK and OAuth | Owner said proceed; auth design still needs separate review |
-| D-006 | 2026-10-10 | PROPOSED | Initial operator = one authorized owner and ClickUp allowlist = one Workspace/List | Minimize POC risk; confirm identifiers privately |
+| D-006 | 2026-10-10 | SUPERSEDED by D-017 | Initial operator = one authorized owner and ClickUp allowlist = one Workspace/List | User requires 2–4 independently authenticated staff |
 | D-007 | 2026-10-10 | PROPOSED | Read-only tools first; one disposable task may be changed only via separate human approval | No production mutation based on AI prose |
 | D-008 | 2026-10-10 | PROPOSED | Keep old JavaScript POC archive as test/reference rather than silently importing all source | Different dependency/auth/security trade-offs |
 | D-009 | 2026-10-10 | ACCEPTED (user direction) | Use upstream professional skills, strict review/verification and `docs/PROJECT_STATE.md` session handoff | Use upstream authored skills with provenance; no fabricated agent memory |
@@ -25,6 +25,10 @@
 
 | D-017 | 2026-10-10 | ACCEPTED (user direction) | Design for 2–4 independently authenticated NeonSales staff using their own ChatGPT/Claude subscription accounts | Per-user authorization, isolation and audit; shared ClickUp token budget never substitutes for identity |
 | D-018 | 2026-10-10 | ACCEPTED (user direction) | Adversarial and concurrency regression tests required from early phases | Test malformed inputs, duplicate requests, unexpected failures and race conditions |
+
+| D-019 | 2026-10-10 | PROPOSED (Phase 3 implementation) | For POC, use independent GitHub OAuth App sign-in with stable numeric GitHub-ID allowlist, official Cloudflare OAuthProvider v1.2.3 | Staff must have individual GitHub accounts; may replace identity provider after review, do not expose real ClickUp yet |
+| D-020 | 2026-10-10 | PROPOSED (Phase 3 compiler design) | Run isolated strict `skipLibCheck:false` checks for OAuth and MCP modules AND combined `strict:true` full-project check with `skipLibCheck:true` for incompatible third-party CF/Node globals | Preserves strict app/test checking; requires Codex scrutiny of dependency declaration compatibility |
+| D-021 | 2026-10-10 | ACCEPTED (owner architecture) | Two parallel agents work on isolated branches; reconcile Phase 3 only after Phase 2 remediation is reviewed | Avoid write collisions and stale parent commits |
 
 ## Record an accepted decision
 
