@@ -1,0 +1,40 @@
+name: One-time lockfile bootstrap
+# Trusted branch only. Generates a REAL lockfile from npm registry; no dependency scripts.
+# REMOVE THIS WORKFLOW from the branch after the lockfile is committed.
+on:
+  push:
+    branches: [phase/02-sdk-foundation]
+    paths:
+      - .github/workflows/bootstrap-lockfile.yml
+
+permissions:
+  contents: write
+
+jobs:
+  lockfile:
+    if: github.repository == 'cryogenized-spec/NeonSales-ClickUp-MCP-' && github.ref == 'refs/heads/phase/02-sdk-foundation'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22.20.0'
+          package-manager-cache: false
+      - name: Generate exact npm lockfile without running package code
+        run: |
+          set -euo pipefail
+          npm install --package-lock-only --ignore-scripts --no-audit --no-fund --save-exact
+          test -s package-lock.json
+          test -z "$(git status --short -- package.json)"
+      - name: Commit generated lockfile only
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- package-lock.json
+          git commit -m "build(phase2): generate authentic npm dependency lockfile"
+          git pull --ff-only origin phase/02-sdk-foundation
+          git push origin HEAD:refs/heads/phase/02-sdk-foundation
