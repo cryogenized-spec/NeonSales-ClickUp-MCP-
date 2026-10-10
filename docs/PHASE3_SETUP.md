@@ -8,6 +8,12 @@ Every one of the 2–4 NeonSales staff members uses **their own ChatGPT or Claud
 
 The Worker uses official `@cloudflare/workers-oauth-provider@1.2.3` for MCP OAuth 2.1, consent, client metadata, resource-bound tokens and revocation. Its public /mcp handler checks each verified `github:<numeric-id>` against the **current** server allowlist and `mcp:read` scope on every call. Removing a staff ID denies future calls even if an existing token has not expired. The backend does not share user sessions or GitHub API tokens.
 
+## Local workerd security smoke — VERIFIED, not live acceptance
+
+[GitHub Actions #38081428776](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/actions/runs/38081428776) passed a **real locally executed workerd** HTTPS test with ephemeral certificates, isolated simulated KV and deliberately invalid GitHub OAuth credentials. Run it with `node scripts/staging-local-smoke.mjs` after `npm ci`; it is now required by strict CI after the Wrangler dry-run. The test verifies the missing-KV 503 gate, unauthenticated 401 and Bearer challenge, correct RFC 9728/RFC 8414 discovery, spoofed bearer/user/host headers, and a query-based bypass attempt.
+
+This does **not** test a real GitHub account authorization, access-token redemption, Cloudflare-hosted KV binding, actual ChatGPT/Claude OAuth callback, four human accounts, or official MCP conformance. The following hosted environment actions remain required before live Phase 3 acceptance.
+
 ## Required Cloudflare actions — human operator only
 
 1. Identify the Cloudflare account and a **separate test hostname** that serves the Worker over HTTPS. `wrangler.jsonc` presently specifies `workers_dev: false`; no public Worker will be published automatically. Use an approved custom domain or explicitly configure a Workers.dev test hostname. Record exact `https://<host>` as `MCP_PUBLIC_ORIGIN` (no path, trailing slash, query or fragment).
