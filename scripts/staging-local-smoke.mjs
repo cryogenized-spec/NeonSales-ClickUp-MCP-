@@ -11,7 +11,6 @@ import https from "node:https";
 import net from "node:net";
 import os from "node:os";
 import path from "node:path";
-import { randomBytes } from "node:crypto";
 
 const root = process.cwd();
 const temporary = await mkdtemp(path.join(os.tmpdir(), "neonsales-workerd-smoke-"));
@@ -107,7 +106,7 @@ async function runWorker(port, certPath, keyPath, withKv) {
     path.join(root, "node_modules/.bin/wrangler"),
     ["dev", "--config", configPath, "--local", "--ip", originIp, "--port", String(port),
       "--local-protocol=https", "--https-cert-path", certPath, "--https-key-path", keyPath,
-      "--infer-origin-from-routes=false", "--persist-to", path.join(temporary, "kv")],
+      "--persist-to", path.join(temporary, "kv")],
     { cwd: root, env: { ...process.env, CI: "true", WRANGLER_SEND_METRICS: "false", BROWSER: "none" }, stdio: ["ignore", "pipe", "pipe"] },
   );
   for (const stream of [child.stdout, child.stderr]) {
