@@ -42,12 +42,27 @@
 
 **GitHub Actions trigger note:** Previous formatter/workflow-bot commits may not trigger a new PR workflow automatically. This human-authorized connector commit intentionally requests fresh CI against the new HEAD. Do not cite any earlier green run as verifying it.
 
+## Codex P1 remediation verified on code SHA (2026-10-10 SAST)
+
+Review: https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/pull/4 (Codex reviewed merge `9b8d246e78`; two P1 findings).
+
+1. **P1, OAuth provider does not initialize:** The pinned `@cloudflare/workers-oauth-provider@1.2.3` forbids using `requiredScopes` and legacy `resourceMetadata.scopes_supported` together. Removed the obsolete resource metadata scope; retain `scopesSupported: ["mcp:read"]` for the authorization server and `requiredScopes: ["mcp:read"]` for the resource. The first RED job, [#38071287920](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/actions/runs/38071287920), reproduced the constructor conflict in an adapter fixture matching pinned provider behavior; the next RED [#38071356014](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/actions/runs/38071356014) proved the configuration fix while exposing missing principal forwarding.
+2. **P1, verified staff identity lost before tool dispatch:** `src/auth/oauth-runtime.ts` now consumes only `OAuthProvider`-verified `ctx.auth` and `ctx.props`, revalidates the active staff allowlist and `mcp:read`, and passes `authInfo` to the official SDK's `createMcpHandler().fetch(request, {authInfo})`. The per-request `AuthInfo` carries OAuth client ID, resource audience, expiry, least-privilege scope, bearer token and vetted `extra.subject` / `extra.githubId`. Forged headers are ignored; four concurrent user identities remain distinct. No global principal or fallback header identity.
+3. **Additional expired-token defense:** An adversarial test proved that a stale context was incorrectly accepted ([RED #38071596569](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/actions/runs/38071596569)). The Worker now checks expiry again before SDK dispatch. 
+4. **Real SDK test:** A separate in-process official-MCP client/server integration verifies four concurrent tool callbacks see their own identities via `ctx.http.authInfo.extra["subject"]`. This **does not replace** real Cloudflare token verification or hosted ChatGPT/Claude subscriber tests.
+
+**Last verified all-code CI (before this documentation commit):** [run #38072132875](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/actions/runs/38072132875), SHA `f3be787042af1a458c63cbb5f94fa7e687ba3fc8`, **SUCCESS**: 56/56 Vitest tests across 7 files, 9 Python policy regressions, Prettier, ESLint, three strict TS profiles, Wrangler dry-run, `npm audit --audit-level=high` (0 reported project dependency vulnerabilities). Node deprecation warnings remain; globally installed package-manager security is a separate gate, and vulnerable npm 12 PR #5 remains closed without merge.
+
+**Temporary formatter CI:** A tightly scoped GitHub Actions formatter ran to normalize newly added regression tests and was then removed from the branch. No elevated workflow remains and no credentials were introduced.
+
+**This checkpoint advances the PR SHA.** A new exact-HEAD quality SUCCESS is REQUIRED before requesting one scoped Codex re-review. PR #4 remains draft, structurally mergeable but not accepted for production or deployment.
+
 ## Next exact action
 
-1. Run/retrieve GitHub Actions `quality` on the final PR #4 SHA, then close temporary PR #6 without merging. Verify policy guard, 7 Python regressions, 44 Vitest tests, three TypeScript checks, build, format, lint and audit.
-2. If **all green on exact final SHA**, post ONE scoped Codex review request on PR #4 with that SHA/run. Examine actual reply and remediate Important/Critical findings after further green CI; no duplicate pings.
-3. Owner manually reviews stacked PRs; verify merged Phase 2 and Phase 3 code plus preserved staff isolation against the exact integration SHA before moving PR #4.
-4. For live end-to-end Phase 3 verification, authorized operator must provision Cloudflare Worker HTTPS test hostname/KV/GitHub OAuth App (exact callback), store Worker secrets, use four separate accounts, test token audience/PKCE/revocation and both subscription UIs. No production task access until these checks are passed.
+1. Confirm a new `quality` success on the latest PR #4 SHA after this documentation commit.
+2. Reply to both original Codex P1 threads with verified resolution and request **one** focused read-only specialist re-review on the final green SHA; do not claim Codex approval without its actual response.
+3. Preserve PR stack #1 → #2 → #3 → #4 and owner-controlled merge gate. PR #5/npm 12 modernization stays CLOSED while its global npm bundle audit is RED.
+4. Complete real Cloudflare Worker + KV + GitHub OAuth App staging, token audience/PKCE/revocation testing, four separate staff logins and ChatGPT/Claude integration, followed by official MCP conformance, **before** any live ClickUp access or production deployment.
 
 ## Phase 2 / Phase 3 conflict-resolution checkpoint (2026-10-10 SAST)
 
