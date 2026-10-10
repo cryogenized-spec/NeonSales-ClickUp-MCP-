@@ -1,12 +1,13 @@
+import type { OAuthProvider } from "@cloudflare/workers-oauth-provider";
 import { configurationUnavailable, validatedOAuthOrigin, type OAuthEnv } from "./auth/env.js";
 
-/**
- * Public Worker entrypoint. The official Cloudflare OAuth provider is only loaded when the
- * deployment has a valid HTTPS origin, a real KV binding, upstream credentials and staff list.
- * No test/header/query-string escape hatch may enable unauthenticated MCP.
- */
+/** No query/header/test escape hatch can expose MCP without full OAuth configuration. */
 export default {
-  async fetch(request: Request, env?: OAuthEnv, context?: ExecutionContext): Promise<Response> {
+  async fetch(
+    request: Request,
+    env?: OAuthEnv,
+    context?: Parameters<OAuthProvider<OAuthEnv>["fetch"]>[2],
+  ): Promise<Response> {
     const origin = validatedOAuthOrigin(env, request);
     if (!origin || !env || !context) {
       if (new URL(request.url).pathname === "/mcp") return configurationUnavailable();
