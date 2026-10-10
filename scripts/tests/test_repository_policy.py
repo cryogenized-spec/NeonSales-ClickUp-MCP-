@@ -26,6 +26,17 @@ class PolicyGateTests(unittest.TestCase):
         policy.ERRORS = self.before_errors
         self.temp.cleanup()
 
+    def test_phase_perimeter_docs_are_mandatory(self) -> None:
+        required = {
+            "docs/phases/ROADMAP.md",
+            "docs/CODEX_REVIEW.md",
+            "docs/SECURITY_PERIMETER.md",
+            "docs/superpowers/specs/2026-10-10-phase1-perimeter-design.md",
+            "docs/superpowers/plans/2026-10-10-phase1-perimeter.md",
+        }
+        self.assertTrue(required.issubset(set(policy.REQUIRED)),
+                        f"Mandatory phase docs missing: {sorted(required - set(policy.REQUIRED))}")
+
     def test_upstream_pins_match_verbatim_vendor_files(self) -> None:
         policy.verify_skills()
         self.assertEqual([], policy.ERRORS)
