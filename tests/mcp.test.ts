@@ -128,7 +128,9 @@ describe("official MCP SDK v2 in-process transport", () => {
           }),
         },
         async (_args, extra) => ({
-          content: [{ type: "text", text: String(extra.http?.authInfo?.extra?.subject ?? "missing") }],
+          content: [
+            { type: "text", text: String(extra.http?.authInfo?.extra?.subject ?? "missing") },
+          ],
         }),
       );
       return server;
