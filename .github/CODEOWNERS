@@ -1,0 +1,9 @@
+# Proposed code owners. Enforcement requires GitHub branch/ruleset settings.
+* @cryogenized-spec
+/.github/ @cryogenized-spec
+/AGENTS.md @cryogenized-spec
+/CLAUDE.md @cryogenized-spec
+/.agents/skills/ @cryogenized-spec
+/scripts/ @cryogenized-spec
+/docs/MCP_COMPLIANCE.md @cryogenized-spec
+/docs/BRANCH_PROTECTION.md @cryogenized-spec

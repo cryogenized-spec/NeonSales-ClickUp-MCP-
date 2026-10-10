@@ -1,0 +1,82 @@
+name: Strict CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: strict-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout pinned GitHub action
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - name: Verify repository policy and upstream skill integrity
+        run: python3 scripts/check_repo_policy.py
+
+      - name: Regression test the repository guard itself
+        run: python3 -m unittest discover -s scripts/tests -p 'test_*.py' -v
+
+      - name: Determine application stage (fail closed)
+        id: stage
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -f package-lock.json ]; then
+            test -f package.json || exit 1
+            echo "application=true" >> "$GITHUB_OUTPUT"
+          elif [ -f package.json ] || [ -d src ] || [ -d test ] || [ -d tests ]; then
+            echo "Code exists but npm lockfile is absent" >&2
+            exit 1
+          else
+            echo "application=false" >> "$GITHUB_OUTPUT"
+            echo "Documentation-only phase; no TS/app test claim"
+          fi
+
+      - name: Set up pinned Node.js action
+        if: steps.stage.outputs.application == 'true'
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install locked dependencies without lifecycle scripts
+        if: steps.stage.outputs.application == 'true'
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Enforce formatting
+        if: steps.stage.outputs.application == 'true'
+        run: npm run format:check
+
+      - name: Enforce ESLint
+        if: steps.stage.outputs.application == 'true'
+        run: npm run lint
+
+      - name: Enforce strict TypeScript checking
+        if: steps.stage.outputs.application == 'true'
+        run: npm run typecheck
+
+      - name: Enforce automated tests
+        if: steps.stage.outputs.application == 'true'
+        run: npm test
+
+      - name: Enforce reproducible build
+        if: steps.stage.outputs.application == 'true'
+        run: npm run build
+
+      - name: Fail on high or critical dependency vulnerabilities
+        if: steps.stage.outputs.application == 'true'
+        run: npm audit --audit-level=high

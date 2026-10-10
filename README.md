@@ -23,6 +23,10 @@
 - [docs/ARCHITECTURE_PROPOSAL.md](docs/ARCHITECTURE_PROPOSAL.md) — proposed stack, options, boundaries and security model; **requires review before implementation**.
 - [docs/DECISIONS.md](docs/DECISIONS.md) — explicit accepted/proposed/rejected architectural decisions.
 - [docs/DEMO_ACCEPTANCE.md](docs/DEMO_ACCEPTANCE.md) — falsifiable pass/fail criteria.
+- [docs/MCP_COMPLIANCE.md](docs/MCP_COMPLIANCE.md) — current MCP 2026-07-28 specification, official SDK v2 and conformance gates.
+- [docs/MODULARITY.md](docs/MODULARITY.md) — module boundaries and failure containment.
+- [docs/SKILLS.md](docs/SKILLS.md) — six pinned, upstream-authored development skills and license.
+- [docs/BRANCH_PROTECTION.md](docs/BRANCH_PROTECTION.md) — strict CI, rulesets, plan restrictions and manual enforcement step.
 - [docs/POC_V0_1_REFERENCE.md](docs/POC_V0_1_REFERENCE.md) — detailed historical README for the earlier *local* JavaScript POC; **source not yet in this GitHub repository**.
 - [docs/WORKFLOW.md](docs/WORKFLOW.md) — repeatable agent workflow / handoff protocol.
 
@@ -30,11 +34,11 @@ These documentation files establish a shared foundation. They do not constitute 
 
 ## Initial engineering proposal — subject to approval
 
-Use a **TypeScript / Node.js / npm** development toolchain and target **Cloudflare Workers** for a small remote HTTPS MCP service. Keep ClickUp REST access in a small isolated adapter; use an established MCP SDK and an OAuth implementation compatible with both ChatGPT and Claude. Keep the server provider-neutral: **one MCP service, two subscription clients**. Use GitHub for source control and CI, not as a permanent web server.
+Use an approved **TypeScript / Node.js / npm** development toolchain and target **Cloudflare Workers** for a small remote HTTPS MCP service. Keep ClickUp REST access in a small isolated adapter; use an established MCP SDK and an OAuth implementation compatible with both ChatGPT and Claude. Keep the server provider-neutral: **one MCP service, two subscription clients**. Use GitHub for source control and CI, not as a permanent web server.
 
 Why npm? Node is the runtime; npm installs and locks dependencies and runs scripts; `npx` runs package executables. No separate AI API key or model API billing is required for *interactive calls from the supported subscription interfaces*. Deployment, ClickUp access and AI usage-plan restrictions remain separate.
 
-This stack is **proposed, not approved**. The older local starter was dependency-free JavaScript with Node's test runner and is retained only as a reference; importing it is a separate reviewed step.
+This stack was **approved by the owner on 2026-10-10**, but detailed app design, OAuth and deployment are **not yet approved or implemented**. The older local starter was dependency-free JavaScript with Node's test runner and is retained only as a reference; importing it is a separate reviewed step.
 
 ## Planned capabilities (not all implemented)
 
