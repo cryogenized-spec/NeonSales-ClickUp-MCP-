@@ -22,22 +22,53 @@ export function handleOAuthRequest(
         if (new URL(incoming.url).pathname !== "/mcp") return new Response(null, { status: 404 });
         const verified = ctx as unknown as {
           props?: { readonly userId?: unknown };
-          auth?: { readonly userId?: unknown; readonly scope?: unknown };
+          auth?: {
+            readonly userId?: unknown;
+            readonly scope?: unknown;
+            readonly token?: unknown;
+            readonly clientId?: unknown;
+            readonly audience?: unknown;
+            readonly expiresAt?: unknown;
+          };
         };
-        if (!verified.props || !verified.auth || !Array.isArray(verified.auth.scope)) {
+        const claims = verified.auth;
+        if (
+          !verified.props ||
+          !claims ||
+          !Array.isArray(claims.scope) ||
+          !claims.scope.every((scope: unknown) => typeof scope === "string") ||
+          typeof claims.token !== "string" ||
+          !claims.token ||
+          typeof claims.clientId !== "string" ||
+          !claims.clientId ||
+          claims.audience !== new URL(incoming.url).origin + "/mcp" ||
+          typeof claims.expiresAt !== "number" ||
+          !Number.isFinite(claims.expiresAt)
+        ) {
           return new Response("Forbidden", { status: 403 });
         }
         try {
-          requireActivePrincipal(
+          const principal = requireActivePrincipal(
             verified.props,
-            verified.auth.userId,
-            verified.auth.scope as string[],
+            claims.userId,
+            claims.scope as string[],
             currentEnv.ALLOWED_GITHUB_IDS,
           );
+          // These facts come ONLY from the OAuthProvider-validated context.
+          // MCP does not validate Authorization headers or reconstruct authInfo.
+          return createProtocolHandler().fetch(incoming, {
+            authInfo: {
+              token: claims.token,
+              clientId: claims.clientId,
+              scopes: [...principal.scopes],
+              expiresAt: claims.expiresAt,
+              resource: new URL(claims.audience),
+              extra: { subject: principal.subject, githubId: principal.githubId },
+            },
+          });
         } catch {
           return new Response("Forbidden", { status: 403 });
         }
-        return createProtocolHandler().fetch(incoming);
       },
     },
     defaultHandler: {
