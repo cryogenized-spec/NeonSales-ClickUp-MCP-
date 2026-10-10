@@ -23,6 +23,9 @@
 | D-015 | 2026-10-10 | ACCEPTED (user direction) | GitHub Free private repo: manual owner merge discipline rather than false claims of enforced branch protection | No paid plan; do not weaken standards |
 | D-016 | 2026-10-10 | ACCEPTED (user direction) | Reuse Elara Relay engineering invariants selectively, not its entire unrelated monolithic review skill | One authority per boundary, evidence-driven exact-SHA certification |
 
+| D-017 | 2026-10-10 | ACCEPTED (user direction) | Design for 2–4 independently authenticated NeonSales staff using their own ChatGPT/Claude subscription accounts | Per-user authorization, isolation and audit; shared ClickUp token budget never substitutes for identity |
+| D-018 | 2026-10-10 | ACCEPTED (user direction) | Adversarial and concurrency regression tests required from early phases | Test malformed inputs, duplicate requests, unexpected failures and race conditions |
+
 ## Record an accepted decision
 
 Add a new row (or change PROPOSED → ACCEPTED) with the owner's actual review decision, date/time in SAST if known, trade-offs, and affected files. For changed decisions, mark original SUPERSEDED and link the replacement. Don't fabricate approval.
