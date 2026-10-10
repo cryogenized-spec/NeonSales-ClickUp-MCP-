@@ -62,22 +62,23 @@ describe("consent scope escalation and malformed submissions", () => {
     [["mcp:read", "mcp:read"]],
     [[""]],
     [[]],
-  ])("rejects injected, duplicated or empty consent scopes %j without consuming a handle", async (scopeValues) => {
-    const { request, env, approveConsent, beginUpstream } = setup(scopeValues);
-    const response = await handleAuthorizationPage(request, env, "https://mcp.example.com");
-    expect(response.status).toBe(400);
-    expect(approveConsent).not.toHaveBeenCalled();
-    expect(beginUpstream).not.toHaveBeenCalled();
-  });
+  ])(
+    "rejects injected, duplicated or empty consent scopes %j without consuming a handle",
+    async (scopeValues) => {
+      const { request, env, approveConsent, beginUpstream } = setup(scopeValues);
+      const response = await handleAuthorizationPage(request, env, "https://mcp.example.com");
+      expect(response.status).toBe(400);
+      expect(approveConsent).not.toHaveBeenCalled();
+      expect(beginUpstream).not.toHaveBeenCalled();
+    },
+  );
 
   it("permits only a single explicit read-only scope", async () => {
     const { request, env, approveConsent } = setup(["mcp:read"]);
     const response = await handleAuthorizationPage(request, env, "https://mcp.example.com");
     expect(response.status).toBe(302);
-    expect(approveConsent).toHaveBeenCalledExactlyOnceWith(
-      request,
-      "fake-browser-handle",
-      { scope: ["mcp:read"] },
-    );
+    expect(approveConsent).toHaveBeenCalledExactlyOnceWith(request, "fake-browser-handle", {
+      scope: ["mcp:read"],
+    });
   });
 });
