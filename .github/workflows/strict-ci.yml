@@ -27,6 +27,9 @@ jobs:
       - name: Verify repository policy and upstream skill integrity
         run: python3 scripts/check_repo_policy.py
 
+      - name: Regression test the repository guard itself
+        run: python3 -m unittest discover -s scripts/tests -p 'test_*.py' -v
+
       - name: Determine application stage (fail closed)
         id: stage
         shell: bash
