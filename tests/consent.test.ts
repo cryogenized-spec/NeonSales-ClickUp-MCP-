@@ -118,17 +118,15 @@ describe("branded consent identity diagram", () => {
 });
 
 describe("read-only OAuth consent scope enforcement", () => {
-  it.each([
-    [["mcp:read", "offline_access"]],
-    [["mcp:read", "mcp:write"]],
-    [["mcp:read", "mcp:read"]],
-    [[""]],
-    [[]],
-  ])("rejects forged, duplicate and empty scopes: %j", (values) => {
-    expect(() => validatedReadOnlyScopes(values)).toThrow();
-  });
+  it.each([[["mcp:read", "offline_access"]], [["mcp:read", "mcp:read"]], [[""]], [[]]])(
+    "rejects forged, duplicate and empty scopes: %j",
+    (values) => {
+      expect(() => validatedReadOnlyScopes(values)).toThrow();
+    },
+  );
 
-  it("allows only exactly one explicitly approved mcp:read scope", () => {
+  it("allows read-only and explicitly consented write scopes without duplicates", () => {
     expect(validatedReadOnlyScopes(["mcp:read"])).toEqual(["mcp:read"]);
+    expect(validatedReadOnlyScopes(["mcp:write", "mcp:read"])).toEqual(["mcp:read", "mcp:write"]);
   });
 });

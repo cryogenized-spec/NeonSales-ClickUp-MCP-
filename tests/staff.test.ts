@@ -36,6 +36,16 @@ describe("active staff isolation and scope validation", () => {
     ).toThrow();
   });
 
+  it("allows the separately granted write scope for authenticated staff", () => {
+    const principal = requireActivePrincipal(
+      { userId: "github:22" },
+      "github_22",
+      ["mcp:read", "mcp:write"],
+      "22",
+    );
+    expect(principal.scopes).toEqual(["mcp:read", "mcp:write"]);
+  });
+
   it("uses a colon-free, canonical OAuth grant ID while preserving the GitHub principal", () => {
     expect(oauthUserIdForGitHub("256972168")).toBe("github_256972168");
     expect(oauthUserIdForGitHub("256972168")).not.toContain(":");
@@ -53,8 +63,6 @@ describe("active staff isolation and scope validation", () => {
   it.each([
     [[]],
     [["mcp:read", "mcp:read"]],
-    [["mcp:read", "mcp:write"]],
-    [["mcp:write", "mcp:read"]],
     [["offline_access", "mcp:read"]],
     [["MCP:READ"]],
     [[""]],

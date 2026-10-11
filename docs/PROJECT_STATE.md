@@ -1,4 +1,87 @@
-# Project state — canonical handoff
+# Codex P1/P2 remediation — 11 October 2026 SAST
+
+**Current draft:** [PR #23](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/pull/23) stacked on draft PR #22. Source: Codex's five findings on #22 (two P1, three P2). Not merged, deployed or tested against live ClickUp.
+
+- **P1 cross-Workspace configuration:** `workspaceId` carried from the individual user's verified ClickUp OAuth grant; every operational tool preflights the configured List's actual Space against the Workspace-specific `GET /team/{workspace_id}/space`. Missing, mismatched or malformed hierarchy fails closed; no model-supplied tenant/list IDs.
+- **P1 task move TOCTOU:** remove `update_scoped_task` and `comment_on_scoped_task` entirely from operational tool advertisement and native adapters. There is no documented atomic List-bound precondition on ClickUp task-ID writes, and a GET followed by PUT/POST would not be safe. `get_scoped_task_comments` is also removed due to a related read-after-move exposure risk. Leave ClickUp-native history in ClickUp.
+- **P2 write OAuth:** official SDK `requireScopes("mcp:read","mcp:write")` scope challenge for the remaining create task tool, plus existing handler authorization. No server-side permission UI.
+- **P2 destructive metadata:** the unsafe task update is no longer advertised or callable, so no false non-destructive annotation is exposed.
+- **P2 rate-limit:** propagate bounded upstream write HTTP 429 reset into the same ClickUp-user quota Durable Object; no automatic retries.
+
+**Available direct ClickUp task operations after this change:** read/list/attention report, List metadata, List-bound task creation. The 48 schema-only proposed tools remain inert; no independent audit journal or rollback is built.
+
+**Residual limitations:** List ancestry is verified through upstream reads and is not an atomic lock against a concurrent *List* move; ClickUp's native authorization is the final authority. No task-ID write will be re-enabled without an upstream atomic condition or a proven restricted upstream credential. GitHub-only synthetic CI is not proof of real ClickUp attribution or account consent.
+
+**Release checklist:** strict CI SUCCESS for exact PR #23 SHA, fresh Codex review of that SHA, owner-controlled merge of entire dependency stack, Cloudflare/GitHub secrets staging deployment, four-user OAuth/live List tests and tool response validation. All production mutations remain disabled until acceptance.
+
+---
+
+# Phase 6 native ClickUp tools checkpoint — 11 October 2026 SAST
+
+**Owner-accepted scope:** No NeonSales action journal, rollback backend, duplicate activity UI or duplicate per-tool approval control. ClickUp handles task activity/attribution; AI clients handle allow/deny prompts. Native MCP OAuth `mcp:read` and optional `mcp:write` authenticate access to the MCP resource; individually consented ClickUp OAuth tokens grant actual upstream data rights. No shared ClickUp API token and no laptop-bound service.
+
+**Branch:** `feature/phase6-native-clickup-tools-no-journal-20261011` on [draft PR #22](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/pull/22), stacked on #21 → #20 → #18 → #17 → Phase 3. No merge/deploy/real ClickUp mutation. The former [PHASE6_AUDIT_ROLLBACK_CONTRACT.md] proposal has been deleted on this branch.
+
+**Added operational adapters:** `get_scoped_list`, `get_scoped_task_comments`, `create_scoped_task`, `update_scoped_task`, `comment_on_scoped_task`. Each task mutation uses the authenticated staff member's ClickUp token and fixed configured home List, not an LLM-supplied token or arbitrary URL. The 48-model-schema catalogue remains explicitly nonoperational. `service_info` now reports runtime flags without claiming real connectivity.
+
+**Latest full code-only Strict CI:** [run #38148621790](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/actions/runs/38148621790) **SUCCESS** on `0bf390c5ae418bd381c4a71eef768a0f22cbe509`. Expected tests: 134/134, strict TypeScript, Prettier, ESLint, pinned Worker build, real local workerd HTTPS OAuth security smoke, 9 Python repository regressions and npm security audit. This documentation update advances HEAD, requiring an **exact-HEAD CI run** before specialist review.
+
+**Not yet proven:** real ClickUp OAuth, permission attribution, REST response shapes, live staging, official MCP conformance, Claude/ChatGPT subscription integration, full 48-capability backend parity, or a clean human-reviewed merge stack. GitHub Actions deployment requires owner-provided Cloudflare GitHub Environment secrets and Worker secrets; none entered in chat.
+
+---
+
+# Owner update — 11 October 2026 SAST: ClickUp-native actions ONLY
+
+Owner explicitly rejected an external action journal, a duplicate rollback system and a separate MCP tool-permission interface. **ClickUp records task history, the AI client controls tool allow/deny prompts, and the MCP merely validates OAuth identity and upstream ClickUp permissions.** The previous Phase 6 audit/rollback proposal is cancelled and deleted on the new feature branch. This branch adds core scoped task create/update/comment and reads, with explicit OAuth `mcp:write` scope. **No deployment, merge or real task mutation has occurred.**
+
+---
+
+# Phase 5 checkpoint — per-user ClickUp OAuth and GitHub-hosted CI/CD (11 October 2026 SAST)
+
+**Owner directive:** Every staff member uses their own ClickUp OAuth. There is **no shared ClickUp API token** and **no laptop-bound service or deployment requirement**. GitHub Actions is the build/test/manual deployment runner; Cloudflare Workers is the actual HTTPS MCP host. Accepted in `docs/DECISIONS.md` D-022/D-023.
+
+**Branch:** `feature/phase5-per-user-clickup-oauth-ci-20261011` on draft [PR #20](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/pull/20), stacked on draft PR #18 and #17. No merge, production deployment, stage redeploy, user credentials, live ClickUp calls or task writes.
+
+**Changes:** OAuth-backed `connect_clickup_account`, `get_clickup_connection_status`, `disconnect_clickup_account`, one-time HMAC-signed OAuth state, identity + Workspace check, required one-to-one GitHub-ID/ClickUp-user-ID owner map, AES-GCM-encrypted per-subject Durable Object, strictly per-user ClickUp task token authorization and token-scoped quota. Cloud-only manual main-branch/staging-environment deploy workflow with GitHub environment secrets for Wrangler. Key instructions: [PHASE5_USER_OAUTH_AND_CLOUD_CI.md](PHASE5_USER_OAUTH_AND_CLOUD_CI.md).
+
+**Verification caveat:** A temporary GitHub-hosted formatter and test runner passed 119 OAuth/SDK tests on an earlier code revision. Follow-up security vault tests added 3 cases; initial CI exposed an expected-503 test harness bug, since fixed. **Final exact-HEAD Strict CI remains the authoritative gate**; do not claim green before its actual result. No secrets were added to GitHub.
+
+**Agent action accountability:** ClickUp's native user attribution and signed webhooks remain the first source. Superseded: a separate journal or rollback feature will not be built. ClickUp-native task history remains authoritative.
+
+**Next:** Green final exact-HEAD CI, focused security review of per-user OAuth callback and vault, then owner-managed GitHub/Cloudflare secrets and sandbox account acceptance. Production remains closed.
+
+---
+
+# Schema catalogue checkpoint — 11 October 2026 SAST
+
+**Scope:** Draft [PR #18](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/pull/18), `feature/phase4-complete-model-tool-schemas-20261011`, stacked on Phase 4 POC draft PR #17. No merge/deploy or new live ClickUp operation.
+
+**Delivered:** `src/mcp/tool-catalog.ts` contains all **48** named capabilities from ClickUp's published [Supported Tools](https://developer.clickup.com/docs/mcp-tools) listing, with our own closed JSON input schemas, descriptions, examples, effect classes and `schema_only` status. An authenticated `clickup_tool_catalog` offers bounded read-only discovery; **no REST request**. Official MCP SDK registers all 48 only in injected in-process `schemaPreview: true` tests, where all calls fail `CLICKUP_SCHEMA_ONLY`. A normal Worker cannot activate preview through an environment flag. Existing three scoped reads and Phase 3 diagnostic remain unchanged in behavior. See [CLICKUP_TOOL_SCHEMA.md](CLICKUP_TOOL_SCHEMA.md) for the contract and limitations.
+
+**Fresh mechanical evidence:** [Strict CI run #38131409280](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/actions/runs/38131409280) **SUCCESS** for code SHA `f81e28c3b9fc249656658a25ddd2e1a7f0ae402e`: 115/115 Vitest in 11 files, 9 repository policy regressions, pinned npm install, Prettier, ESLint, triple TypeScript, Wrangler dry-run, local workerd OAuth security smoke and npm audit (0 reported vulnerabilities). **This added state documentation advances HEAD and requires its own CI**, not a reused green claim.
+
+**What remains unverified:** True ClickUp hosted-MCP runtime JSON schema equivalence (not asserted), all 48 backends (not built), secrets and OAuth approval for ClickUp, dedicated stage deployment, real task reads and real external subscription clients, conformance and specialist review. Owner deferred API tokens. Never advertise `schema_only` entries as working ClickUp operations. No new write capability is authorized.
+
+**Next action:** Obtain exact final HEAD green CI, request specialist reviewer on that unchanged SHA, then leave draft unmerged while owner handles secrets separately. Do not add write methods merely because schemas exist.
+
+---
+
+# Current checkpoint — Phase 4 read-only POC branch (11 October 2026 SAST)
+
+**Branch:** `feature/phase4-clickup-readonly-poc-20261011` (draft [PR #17](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/pull/17)); stacked on Phase 3 security test branch from [PR #16](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/pull/16), **not merged**.
+
+**Verified evidence:** [Strict CI #38129729291](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/actions/runs/38129729291) passed on commit `ffe0d690dfb1c298d30ca8cbc4cf64e4cf363f65`: 108 Vitest tests, nine repository-policy tests, strict triple TypeScript, formatting, ESLint, Wrangler build, workerd OAuth smoke and npm audit (zero vulnerabilities). **Any later commits require fresh CI; this older run does not certify them.**
+
+**Implemented under separate owner-authorized development:** official MCP SDK registrations for `find_scoped_tasks`, `get_scoped_task` and `get_attention_report`; separate GitHub-ID read grant, server-only List ID, GET-only ClickUp REST adapter, conservative shared SQLite Durable Object quota, bounded pagination, 48h SAST attention report and synthetic adversarial tests. See [Phase 4 POC runbook](PHASE4_POC_SETUP.md).
+
+**Live truth:** Earlier Phase 3 staging was independently reported in PR #15 as successfully authenticated from Claude with `service_info`. This does not mean Phase 3 revocation/conformance/multi-staff gates passed. **Phase 4 is not deployed or enabled, has no live ClickUp credential, has not read a ClickUp task through this server and has performed no write.**
+
+**Pending:** Fresh final SHA CI, focused security review, owner-approved single test List + staff READ grant, isolated Cloudflare staging Durable Object migration and secret provisioning, and actual Claude task read/denial. Keep `CLICKUP_LIVE_ENABLED` unset until these approvals. Do not touch the production Worker, merge Phase 3 or merge Phase 4.
+
+---
+
+## Earlier checkpoint (historical; superseded where inconsistent)
+
 
 **Checkpoint:** 2026-10-10 SAST (time not independently captured). **Current Phase 3:** draft PR [#4](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/pull/4), now based on **main**.
 **Merged foundation:** PRs [#1](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/pull/1), [#2](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/pull/2), and [#3](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/pull/3) are already merged into main at commit `914c5e69e7366b465f823787225861c3ac40ad29`. Phase 4 design-only PR [#8](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/pull/8) remains stacked on #4. Unsafe Node/npm modernization PR #5 is CLOSED without merge.

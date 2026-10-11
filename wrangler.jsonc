@@ -4,4 +4,14 @@
   "compatibility_date": "2026-10-10",
   "compatibility_flags": ["global_fetch_strictly_public"],
   "workers_dev": false,
+  "durable_objects": {
+    "bindings": [
+      { "name": "CLICKUP_QUOTA", "class_name": "ClickUpQuota" },
+      { "name": "CLICKUP_CONNECTIONS", "class_name": "ClickUpUserConnection" },
+    ],
+  },
+  "migrations": [
+    { "tag": "phase4-v1", "new_sqlite_classes": ["ClickUpQuota"] },
+    { "tag": "phase5-user-oauth", "new_sqlite_classes": ["ClickUpUserConnection"] },
+  ],
 }
