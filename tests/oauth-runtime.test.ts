@@ -172,20 +172,10 @@ describe("Codex P1 OAuth integration regressions", () => {
     const accepted = await handleOAuthRequest(request(), env, previouslyAuthorized, origin);
     expect(accepted.status).toBe(200);
     const revokedEnv = { ...env, ALLOWED_GITHUB_IDS: "11,33,44" } as OAuthEnv;
-    const rejected = await handleOAuthRequest(
-      request(),
-      revokedEnv,
-      previouslyAuthorized,
-      origin,
-    );
+    const rejected = await handleOAuthRequest(request(), revokedEnv, previouslyAuthorized, origin);
     expect(rejected.status).toBe(403);
     expect(captures.requests).toHaveLength(1);
-    const retained = await handleOAuthRequest(
-      request(),
-      revokedEnv,
-      verifiedContext("11"),
-      origin,
-    );
+    const retained = await handleOAuthRequest(request(), revokedEnv, verifiedContext("11"), origin);
     expect(retained.status).toBe(200);
     expect(captures.requests).toHaveLength(2);
   });
