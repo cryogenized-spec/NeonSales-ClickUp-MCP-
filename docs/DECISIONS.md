@@ -33,6 +33,8 @@
 | D-022 | 2026-10-11 | ACCEPTED (owner direction) | Each staff member authorizes ClickUp through their own ClickUp OAuth; retire shared ClickUp API-token design. GitHub OAuth still authenticates each MCP principal. | Preserve ClickUp-native user attribution and independent token permissions; Cloudflare stores credentials encrypted per verified staff subject. |
 | D-023 | 2026-10-11 | ACCEPTED (owner direction) | No laptop-bound hosting or deployments. GitHub Actions is the cloud-based CI/CD runner; Cloudflare Workers is the persistent remote MCP host. | Manual reviewed staging deploy; GitHub encrypted secrets for Cloudflare deploy, Worker secrets for app runtime. |
 
+| D-024 | 2026-10-11 | ACCEPTED (owner direction) | **No separate action journal, rollback subsystem, activity dashboard or duplicate client tool-approval settings.** ClickUp handles native task history; Claude/ChatGPT handle per-tool prompts. | Avoid duplicated state and extra failure modes. Keep only necessary OAuth identity, resource authorization and quota protections. |
+
 ## Record an accepted decision
 
 Add a new row (or change PROPOSED → ACCEPTED) with the owner's actual review decision, date/time in SAST if known, trade-offs, and affected files. For changed decisions, mark original SUPERSEDED and link the replacement. Don't fabricate approval.

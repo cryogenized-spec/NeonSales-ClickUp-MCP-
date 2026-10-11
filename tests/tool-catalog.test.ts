@@ -80,10 +80,12 @@ describe("Official ClickUp MCP capability catalogue (model-facing only)", () => 
       expect(tools.map((tool) => tool.name).sort()).toEqual([
         "clickup_tool_catalog",
         "connect_clickup_account",
+        "create_scoped_task",
         "disconnect_clickup_account",
         "find_scoped_tasks",
         "get_attention_report",
         "get_clickup_connection_status",
+        "get_scoped_list",
         "get_scoped_task",
         "service_info",
       ]);
