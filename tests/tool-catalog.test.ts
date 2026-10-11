@@ -82,8 +82,8 @@ describe("Official ClickUp MCP capability catalogue (model-facing only)", () => 
         "connect_clickup_account",
         "disconnect_clickup_account",
         "find_scoped_tasks",
-        "get_clickup_connection_status",
         "get_attention_report",
+        "get_clickup_connection_status",
         "get_scoped_task",
         "service_info",
       ]);
