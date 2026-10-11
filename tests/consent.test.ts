@@ -83,7 +83,7 @@ describe("branded consent identity diagram", () => {
     expect(html).toContain("Cryogenized MCP");
     expect(html).toContain("@media(max-width:520px)");
     expect(html).not.toContain('src="https://');
-    expect(html).not.toContain('<script');
+    expect(html).not.toContain("<script");
   });
 
   it("never lends Claude branding to a spoofed or unrecognized client", () => {
