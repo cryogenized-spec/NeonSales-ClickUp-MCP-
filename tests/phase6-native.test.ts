@@ -1,9 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import {
-  createScopedTask,
-  getScopedList,
-  verifyListWorkspace,
-} from "../src/clickup/operations.js";
+import { createScopedTask, getScopedList, verifyListWorkspace } from "../src/clickup/operations.js";
 import { requireWriteGrant, type ReadGrant } from "../src/clickup/policy.js";
 
 const authToken = "individual-synthetic-OAuth-token";
