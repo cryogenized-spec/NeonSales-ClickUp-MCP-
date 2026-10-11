@@ -199,14 +199,14 @@ describe("Phase 4 official SDK integration", () => {
       await handler.close();
     }
   });
+
   it("rejects a List in a different Workspace before any ClickUp POST", async () => {
     const outbound = vi.fn(async (url: RequestInfo | URL, options?: RequestInit) => {
       const target = String(url);
       if (options?.method === "POST") throw new Error("FORBIDDEN_WRITE");
       if (target.endsWith("/list/12345"))
         return Response.json({ id: "12345", space: { id: 999 } });
-      if (target.includes("/team/555/space"))
-        return Response.json({ spaces: [{ id: 765 }] });
+      if (target.includes("/team/555/space")) return Response.json({ spaces: [{ id: 765 }] });
       throw new Error("unexpected request");
     });
     const handler = createProtocolHandler({
@@ -235,7 +235,7 @@ describe("Phase 4 official SDK integration", () => {
       expect(JSON.stringify(result.content)).toContain("CLICKUP_SCOPE_OR_SCHEMA_REJECTED");
       expect(outbound).toHaveBeenCalledTimes(2);
       expect(outbound.mock.calls.every(([, init]) => init?.method === "GET")).toBe(true);
-      const names = (await client.listTools()).tools.map(tool => tool.name);
+      const names = (await client.listTools()).tools.map((tool) => tool.name);
       expect(names).not.toContain("update_scoped_task");
       expect(names).not.toContain("comment_on_scoped_task");
       expect(names).not.toContain("get_scoped_task_comments");
@@ -244,5 +244,4 @@ describe("Phase 4 official SDK integration", () => {
       await handler.close();
     }
   });
-
 });
