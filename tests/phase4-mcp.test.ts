@@ -199,4 +199,50 @@ describe("Phase 4 official SDK integration", () => {
       await handler.close();
     }
   });
+  it("rejects a List in a different Workspace before any ClickUp POST", async () => {
+    const outbound = vi.fn(async (url: RequestInfo | URL, options?: RequestInit) => {
+      const target = String(url);
+      if (options?.method === "POST") throw new Error("FORBIDDEN_WRITE");
+      if (target.endsWith("/list/12345"))
+        return Response.json({ id: "12345", space: { id: 999 } });
+      if (target.includes("/team/555/space"))
+        return Response.json({ spaces: [{ id: 765 }] });
+      throw new Error("unexpected request");
+    });
+    const handler = createProtocolHandler({
+      bindings: configuration(),
+      fetcher: outbound as typeof fetch,
+    });
+    const client = new Client({ name: "workspace-isolation-test", version: "0.1.0" });
+    const transport = new StreamableHTTPClientTransport(new URL("http://local.test/mcp"), {
+      fetch: async (input, init) =>
+        handler.fetch(new Request(input, init), {
+          authInfo: {
+            token: "write-grant",
+            clientId: "test",
+            scopes: ["mcp:read", "mcp:write"],
+            extra: { subject: "github:11" },
+          },
+        }),
+    });
+    try {
+      await client.connect(transport);
+      const result = await client.callTool({
+        name: "create_scoped_task",
+        arguments: { name: "Must not be created" },
+      });
+      expect(result.isError).toBe(true);
+      expect(JSON.stringify(result.content)).toContain("CLICKUP_SCOPE_OR_SCHEMA_REJECTED");
+      expect(outbound).toHaveBeenCalledTimes(2);
+      expect(outbound.mock.calls.every(([, init]) => init?.method === "GET")).toBe(true);
+      const names = (await client.listTools()).tools.map(tool => tool.name);
+      expect(names).not.toContain("update_scoped_task");
+      expect(names).not.toContain("comment_on_scoped_task");
+      expect(names).not.toContain("get_scoped_task_comments");
+    } finally {
+      await client.close();
+      await handler.close();
+    }
+  });
+
 });
