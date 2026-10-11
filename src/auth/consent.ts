@@ -126,7 +126,7 @@ h1{font-size:clamp(26px,5vw,32px);line-height:1.16;letter-spacing:-.035em;margin
 <p class="publisher">${origin}</p>
 ${loopbackWarning}
 <h2 class="permissions-title" id="permissions-heading">Requested permission</h2>
-<p class="permissions-intro">The initial staging connector provides diagnostic read access only. No ClickUp production data is connected.</p>
+<p class="permissions-intro">Read and optional write OAuth scopes are shown here. Per-tool approvals are handled by your Claude or ChatGPT client.</p>
 <form method="post" action="/authorize" aria-labelledby="permissions-heading">
 <input type="hidden" name="handle" value="${escapeHtml(handle)}">
 <div class="permission-list">${scopes}</div>
@@ -144,10 +144,16 @@ ${loopbackWarning}
 </html>`;
 }
 
-/** Fail closed: Phase 3 exposes only the diagnostic read-only MCP capability. */
+/** MCP OAuth distinguishes reads from mutations, without duplicating client-side tool approval. */
 export function validatedReadOnlyScopes(submitted: readonly string[]): string[] {
-  if (submitted.length !== 1 || submitted[0] !== "mcp:read") {
-    throw new Error("Consent must grant exactly mcp:read");
+  if (
+    !submitted.includes("mcp:read") ||
+    submitted.length < 1 ||
+    submitted.length > 2 ||
+    new Set(submitted).size !== submitted.length ||
+    submitted.some((scope) => scope !== "mcp:read" && scope !== "mcp:write")
+  ) {
+    throw new Error("Invalid MCP consent scope");
   }
-  return ["mcp:read"];
+  return submitted.includes("mcp:write") ? ["mcp:read", "mcp:write"] : ["mcp:read"];
 }

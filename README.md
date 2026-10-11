@@ -1,95 +1,53 @@
-# NeonSales ClickUp MCP — phased development
+# NeonSales ClickUp MCP
 
-**Project status:** Phase 3 OAuth identity code is on **draft stacked PR #4** (2026-10-10 SAST). It is **not deployed**: Cloudflare KV, real GitHub OAuth App credentials, live four-user sign-in, ChatGPT/Claude connectors and ClickUp remain unconfigured/unverified. The Phase 2 SDK still provides only synthetic `service_info`. Public `/mcp` fails closed without valid OAuth deployment bindings. The older local v0.1 archive has not been imported.
+A private, cloud-hosted [Model Context Protocol](https://modelcontextprotocol.io/) server connecting authorized staff members to ClickUp through **their own individual ClickUp OAuth accounts**. The same remote MCP endpoint is intended for supported Claude and ChatGPT clients.
 
-**Purpose:** Build a private, authenticated, vendor-neutral remote MCP service that gives ChatGPT and Claude controlled access to NeonSales ClickUp data through ClickUp's official REST API. Prove the workflow against real, permitted records before showing management. This is an internal prototype, not a product offering.
+> **Release status — 11 October 2026:** Code for OAuth, scoped reads, core task writes and GitHub Actions deployment is on a **draft, unmerged PR stack**. Synthetic integration tests and local Cloudflare workerd security smoke pass, but no live ClickUp accounts, authorized Workspace/List or production Cloudflare secrets have been configured. **Not deployed; not fully accepted; do not claim live functionality.**
 
-## What we are trying to prove
+## Responsibilities — no duplicate systems
 
-1. From an ordinary **ChatGPT subscription** via a supported **custom MCP plugin**, invoke a NeonSales tool without buying separate model API usage.
-2. From an ordinary **Claude subscription** via its **remote MCP custom connector**, invoke the **same** server and tools.
-3. Retrieve real tasks from the permitted ClickUp Workspace/List and return truthful, traceable results.
-4. Identify overdue work and tasks with ClickUp `date_updated` older than 48 hours, grouped by assignee; clearly distinguish task metadata from evidence of actual staff inactivity.
-5. Prepare a proposed update without mutating ClickUp; execute only after independent owner approval, only on a disposable test task during the POC.
-6. Produce a documented demonstration, a security check, and a clear cost/limits breakdown before any commercial pitch.
+| Platform | Sole responsibility |
+|---|---|
+| **ClickUp** | Task data, staff permissions, activity/history, native attribution, existing comments, updates and any recovery it natively supports |
+| **Claude / ChatGPT** | Per-tool allow/deny prompts, low-risk approvals and user-specific tool trust preferences |
+| **NeonSales MCP** | OAuth verification and account mapping, forwarding bounded ClickUp API calls under each user's own token, input validation, fixed-resource scoping and rate-limit controls |
+| **Cloudflare Workers** | Permanent HTTPS remote MCP hosting and encrypted per-user credential storage |
+| **GitHub Actions** | Hosted CI and manual deployment to an isolated Cloudflare Worker; never hosts the persistent application |
 
-**Not yet proven:** live ClickUp reads/writes by this POC, hosted OAuth, cloud deployment, subscription UI connectivity, production security, uptime or cost at scale.
+**There is no NeonSales activity journal, duplicate audit dashboard, rollback engine or additional per-tool approval settings.** The previously proposed journal/rollback design was rejected by the owner and removed from the current feature branch.
 
-## What's in the repository
+## Implemented server tools
 
-- [AGENTS.md](AGENTS.md) — binding working rules for coding agents and future chats.
-- [CLAUDE.md](CLAUDE.md) — short Claude entry point; defers to the same rules.
-- [docs/PROJECT_STATE.md](docs/PROJECT_STATE.md) — canonical handoff/checkpoint: verified facts, pending decisions and next action.
-- [docs/ARCHITECTURE_PROPOSAL.md](docs/ARCHITECTURE_PROPOSAL.md) — proposed stack, options, boundaries and security model; **requires review before implementation**.
-- [docs/DECISIONS.md](docs/DECISIONS.md) — explicit accepted/proposed/rejected architectural decisions.
-- [docs/DEMO_ACCEPTANCE.md](docs/DEMO_ACCEPTANCE.md) — falsifiable pass/fail criteria.
-- [docs/MCP_COMPLIANCE.md](docs/MCP_COMPLIANCE.md) — current MCP 2026-07-28 specification, official SDK v2 and conformance gates.
-- [docs/MODULARITY.md](docs/MODULARITY.md) — module boundaries and failure containment.
-- [docs/SKILLS.md](docs/SKILLS.md) — six pinned, upstream-authored development skills and license.
-- [docs/BRANCH_PROTECTION.md](docs/BRANCH_PROTECTION.md) — strict CI, rulesets, plan restrictions and manual enforcement step.
-- [docs/PHASE3_SETUP.md](docs/PHASE3_SETUP.md) — manual Cloudflare KV/GitHub OAuth setup and live multi-user acceptance.
-- [docs/phases/ROADMAP.md](docs/phases/ROADMAP.md) — mandatory one-phase-at-a-time delivery.
-- [docs/SECURITY_PERIMETER.md](docs/SECURITY_PERIMETER.md) — trust boundaries and single-authority design.
-- [docs/CODEX_REVIEW.md](docs/CODEX_REVIEW.md) — after-CI-green exact-SHA specialist review handoff.
-- [docs/POC_V0_1_REFERENCE.md](docs/POC_V0_1_REFERENCE.md) — detailed historical README for the earlier *local* JavaScript POC; **source not yet in this GitHub repository**.
-- [docs/WORKFLOW.md](docs/WORKFLOW.md) — repeatable agent workflow / handoff protocol.
+| Name | Effect | Purpose |
+|---|---|---|
+| `service_info` | Read | Show runtime configuration flags, not proof of connectivity |
+| `connect_clickup_account` | Account operation | Return individual ClickUp authorization URL; no tokens to AI clients |
+| `get_clickup_connection_status` | Read | Show only your own connection |
+| `disconnect_clickup_account` | Account operation | Remove your local encrypted connection (revoke upstream in ClickUp separately) |
+| `find_scoped_tasks` | Read | Get bounded tasks in configured home List |
+| `get_scoped_task` | Read | Read known task ID after verifying its home List |
+| `get_attention_report` | Read | Bounded overdue/upcoming/stale-task metadata; clearly flags incompleteness |
+| `get_scoped_list` | Read | View authorized List name and valid status labels |
+| `create_scoped_task` | Write | Create a task in the configured List under your own account |
+| `clickup_tool_catalog` | Read | Inspect proposed schemas for further ClickUp capabilities; **not** an operational API |
 
-These documentation files establish a shared foundation. They do not constitute completion of the implementation.
+**Security restriction:** The per-task update, comment-create and comment-read tools are deliberately **not advertised**. ClickUp's task-ID endpoints lack a supported atomic condition that enforces an unchanged home List. A task moved between preflight and the second request could escape our required List boundary. Never claim those features are functional until ClickUp offers a verified list-bound operation or a comparable documented primitive. The configured List is also verified against the approved Workspace's own Spaces list before any live tool operation. List metadata verification is not a lock against concurrent hierarchy changes.
 
-## Approved technology / implementation still phased
+Tools execute through the official `@modelcontextprotocol/server` v2 SDK and ClickUp REST API v2. Read operations require `mcp:read`; writes additionally require the explicitly consented `mcp:write` MCP OAuth scope. **This OAuth scope is not a duplicate client approval interface.** Users still control the AI client's own permission prompts.
 
-Use an approved **TypeScript / Node.js / npm** development toolchain and target **Cloudflare Workers** for a small remote HTTPS MCP service. Keep ClickUp REST access in a small isolated adapter; use an established MCP SDK and an OAuth implementation compatible with both ChatGPT and Claude. Keep the server provider-neutral: **one MCP service, two subscription clients**. Use GitHub for source control and CI, not as a permanent web server.
+The separate **48-capability model-facing schema catalogue** is descriptive. Most entries have **no backend implementation** and cannot be called operationally in the deployed Worker; isolated SDK preview tests deliberately reject them. Do not present this as full feature parity with ClickUp's first-party MCP.
 
-Why npm? Node is the runtime; npm installs and locks dependencies and runs scripts; `npx` runs package executables. No separate AI API key or model API billing is required for *interactive calls from the supported subscription interfaces*. Deployment, ClickUp access and AI usage-plan restrictions remain separate.
+## Deployment — cloud only
 
-The TypeScript/npm/Cloudflare stack was approved on 2026-10-10. Phase 2 uses the **official MCP SDK 2.3.1** and an authentic npm lockfile; OAuth, live ClickUp reads, cloud deployment and user-specific authorization are **not yet implemented**. The target is 2–4 separately authenticated NeonSales staff using their own ChatGPT/Claude subscriptions. The older local starter was dependency-free JavaScript with Node's test runner and is retained only as a reference; importing it is a separate reviewed step.
+1. Review and merge the stacked draft PRs in dependency order, preserving all OAuth and strict CI changes: [#17](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/pull/17) → [#18](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/pull/18) → [#20](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/pull/20) → [#21](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/pull/21) → [#22](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/pull/22) → [#23](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/pull/23). Their earlier Phase 3 bases must also be reconciled into `main` first. Alternative schema PR #19 is **not** part of this stack. Never merge merely because a unit test passed.
+2. Follow [Phase 5 individual OAuth and cloud-only setup](docs/PHASE5_USER_OAUTH_AND_CLOUD_CI.md): configure independent GitHub OAuth and ClickUp OAuth apps, the exact HTTPS callback origin, a dedicated staging KV, the required SQLite Durable Objects and per-user account mapping. Secrets belong in GitHub's protected staging environment and Cloudflare Worker Secrets, **not** in the repository, laptop or chat.
+3. Run [Deploy NeonSales MCP staging](.github/workflows/deploy-staging.yml) manually on reviewed `main` via GitHub Actions. This runs tests and uses a pinned Wrangler to deploy an isolated Cloudflare staging Worker. It does **not** require a local laptop service.
+4. Only enable `CLICKUP_OAUTH_ENABLED` and `CLICKUP_LIVE_ENABLED` after owner-approved staging setup, appropriate ClickUp List and individual user grants. Each employee completes their own ClickUp consent. Confirm real user attribution in ClickUp's native Activity and verify read/write restrictions on a disposable test List before operational rollout.
 
-## Phase 2 commands and verification
+## Adversarial testing
 
-For the code in [draft PR #3](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/pull/3):
+Synthetic tests cover independently verified staff identity, forged bearer/header rejection, one-use OAuth state, wrong Workspace/account rejection before saving credentials, encrypted vault isolation, cross-List task substitution, foreign-Workspace List denial, unavailable task-ID mutation surfaces, write-scope OAuth step-up, 429 cooldown handling, invalid arguments, redirects, quota-denied operations, uncertain writes with **no automatic retry**, and a complete MCP SDK `tools/list` → `tools/call` write flow. The CI workflow requires format, lint, strict TypeScript, Vitest, Worker dry-run, real local workerd HTTPS security smoke, policy regression checks and dependency audit.
 
-```bash
-npm ci --ignore-scripts --no-audit --no-fund
-npm run format:check
-npm run lint
-npm run typecheck
-npm test
-npm run build
-npm audit --audit-level=high
-```
+Run via GitHub Actions; no local development environment is required. Source [release evidence and limitations](docs/PROJECT_STATE.md), [tool schema](docs/CLICKUP_TOOL_SCHEMA.md) and [MCP conformance acceptance](docs/MCP_COMPLIANCE.md).
 
-The Worker rejects `/mcp` when the Phase 3 OAuth deployment bindings are missing; when configured, Cloudflare's official OAuthProvider guards the genuine SDK endpoint. **No deployed endpoint, real user sign-in or real ClickUp operation is claimed.** Phase 3 adds the `@cloudflare/workers-oauth-provider` module and tests, with 2–4 independent numeric GitHub staff IDs verified against an allowlist. See `docs/PROJECT_STATE.md` for current SHA and CI evidence.
-
-## Planned capabilities (not all implemented)
-
-- `connection_check`: identify configured environment and live/synthetic provenance.
-- `find_tasks`, `get_task`: bounded read-only lookup within allowed ClickUp scope.
-- `get_attention_report`: report overdue and >48-hour metadata-inactive tasks; disclose pagination limits.
-- `prepare_test_task_update`: create an immutable proposed change for one designated disposable test task.
-- `commit_approved_test_update`: commit only a separately approved proposal; never grant approval based solely on an LLM request.
-
-**Approval is enforced by the backend**, not merely by prompt wording. Production updates remain disabled until a separate security and authorization review.
-
-## Security principles
-
-Never commit or paste real ClickUp tokens, OAuth client secrets, admin approval tokens, customer personal information, `.env` files, or worker secrets. Use deployment secrets and minimal permissions. Require authenticated MCP requests, server-side Workspace/List allowlisting, validation, bounded pagination, least-privilege writes, replay protection, logging without secrets, and explicit error reporting. A private GitHub repository **does not** make a publicly deployed MCP endpoint private.
-
-A rate limit of 100 ClickUp REST requests/minute/token on Free Forever is distinct from the hosted ClickUp MCP daily allowance; it is **not** unlimited access. Handle 429, retries and partial results safely. See https://developer.clickup.com/docs/rate-limits.
-
-## How we collaborate
-
-At the beginning of each development session, read `AGENTS.md`, `docs/PROJECT_STATE.md`, `docs/DECISIONS.md`, and the relevant spec/plan. At the end, record what changed, the verification run, blockers and the exact next task in `docs/PROJECT_STATE.md`; cite commit IDs. Do not report a feature as working without a fresh test against the appropriate environment.
-
-**Milestone order:** documentation and agreement → isolated read-only ClickUp integration → deploy + OAuth → test Claude connector and ChatGPT plugin → approval-gated disposable task write → review evidence → management demonstration. A 24-hour target is an aspiration, not proof of completion.
-
-## Official reference material
-
-- ClickUp REST API rate limits: https://developer.clickup.com/docs/rate-limits
-- ClickUp filtered Workspace tasks: https://developer.clickup.com/reference/getfilteredteamtasks
-- ChatGPT custom MCP server: https://developers.openai.com/api/docs/guides/custom-mcp-server
-- ChatGPT personal plugin quickstart: https://developers.openai.com/plugins/quickstart
-- Claude remote MCP connector: https://support.claude.com/en/articles/11175166-get-started-with-custom-connectors-using-remote-mcp
-- Cloudflare remote MCP: https://developers.cloudflare.com/agents/model-context-protocol/guides/remote-mcp-server/
-- MCP specification: https://modelcontextprotocol.io/specification
-
-**Intended audience:** NeonSales technical owner and authorized developers. No permission is implied to modify the production ClickUp Workspace or to publish confidential records.
+**Still unverified:** real ClickUp REST responses and native attribution, live Cloudflare deployment, end-to-end OAuth and token revocation, external Claude/ChatGPT subscription UI integration, official MCP conformance runner, and full first-party ClickUp MCP parity. Test fixtures cannot establish any of these. Never represent the service as operational without completing the relevant real acceptance steps.

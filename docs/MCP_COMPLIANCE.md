@@ -17,7 +17,7 @@ The older `@modelcontextprotocol/sdk` v1.x implements the 2025-11-25 spec only. 
 - Revised **Streamable HTTP** over HTTPS, one `/mcp` POST endpoint as specified for 2026-07-28; do not blindly copy pre-2026 session IDs, long-lived GET stream endpoints or old HTTP+SSE examples.
 - Honor MCP protocol version negotiation, correct headers, request-scoped streams if used, bounded request size, timeouts and cancellation where supported. Never report protocol-level success for a business operation that failed.
 - The server must require authenticated access before it can touch any real ClickUp record. Implement standard OAuth authorization compatible with the clients' actual capabilities, protected resource / authorization server metadata as needed, PKCE, scope/identity checks and exact redirect URI rules. Do not confuse MCP client OAuth with backend ClickUp API credential storage.
-- Enforce Workspace/List allowlists, read/write scopes, output minimization and human approval independently of tool metadata. Tool descriptions are NOT an access-control system.
+- Enforce Workspace/List allowlists, read/write scopes, output minimization and OAuth read/write scopes independently of tool metadata. Claude/ChatGPT own their tool approval prompts; the server does not duplicate those settings. Tool descriptions are NOT an access-control system.
 - Treat task body content as untrusted; logs must omit secrets. Negative tests must cover unauthenticated, wrong scope, wrong list, replay and 429/partial pagination cases.
 - Never return simulated data as live. Tool responses expose explicit `source` and partial-result status when applicable.
 
