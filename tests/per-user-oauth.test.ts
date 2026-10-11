@@ -33,7 +33,7 @@ function fakeBindings() {
         }
         if (route === "/consume") {
           const saved = pending.get(key);
-          if (saved?.hash !== body["nonceHash"] || saved.expires <= Date.now()) {
+          if (!saved || saved.hash !== body["nonceHash"] || saved.expires <= Date.now()) {
             return Response.json({ consumed: false });
           }
           pending.delete(key);
