@@ -1,8 +1,11 @@
 import { parseStaffAllowlist } from "../auth/staff.js";
+import { personalClickUpCredential } from "./per-user-oauth.js";
 
 export interface ReadGrant {
   readonly subject: string;
+  readonly clickupUserId: string;
   readonly listId: string;
+  readonly workspaceId: string;
   readonly apiToken: string;
   readonly quota: {
     readonly idFromName: (name: string) => unknown;
@@ -16,17 +19,16 @@ export class ReadFailure extends Error {
     this.name = "ReadFailure";
   }
 }
-
 function record(value: unknown): Record<string, unknown> | null {
   return value !== null && typeof value === "object" && !Array.isArray(value)
     ? (value as Record<string, unknown>)
     : null;
 }
 
-/** ClickUp grants are separate from Phase 3's GitHub login allowlist.
- * Only verified SDK authInfo is accepted; tool arguments never choose a principal or List.
+/** Mandatory two-authority check: current app List grant AND the individual's
+ * ClickUp OAuth credential. Shared service tokens can never authorize reads.
  */
-export function requireReadGrant(auth: unknown, bindings: unknown): ReadGrant {
+export async function requireReadGrant(auth: unknown, bindings: unknown): Promise<ReadGrant> {
   const identity = record(auth);
   const extra = record(identity?.["extra"]);
   const env = record(bindings);
@@ -36,28 +38,22 @@ export function requireReadGrant(auth: unknown, bindings: unknown): ReadGrant {
     !identity ||
     !env ||
     typeof subject !== "string" ||
-    !/^github:[1-9]\d*$/.test(subject) ||
-    !Number.isSafeInteger(Number(subject.slice(7))) ||
+    !/^github:[1-9]\d{0,15}$/.test(subject) ||
     !Array.isArray(scopes) ||
-    scopes.length !== 1 ||
-    scopes[0] !== "mcp:read"
+    (!(scopes.length === 1 && scopes[0] === "mcp:read") &&
+      !(scopes.length === 2 && scopes.includes("mcp:read") && scopes.includes("mcp:write")))
   ) {
     throw new ReadFailure("CLICKUP_ACCESS_DENIED");
   }
   if (env["CLICKUP_LIVE_ENABLED"] !== "true") {
     throw new ReadFailure("CLICKUP_NOT_CONFIGURED");
   }
-
   const listId = env["CLICKUP_LIST_ID"];
-  const apiToken = env["CLICKUP_API_TOKEN"];
   const readIds = env["CLICKUP_READ_GITHUB_IDS"];
   const quota = record(env["CLICKUP_QUOTA"]);
   if (
     typeof listId !== "string" ||
-    !/^[1-9]\d*$/.test(listId) ||
-    !Number.isSafeInteger(Number(listId)) ||
-    typeof apiToken !== "string" ||
-    !apiToken.trim() ||
+    !/^[1-9]\d{0,17}$/.test(listId) ||
     typeof readIds !== "string" ||
     !quota ||
     typeof quota["idFromName"] !== "function" ||
@@ -65,24 +61,33 @@ export function requireReadGrant(auth: unknown, bindings: unknown): ReadGrant {
   ) {
     throw new ReadFailure("CLICKUP_NOT_CONFIGURED");
   }
-
   let approved: ReadonlySet<string>;
   try {
     approved = parseStaffAllowlist(readIds);
-    const loginAllowlist = parseStaffAllowlist(env["ALLOWED_GITHUB_IDS"]);
-    if ([...approved].some((id) => !loginAllowlist.has(id))) {
-      throw new Error("Read grant outside login allowlist");
-    }
+    const loggedIn = parseStaffAllowlist(env["ALLOWED_GITHUB_IDS"]);
+    if ([...approved].some((id) => !loggedIn.has(id))) throw Error("Inconsistent grants");
   } catch {
     throw new ReadFailure("CLICKUP_NOT_CONFIGURED");
   }
-  if (!approved.has(subject.slice(7))) {
-    throw new ReadFailure("CLICKUP_ACCESS_DENIED");
-  }
+  if (!approved.has(subject.slice(7))) throw new ReadFailure("CLICKUP_ACCESS_DENIED");
+  const user = await personalClickUpCredential(auth, bindings);
+  if (user.subject !== subject) throw new ReadFailure("CLICKUP_ACCESS_DENIED");
   return {
     subject,
+    clickupUserId: user.clickupUserId,
     listId,
-    apiToken,
+    workspaceId: user.workspaceId,
+    apiToken: user.token,
     quota: quota as unknown as ReadGrant["quota"],
   };
+}
+
+/** OAuth write scope: the AI client owns its tool-by-tool permission settings. */
+export async function requireWriteGrant(auth: unknown, bindings: unknown): Promise<ReadGrant> {
+  const details = record(auth);
+  const scopes = details?.["scopes"];
+  if (!Array.isArray(scopes) || !scopes.includes("mcp:write")) {
+    throw new ReadFailure("CLICKUP_WRITE_SCOPE_REQUIRED");
+  }
+  return requireReadGrant(auth, bindings);
 }

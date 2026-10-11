@@ -78,7 +78,7 @@ export function handleOAuthRequest(
     authorizeEndpoint: "/authorize",
     tokenEndpoint: "/oauth/token",
     clientRegistrationEndpoint: "/oauth/register",
-    scopesSupported: ["mcp:read"],
+    scopesSupported: ["mcp:read", "mcp:write"],
     requiredScopes: ["mcp:read"],
     resourceMetadata: {
       resource: origin + "/mcp",

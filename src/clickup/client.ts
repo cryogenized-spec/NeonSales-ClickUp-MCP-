@@ -95,14 +95,14 @@ function normalizeTask(raw: unknown, requiredListId: string): ScopedTask {
   };
 }
 
-async function quotaCall(
+export async function quotaCall(
   grant: ReadGrant,
   kind: "reserve" | "cooldown",
   until?: number,
 ): Promise<void> {
   try {
     const binding = grant.quota;
-    const id = binding.idFromName("single-clickup-api-credential");
+    const id = binding.idFromName("clickup-account:" + grant.clickupUserId);
     const stub = binding.get(id as never);
     const response = await stub.fetch(
       new Request("https://internal.invalid/" + kind, {
