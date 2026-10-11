@@ -1,10 +1,14 @@
 # ClickUp model-facing tool schemas — official capability inventory
 
-> **11 October 2026 owner direction:** There is no separate AI action journal, rollback database or tool-approval settings. ClickUp is the native task/activity record and Claude/ChatGPT control prompts. On unmerged PR #22, five further tools (`create_scoped_task`, `update_scoped_task`, `comment_on_scoped_task`, `get_scoped_task_comments`, `get_scoped_list`) are **real REST-backed implementations**, requiring per-user ClickUp OAuth and `mcp:write` for mutations. The **48** separately named catalogue tools remain schema-only, and preview registrations remain inert. No API keys, real ClickUp writes or deployments were performed.
+> **11 October 2026 owner direction:** There is no separate AI action journal, rollback database or tool-approval settings. ClickUp is the native task/activity record and Claude/ChatGPT control prompts. After unmerged remediation PR #23 (stacked on #22), two further tools (`create_scoped_task`, `get_scoped_list`) are **real REST-backed implementations**, requiring per-user ClickUp OAuth and `mcp:write` for mutations. The **48** separately named catalogue tools remain schema-only, and preview registrations remain inert. No API keys, real ClickUp writes or deployments were performed.
 
 **Date:** 11 October 2026 SAST. **Scope:** documentation and SDK schema-preview only; no new live ClickUp features, secrets, write endpoints or deployment.
 
 **Primary source:** [ClickUp's official Supported Tools list](https://developer.clickup.com/docs/mcp-tools), with REST cross-reference from [ClickUp's API index](https://developer.clickup.com/llms.txt). The upstream ClickUp hosted MCP catalogue and the public REST API are DIFFERENT services and their tool/request schemas are not guaranteed to match. This file and `src/mcp/tool-catalog.ts` are **our proposed schema contracts** based on the **48** named capabilities in that published hosted MCP list, **not a verbatim dump of ClickUp's hidden runtime tools/list response**.
+
+## Codex security revision (PR #23)
+
+The per-task `update_scoped_task`, `comment_on_scoped_task` and `get_scoped_task_comments` APIs are intentionally not advertised or callable. ClickUp's task-ID endpoints cannot atomically enforce our List boundary while another actor moves the task. `create_scoped_task` targets the verified home List and uses the official SDK write scope challenge, while `get_scoped_list` reads List metadata. Workspace-to-List ancestry is checked using ClickUp's own Workspace Space list on every real tool invocation.
 
 ## Current executable state
 
