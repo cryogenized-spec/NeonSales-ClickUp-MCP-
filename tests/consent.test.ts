@@ -64,7 +64,7 @@ describe("professional consent page invariants", () => {
 });
 
 describe("branded consent identity diagram", () => {
-  it("renders a self-contained monochrome Claude glyph and the user-approved badge", () => {
+  it("renders a self-contained Claude glyph and the approved NeonSales staging badge", () => {
     const html = renderConsentPage(
       {
         clientName: "Claude",
@@ -80,7 +80,9 @@ describe("branded consent identity diagram", () => {
     expect(html).toContain('class="connection-tile mcp"');
     expect(html).toContain('src="data:image/webp;base64,UklG');
     expect(html).toContain('viewBox="0 0 256 257"');
-    expect(html).toContain("Cryogenized MCP");
+    expect(html).toContain("NeonSales MCP");
+    expect(html).toContain("NEONSALES");
+    expect(html).not.toContain("Cryogenized MCP");
     expect(html).toContain("@media(max-width:520px)");
     expect(html).not.toContain('src="https://');
     expect(html).not.toContain("<script");
