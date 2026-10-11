@@ -21,6 +21,16 @@ export function parseStaffAllowlist(config: unknown): ReadonlySet<string> {
   return new Set(ids);
 }
 
+/** Cloudflare OAuth v1.2.3 uses ':' as a token/grant separator.
+ *  Keep the public github:<id> subject, but issue grants with a colon-free userId.
+ */
+export function oauthUserIdForGitHub(githubId: string): string {
+  if (!/^[1-9]\\d*$/.test(githubId) || !Number.isSafeInteger(Number(githubId))) {
+    throw new Error("Invalid numeric GitHub identity");
+  }
+  return "github_" + githubId;
+}
+
 /** Called on every protected MCP invocation, not only at initial OAuth login. */
 export function requireActivePrincipal(
   props: { readonly userId?: unknown },
@@ -34,7 +44,7 @@ export function requireActivePrincipal(
     throw new Error("Invalid authenticated principal");
   }
   const id = subject.slice("github:".length);
-  if (!permitted.has(id) || tokenSubject !== subject || !tokenScopes.includes("mcp:read")) {
+  if (!permitted.has(id) || tokenSubject !== oauthUserIdForGitHub(id) || !tokenScopes.includes("mcp:read")) {
     throw new Error("Staff identity is not authorized");
   }
   return Object.freeze({ subject, githubId: id, scopes: Object.freeze(["mcp:read"]) });
