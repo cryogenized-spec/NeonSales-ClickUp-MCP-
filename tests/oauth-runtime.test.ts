@@ -141,6 +141,55 @@ describe("Codex P1 OAuth integration regressions", () => {
     ).toEqual(["github:11", "github:22", "github:33", "github:44"]);
   });
 
+  it.each([
+    ["wrong audience", { audience: origin + "/other" }],
+    ["untrusted issuer host", { audience: "https://impostor.example/mcp" }],
+    ["missing access token", { token: "" }],
+    ["missing client ID", { clientId: "" }],
+    ["invalid token expiry", { expiresAt: Number.NaN }],
+    ["infinite token expiry", { expiresAt: Number.POSITIVE_INFINITY }],
+    ["string token expiry", { expiresAt: "1990000000" }],
+    ["missing read scope", { scope: [] }],
+    ["elevated scopes", { scope: ["mcp:read", "mcp:write"] }],
+    ["duplicate read scope", { scope: ["mcp:read", "mcp:read"] }],
+    ["non-string scope", { scope: ["mcp:read", 1] }],
+    ["incorrect token identity", { userId: "github_44" }],
+  ])("rejects %s before dispatching an MCP request", async (_name, overrides) => {
+    const response = await handleOAuthRequest(
+      new Request(origin + "/mcp", { method: "POST" }),
+      env,
+      verifiedContext("11", overrides),
+      origin,
+    );
+    expect(response.status).toBe(403);
+    expect(captures.requests).toHaveLength(0);
+    expect(await response.text()).toBe("Forbidden");
+  });
+
+  it("enforces a changed allowlist for an existing authenticated context", async () => {
+    const request = () => new Request(origin + "/mcp", { method: "POST" });
+    const previouslyAuthorized = verifiedContext("22");
+    const accepted = await handleOAuthRequest(request(), env, previouslyAuthorized, origin);
+    expect(accepted.status).toBe(200);
+    const revokedEnv = { ...env, ALLOWED_GITHUB_IDS: "11,33,44" } as OAuthEnv;
+    const rejected = await handleOAuthRequest(
+      request(),
+      revokedEnv,
+      previouslyAuthorized,
+      origin,
+    );
+    expect(rejected.status).toBe(403);
+    expect(captures.requests).toHaveLength(1);
+    const retained = await handleOAuthRequest(
+      request(),
+      revokedEnv,
+      verifiedContext("11"),
+      origin,
+    );
+    expect(retained.status).toBe(200);
+    expect(captures.requests).toHaveLength(2);
+  });
+
   it("rejects expired provider token facts even for an allowlisted staff member", async () => {
     const response = await handleOAuthRequest(
       new Request(origin + "/mcp", { method: "POST" }),
