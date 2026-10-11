@@ -98,7 +98,6 @@ describe("Phase 4 separate authorization policy", () => {
 });
 
 describe("Phase 4 ClickUp GET-only transport", () => {
-  const grant = requireReadGrant(auth, env);
 
   it("uses exact allowed host, GET, hardcoded List and no redirects", async () => {
     const grant = await requireReadGrant(auth, env);
