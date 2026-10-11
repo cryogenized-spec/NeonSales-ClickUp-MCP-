@@ -20,7 +20,8 @@ export class ReadFailure extends Error {
 }
 function record(value: unknown): Record<string, unknown> | null {
   return value !== null && typeof value === "object" && !Array.isArray(value)
-    ? (value as Record<string, unknown>) : null;
+    ? (value as Record<string, unknown>)
+    : null;
 }
 
 /** Mandatory two-authority check: current app List grant AND the individual's
@@ -32,9 +33,15 @@ export async function requireReadGrant(auth: unknown, bindings: unknown): Promis
   const env = record(bindings);
   const subject = extra?.["subject"];
   const scopes = identity?.["scopes"];
-  if (!identity || !env || typeof subject !== "string" ||
-      !/^github:[1-9]\d{0,15}$/.test(subject) ||
-      !Array.isArray(scopes) || scopes.length !== 1 || scopes[0] !== "mcp:read") {
+  if (
+    !identity ||
+    !env ||
+    typeof subject !== "string" ||
+    !/^github:[1-9]\d{0,15}$/.test(subject) ||
+    !Array.isArray(scopes) ||
+    scopes.length !== 1 ||
+    scopes[0] !== "mcp:read"
+  ) {
     throw new ReadFailure("CLICKUP_ACCESS_DENIED");
   }
   if (env["CLICKUP_LIVE_ENABLED"] !== "true") {
@@ -43,22 +50,32 @@ export async function requireReadGrant(auth: unknown, bindings: unknown): Promis
   const listId = env["CLICKUP_LIST_ID"];
   const readIds = env["CLICKUP_READ_GITHUB_IDS"];
   const quota = record(env["CLICKUP_QUOTA"]);
-  if (typeof listId !== "string" || !/^[1-9]\d{0,17}$/.test(listId) ||
-      typeof readIds !== "string" || !quota ||
-      typeof quota["idFromName"] !== "function" || typeof quota["get"] !== "function") {
+  if (
+    typeof listId !== "string" ||
+    !/^[1-9]\d{0,17}$/.test(listId) ||
+    typeof readIds !== "string" ||
+    !quota ||
+    typeof quota["idFromName"] !== "function" ||
+    typeof quota["get"] !== "function"
+  ) {
     throw new ReadFailure("CLICKUP_NOT_CONFIGURED");
   }
   let approved: ReadonlySet<string>;
   try {
     approved = parseStaffAllowlist(readIds);
     const loggedIn = parseStaffAllowlist(env["ALLOWED_GITHUB_IDS"]);
-    if ([...approved].some(id => !loggedIn.has(id))) throw Error("Inconsistent grants");
-  } catch { throw new ReadFailure("CLICKUP_NOT_CONFIGURED"); }
+    if ([...approved].some((id) => !loggedIn.has(id))) throw Error("Inconsistent grants");
+  } catch {
+    throw new ReadFailure("CLICKUP_NOT_CONFIGURED");
+  }
   if (!approved.has(subject.slice(7))) throw new ReadFailure("CLICKUP_ACCESS_DENIED");
   const user = await personalClickUpCredential(auth, bindings);
   if (user.subject !== subject) throw new ReadFailure("CLICKUP_ACCESS_DENIED");
   return {
-    subject, clickupUserId: user.clickupUserId, listId, apiToken: user.token,
+    subject,
+    clickupUserId: user.clickupUserId,
+    listId,
+    apiToken: user.token,
     quota: quota as unknown as ReadGrant["quota"],
   };
 }

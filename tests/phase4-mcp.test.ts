@@ -16,12 +16,13 @@ function configuration() {
     CLICKUP_CONNECTIONS: {
       idFromName: (name: string) => name,
       get: () => ({
-        fetch: async () => Response.json({
-          connected: true,
-          clickupUserId: "456",
-          workspaceId: "555",
-          accessToken: "nonworking-personal-fixture",
-        }),
+        fetch: async () =>
+          Response.json({
+            connected: true,
+            clickupUserId: "456",
+            workspaceId: "555",
+            accessToken: "nonworking-personal-fixture",
+          }),
       }),
     },
     CLICKUP_READ_GITHUB_IDS: "11",
@@ -68,7 +69,9 @@ describe("Phase 4 official SDK integration", () => {
         "service_info",
       ]);
       for (const tool of tools) {
-        expect(tool.annotations?.readOnlyHint).toBe(!["connect_clickup_account", "disconnect_clickup_account"].includes(tool.name));
+        expect(tool.annotations?.readOnlyHint).toBe(
+          !["connect_clickup_account", "disconnect_clickup_account"].includes(tool.name),
+        );
         expect(tool.annotations?.destructiveHint).toBe(tool.name === "disconnect_clickup_account");
       }
       const response = await client.callTool({

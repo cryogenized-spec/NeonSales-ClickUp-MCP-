@@ -1,7 +1,11 @@
 import { McpServer, fromJsonSchema } from "@modelcontextprotocol/server";
 import { getScopedTask, findScopedTasks } from "../clickup/client.js";
 import { ReadFailure, requireReadGrant } from "../clickup/policy.js";
-import { beginClickUpOAuth, clickUpConnectionStatus, disconnectClickUp } from "../clickup/per-user-oauth.js";
+import {
+  beginClickUpOAuth,
+  clickUpConnectionStatus,
+  disconnectClickUp,
+} from "../clickup/per-user-oauth.js";
 import { createAttentionReport } from "../reports/attention.js";
 import {
   CLICKUP_MODEL_TOOL_CATALOG,
@@ -70,7 +74,9 @@ export function createServer(deps?: ReadDependencies): McpServer {
       description:
         "Connect YOUR OWN individual ClickUp account by OAuth. Returns a one-time ClickUp authorization URL to open in a browser. Requires consent for the approved Workspace; credentials stay encrypted on Cloudflare and never appear in tool output. This does not modify any ClickUp task. Never connect on behalf of another staff member.",
       inputSchema: fromJsonSchema<Record<string, never>>({
-        type: "object", properties: {}, additionalProperties: false,
+        type: "object",
+        properties: {},
+        additionalProperties: false,
       }),
       annotations: { readOnlyHint: false, destructiveHint: false },
     },
@@ -89,13 +95,17 @@ export function createServer(deps?: ReadDependencies): McpServer {
       description:
         "Check your OWN ClickUp OAuth connection; returns no secrets, only connection status and authenticated ClickUp user/Workspace IDs. Connection never grants permission to modify tasks.",
       inputSchema: fromJsonSchema<Record<string, never>>({
-        type: "object", properties: {}, additionalProperties: false,
+        type: "object",
+        properties: {},
+        additionalProperties: false,
       }),
       annotations: { readOnlyHint: true, destructiveHint: false },
     },
     async (_args, extra) => {
       try {
-        return toolSuccess(await clickUpConnectionStatus(extra.http?.authInfo, dependencies.bindings));
+        return toolSuccess(
+          await clickUpConnectionStatus(extra.http?.authInfo, dependencies.bindings),
+        );
       } catch (error) {
         return toolError(error);
       }
@@ -108,7 +118,9 @@ export function createServer(deps?: ReadDependencies): McpServer {
       description:
         "Delete YOUR OWN locally stored ClickUp OAuth credential, preventing further NeonSales MCP requests on that account. This does NOT revoke the app in ClickUp itself; use ClickUp Connected Apps to revoke it there. Call only after explicit user instruction.",
       inputSchema: fromJsonSchema<Record<string, never>>({
-        type: "object", properties: {}, additionalProperties: false,
+        type: "object",
+        properties: {},
+        additionalProperties: false,
       }),
       annotations: { readOnlyHint: false, destructiveHint: true },
     },

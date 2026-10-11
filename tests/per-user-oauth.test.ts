@@ -1,7 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 import {
-  beginClickUpOAuth, finishClickUpOAuth, personalClickUpCredential,
-  clickUpConnectionStatus, disconnectClickUp,
+  beginClickUpOAuth,
+  finishClickUpOAuth,
+  personalClickUpCredential,
+  clickUpConnectionStatus,
+  disconnectClickUp,
 } from "../src/clickup/per-user-oauth.js";
 
 const key = btoa(String.fromCharCode(...new Uint8Array(32)));
@@ -17,11 +20,15 @@ function fakeBindings() {
       fetch: async (request: Request) => {
         const route = new URL(request.url).pathname;
         calls.push(key + route);
-        const body = await request.json() as Record<string, unknown>;
+        const body = (await request.json()) as Record<string, unknown>;
         const subject = String(body["subject"]);
         if (key !== "staff-clickup:" + subject) return new Response(null, { status: 403 });
         if (route === "/begin") {
-          pending.set(key, { hash: String(body["nonceHash"]), subject, expires: Number(body["expiresAt"]) });
+          pending.set(key, {
+            hash: String(body["nonceHash"]),
+            subject,
+            expires: Number(body["expiresAt"]),
+          });
           return Response.json({ accepted: true });
         }
         if (route === "/consume") {
@@ -42,16 +49,28 @@ function fakeBindings() {
         }
         if (route === "/credential") {
           const current = connected.get(key);
-          return Response.json(current ? {
-            connected: true, accessToken: current.token, clickupUserId: current.userId,
-            workspaceId: current.workspaceId,
-          } : { connected: false });
+          return Response.json(
+            current
+              ? {
+                  connected: true,
+                  accessToken: current.token,
+                  clickupUserId: current.userId,
+                  workspaceId: current.workspaceId,
+                }
+              : { connected: false },
+          );
         }
         if (route === "/status") {
           const current = connected.get(key);
-          return Response.json(current ? {
-            connected: true, clickupUserId: current.userId, workspaceId: current.workspaceId,
-          } : { connected: false });
+          return Response.json(
+            current
+              ? {
+                  connected: true,
+                  clickupUserId: current.userId,
+                  workspaceId: current.workspaceId,
+                }
+              : { connected: false },
+          );
         }
         if (route === "/disconnect") {
           connected.delete(key);
@@ -93,9 +112,12 @@ describe("independent ClickUp OAuth identity against current MCP principal", () 
   it("rejects missing configuration and forged MCP principal before a state is created", async () => {
     const fixture = fakeBindings();
     await expect(beginClickUpOAuth(null, fixture.env)).rejects.toThrow("CLICKUP_ACCESS_DENIED");
-    await expect(beginClickUpOAuth(login("33"), fixture.env)).rejects.toThrow("CLICKUP_ACCESS_DENIED");
-    await expect(beginClickUpOAuth(login("11"), { ...fixture.env, CLICKUP_STATE_KEY: undefined }))
-      .rejects.toThrow("CLICKUP_OAUTH_NOT_CONFIGURED");
+    await expect(beginClickUpOAuth(login("33"), fixture.env)).rejects.toThrow(
+      "CLICKUP_ACCESS_DENIED",
+    );
+    await expect(
+      beginClickUpOAuth(login("11"), { ...fixture.env, CLICKUP_STATE_KEY: undefined }),
+    ).rejects.toThrow("CLICKUP_OAUTH_NOT_CONFIGURED");
     expect(fixture.pending.size).toBe(0);
   });
 
@@ -105,7 +127,9 @@ describe("independent ClickUp OAuth identity against current MCP principal", () 
     const authorize = new URL(started.authorization_url);
     expect(authorize.origin).toBe("https://app.clickup.com");
     expect(authorize.searchParams.get("client_id")).toBe(fixture.env.CLICKUP_CLIENT_ID);
-    expect(authorize.searchParams.get("redirect_uri")).toBe("https://stage.example/clickup/callback");
+    expect(authorize.searchParams.get("redirect_uri")).toBe(
+      "https://stage.example/clickup/callback",
+    );
     const state = authorize.searchParams.get("state");
     expect(state).toBeTruthy();
     const callback = new URL("https://stage.example/clickup/callback");
@@ -122,22 +146,31 @@ describe("independent ClickUp OAuth identity against current MCP principal", () 
     const own = await personalClickUpCredential(login("11"), fixture.env);
     expect(own.clickupUserId).toBe("707");
     expect(own.token).toBe("test-user-token-no-value");
-    await expect(personalClickUpCredential(login("22"), fixture.env))
-      .rejects.toThrow("CLICKUP_ACCOUNT_NOT_CONNECTED");
+    await expect(personalClickUpCredential(login("22"), fixture.env)).rejects.toThrow(
+      "CLICKUP_ACCOUNT_NOT_CONNECTED",
+    );
     expect(await clickUpConnectionStatus(login("22"), fixture.env)).toEqual({ connected: false });
     expect((await clickUpConnectionStatus(login("11"), fixture.env))["connected"]).toBe(true);
     await disconnectClickUp(login("11"), fixture.env);
-    await expect(personalClickUpCredential(login("11"), fixture.env))
-      .rejects.toThrow("CLICKUP_ACCOUNT_NOT_CONNECTED");
+    await expect(personalClickUpCredential(login("11"), fixture.env)).rejects.toThrow(
+      "CLICKUP_ACCOUNT_NOT_CONNECTED",
+    );
   });
 
   it("rejects tampered state and never exchanges a token with ClickUp", async () => {
     const fixture = fakeBindings();
     const started = await beginClickUpOAuth(login("11"), fixture.env);
     const url = new URL("https://stage.example/clickup/callback");
-    url.searchParams.set("state", new URL(started.authorization_url).searchParams.get("state")!.replace(/^11/, "22"));
+    url.searchParams.set(
+      "state",
+      new URL(started.authorization_url).searchParams.get("state")!.replace(/^11/, "22"),
+    );
     url.searchParams.set("code", "fake-code");
-    const response = await finishClickUpOAuth(new Request(url), fixture.env, fixture.upstream as typeof fetch);
+    const response = await finishClickUpOAuth(
+      new Request(url),
+      fixture.env,
+      fixture.upstream as typeof fetch,
+    );
     expect(response.status).toBe(400);
     expect(fixture.upstream).not.toHaveBeenCalled();
   });
@@ -154,7 +187,11 @@ describe("independent ClickUp OAuth identity against current MCP principal", () 
       if (url.endsWith("/user")) return Response.json({ user: { id: 809 } });
       return Response.json({ teams: [{ id: 888 }] });
     });
-    const response = await finishClickUpOAuth(new Request(url), fixture.env, wrongTeam as typeof fetch);
+    const response = await finishClickUpOAuth(
+      new Request(url),
+      fixture.env,
+      wrongTeam as typeof fetch,
+    );
     expect(response.status).toBe(400);
     expect(fixture.connected.size).toBe(0);
   });

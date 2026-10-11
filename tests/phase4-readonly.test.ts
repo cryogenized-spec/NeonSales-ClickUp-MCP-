@@ -18,11 +18,15 @@ const env = {
     get: (_id: unknown) => ({
       fetch: async (request: Request) => {
         const path = new URL(request.url).pathname;
-        if (path === "/credential") return Response.json({
-          connected: true, clickupUserId: "456", workspaceId: "555",
-          accessToken: "nonworking-personal-oauth-token-fixture",
-        });
-        if (path === "/status") return Response.json({ connected: true, clickupUserId: "456", workspaceId: "555" });
+        if (path === "/credential")
+          return Response.json({
+            connected: true,
+            clickupUserId: "456",
+            workspaceId: "555",
+            accessToken: "nonworking-personal-oauth-token-fixture",
+          });
+        if (path === "/status")
+          return Response.json({ connected: true, clickupUserId: "456", workspaceId: "555" });
         return Response.json({ accepted: true, disconnected: true });
       },
     }),
@@ -82,23 +86,24 @@ describe("Phase 4 separate authorization policy", () => {
   });
 
   it("fails closed if any separate configuration or the quota binding is absent", async () => {
-    for (const field of [
-      "CLICKUP_LIST_ID",
-      "CLICKUP_QUOTA",
-      "CLICKUP_READ_GITHUB_IDS",
-    ]) {
+    for (const field of ["CLICKUP_LIST_ID", "CLICKUP_QUOTA", "CLICKUP_READ_GITHUB_IDS"]) {
       const broken: Record<string, unknown> = { ...env };
       delete broken[field];
       await expect(requireReadGrant(auth, broken)).rejects.toThrowError("CLICKUP_NOT_CONFIGURED");
     }
-    await expect(requireReadGrant(auth, { ...env, CLICKUP_CONNECTIONS: undefined })).rejects.toThrowError("CLICKUP_OAUTH_NOT_CONFIGURED");
-    await expect(requireReadGrant(auth, { ...env, CLICKUP_LIVE_ENABLED: "false" })).rejects.toThrowError("CLICKUP_NOT_CONFIGURED");
-    await expect(requireReadGrant(auth, { ...env, CLICKUP_READ_GITHUB_IDS: "11,99" })).rejects.toThrowError("CLICKUP_NOT_CONFIGURED");
+    await expect(
+      requireReadGrant(auth, { ...env, CLICKUP_CONNECTIONS: undefined }),
+    ).rejects.toThrowError("CLICKUP_OAUTH_NOT_CONFIGURED");
+    await expect(
+      requireReadGrant(auth, { ...env, CLICKUP_LIVE_ENABLED: "false" }),
+    ).rejects.toThrowError("CLICKUP_NOT_CONFIGURED");
+    await expect(
+      requireReadGrant(auth, { ...env, CLICKUP_READ_GITHUB_IDS: "11,99" }),
+    ).rejects.toThrowError("CLICKUP_NOT_CONFIGURED");
   });
 });
 
 describe("Phase 4 ClickUp GET-only transport", () => {
-
   it("uses exact allowed host, GET, hardcoded List and no redirects", async () => {
     const grant = await requireReadGrant(auth, env);
     const outbound = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) =>
