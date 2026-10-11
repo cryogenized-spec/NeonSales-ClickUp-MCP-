@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { oauthUserIdForGitHub, parseStaffAllowlist, requireActivePrincipal } from "../src/auth/staff.js";
+import {
+  oauthUserIdForGitHub,
+  parseStaffAllowlist,
+  requireActivePrincipal,
+} from "../src/auth/staff.js";
 
 describe("active staff isolation and scope validation", () => {
   it("accepts one to four distinct stable numeric GitHub identities", () => {
