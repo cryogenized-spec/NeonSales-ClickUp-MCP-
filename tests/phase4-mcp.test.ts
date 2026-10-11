@@ -13,7 +13,6 @@ function configuration() {
     CLICKUP_TOKEN_KEY: btoa(String.fromCharCode(...new Uint8Array(32))),
     CLICKUP_WORKSPACE_ID: "555",
     CLICKUP_STAFF_USER_MAP: JSON.stringify({ "11": "456", "22": "654" }),
-  CLICKUP_STAFF_USER_MAP: JSON.stringify({ "11": "456", "22": "654" }),
     MCP_PUBLIC_ORIGIN: "https://staging.example",
     CLICKUP_CONNECTIONS: {
       idFromName: (name: string) => name,
