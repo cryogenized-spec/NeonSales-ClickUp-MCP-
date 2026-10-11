@@ -73,7 +73,6 @@ describe("Phase 4 official SDK integration", () => {
         "get_clickup_connection_status",
         "get_scoped_list",
         "get_scoped_task",
-        "get_scoped_task_comments",
         "service_info",
       ]);
       for (const tool of tools) {
