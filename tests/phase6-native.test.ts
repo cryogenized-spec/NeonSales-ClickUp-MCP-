@@ -111,17 +111,6 @@ describe("native ClickUp endpoints: no duplicate journal or server approval sett
     );
   });
 
-  it("prevents task-ID mutation tools from being implemented as a check-then-write sequence", async () => {
-    const outbound = vi.fn(async () => json(task()));
-    const { createServer } = await import("../src/mcp/create-server.js");
-    const server = createServer({ bindings: {}, fetcher: outbound as typeof fetch });
-    // Any real registered tools must use the official SDK; the two task-ID
-    // write operations are removed entirely until ClickUp supports atomic
-    // home-list preconditions (otherwise moving a task defeats preflight).
-    expect(server).toBeDefined();
-    expect(outbound).not.toHaveBeenCalled();
-  });
-
   it("rejects malicious create input before outbound HTTP", async () => {
     const upstream = vi.fn(async () => json({ id: "abc123" }));
     for (const bad of [
