@@ -147,4 +147,48 @@ describe("Phase 4 official SDK integration", () => {
       await handler.close();
     }
   });
+
+  it("executes a native create task through the official MCP protocol only with separately consented write scope", async () => {
+    const outbound = vi.fn(async (url: RequestInfo | URL, options?: RequestInit) => {
+      expect(String(url)).toBe("https://api.clickup.com/api/v2/list/12345/task");
+      expect(options?.method).toBe("POST");
+      expect(options?.headers).toMatchObject({
+        Authorization: "nonworking-personal-fixture",
+      });
+      return Response.json({ id: "new123", list: { id: "12345" } });
+    });
+    const handler = createProtocolHandler({
+      bindings: configuration(),
+      fetcher: outbound as typeof fetch,
+    });
+    const client = new Client({ name: "write-integration-test", version: "0.1.0" });
+    const transport = new StreamableHTTPClientTransport(new URL("http://local.test/mcp"), {
+      fetch: async (input, init) =>
+        handler.fetch(new Request(input, init), {
+          authInfo: {
+            token: "verified-client-token",
+            clientId: "client-test",
+            scopes: ["mcp:read", "mcp:write"],
+            extra: { subject: "github:11" },
+          },
+        }),
+    });
+    try {
+      await client.connect(transport);
+      const result = await client.callTool({
+        name: "create_scoped_task",
+        arguments: { name: "Synthetic task" },
+      });
+      expect(result.isError).not.toBe(true);
+      expect(result.structuredContent).toMatchObject({
+        action: "task_created",
+        task_id: "new123",
+        accepted: true,
+      });
+      expect(outbound).toHaveBeenCalledTimes(1);
+    } finally {
+      await client.close();
+      await handler.close();
+    }
+  });
 });
