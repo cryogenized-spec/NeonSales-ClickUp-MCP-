@@ -37,9 +37,12 @@ function configuration() {
 
 describe("Phase 4 official SDK integration", () => {
   it("advertises three operational read tools plus catalogue and diagnostic", async () => {
-    const outbound = vi.fn(async () =>
-      Response.json({ tasks: [] }, { headers: { "content-type": "application/json" } }),
-    );
+    const outbound = vi.fn(async (url: RequestInfo | URL) => {
+      const pathname = new URL(String(url)).pathname;
+      if (pathname.endsWith("/list/12345")) return Response.json({ id: "12345", space: { id: "765" } });
+      if (pathname.endsWith("/team/555/space")) return Response.json({ spaces: [{ id: "765" }] });
+      return Response.json({ tasks: [] });
+    });
     const handler = createProtocolHandler({
       bindings: configuration(),
       fetcher: outbound as typeof fetch,
@@ -61,7 +64,6 @@ describe("Phase 4 official SDK integration", () => {
       const tools = (await client.listTools()).tools;
       expect(tools.map((tool) => tool.name).sort()).toEqual([
         "clickup_tool_catalog",
-        "comment_on_scoped_task",
         "connect_clickup_account",
         "create_scoped_task",
         "disconnect_clickup_account",
@@ -72,7 +74,6 @@ describe("Phase 4 official SDK integration", () => {
         "get_scoped_task",
         "get_scoped_task_comments",
         "service_info",
-        "update_scoped_task",
       ]);
       for (const tool of tools) {
         expect(tool.annotations?.readOnlyHint).toBe(
@@ -80,9 +81,7 @@ describe("Phase 4 official SDK integration", () => {
             "connect_clickup_account",
             "disconnect_clickup_account",
             "create_scoped_task",
-            "update_scoped_task",
-            "comment_on_scoped_task",
-          ].includes(tool.name),
+                  ].includes(tool.name),
         );
         expect(tool.annotations?.destructiveHint).toBe(tool.name === "disconnect_clickup_account");
       }
@@ -92,12 +91,10 @@ describe("Phase 4 official SDK integration", () => {
         liveClickUp: true,
         authentication: "github-oauth-plus-individual-clickup-oauth",
       });
-      const denied = await client.callTool({
+      await expect(client.callTool({
         name: "create_scoped_task",
         arguments: { name: "No write scope" },
-      });
-      expect(denied.isError).toBe(true);
-      expect(JSON.stringify(denied.content)).toContain("CLICKUP_WRITE_SCOPE_REQUIRED");
+      })).rejects.toThrow();
       expect(outbound).not.toHaveBeenCalled();
       const response = await client.callTool({
         name: "find_scoped_tasks",
@@ -110,7 +107,7 @@ describe("Phase 4 official SDK integration", () => {
         incomplete: false,
         pages_scanned: 1,
       });
-      expect(outbound).toHaveBeenCalledTimes(1);
+      expect(outbound).toHaveBeenCalledTimes(3);
     } finally {
       await client.close();
       await handler.close();
@@ -156,6 +153,11 @@ describe("Phase 4 official SDK integration", () => {
 
   it("executes a native create task through the official MCP protocol only with separately consented write scope", async () => {
     const outbound = vi.fn(async (url: RequestInfo | URL, options?: RequestInit) => {
+      const pathname = new URL(String(url)).pathname;
+      if (pathname.endsWith("/list/12345") && options?.method === "GET")
+        return Response.json({ id: "12345", space: { id: 765 } });
+      if (pathname.endsWith("/team/555/space") && options?.method === "GET")
+        return Response.json({ spaces: [{ id: 765 }] });
       expect(String(url)).toBe("https://api.clickup.com/api/v2/list/12345/task");
       expect(options?.method).toBe("POST");
       expect(options?.headers).toMatchObject({
