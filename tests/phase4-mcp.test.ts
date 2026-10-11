@@ -61,18 +61,18 @@ describe("Phase 4 official SDK integration", () => {
       const tools = (await client.listTools()).tools;
       expect(tools.map((tool) => tool.name).sort()).toEqual([
         "clickup_tool_catalog",
-        "connect_clickup_account",
-        "disconnect_clickup_account",
-        "create_scoped_task",
-        "update_scoped_task",
         "comment_on_scoped_task",
-        "get_scoped_list",
-        "get_scoped_task_comments",
+        "connect_clickup_account",
+        "create_scoped_task",
+        "disconnect_clickup_account",
         "find_scoped_tasks",
         "get_attention_report",
         "get_clickup_connection_status",
+        "get_scoped_list",
         "get_scoped_task",
+        "get_scoped_task_comments",
         "service_info",
+        "update_scoped_task",
       ]);
       for (const tool of tools) {
         expect(tool.annotations?.readOnlyHint).toBe(
@@ -86,6 +86,13 @@ describe("Phase 4 official SDK integration", () => {
         );
         expect(tool.annotations?.destructiveHint).toBe(tool.name === "disconnect_clickup_account");
       }
+      const denied = await client.callTool({
+        name: "create_scoped_task",
+        arguments: { name: "No write scope" },
+      });
+      expect(denied.isError).toBe(true);
+      expect(JSON.stringify(denied.content)).toContain("CLICKUP_WRITE_SCOPE_REQUIRED");
+      expect(outbound).not.toHaveBeenCalled();
       const response = await client.callTool({
         name: "find_scoped_tasks",
         arguments: { max_results: 4 },
