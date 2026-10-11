@@ -44,7 +44,11 @@ export function requireActivePrincipal(
     throw new Error("Invalid authenticated principal");
   }
   const id = subject.slice("github:".length);
-  if (!permitted.has(id) || tokenSubject !== oauthUserIdForGitHub(id) || !tokenScopes.includes("mcp:read")) {
+  if (
+    !permitted.has(id) ||
+    tokenSubject !== oauthUserIdForGitHub(id) ||
+    !tokenScopes.includes("mcp:read")
+  ) {
     throw new Error("Staff identity is not authorized");
   }
   return Object.freeze({ subject, githubId: id, scopes: Object.freeze(["mcp:read"]) });
