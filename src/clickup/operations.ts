@@ -1,4 +1,4 @@
-import { getScopedTask, quotaCall } from "./client.js";
+import { quotaCall } from "./client.js";
 import { ReadFailure, type ReadGrant } from "./policy.js";
 
 /**
@@ -12,10 +12,6 @@ const idPattern = /^[A-Za-z0-9_-]{2,40}$/;
 const obj = (v: unknown): Record<string, unknown> | null =>
   v !== null && typeof v === "object" && !Array.isArray(v) ? (v as Record<string, unknown>) : null;
 
-function taskId(id: string): string {
-  if (!idPattern.test(id)) throw new ReadFailure("CLICKUP_INVALID_ARGUMENT");
-  return encodeURIComponent(id);
-}
 async function requestJson(
   grant: ReadGrant,
   fetcher: typeof fetch,
@@ -214,53 +210,9 @@ export async function createScopedTask(
  * advertising these mutations would violate our strict List boundary.
  * Restore only when upstream provides a List-bound conditional mutation.
  */
-export async function getScopedTaskComments(
-  grant: ReadGrant,
-  id: string,
-  limit: number,
-  fetcher: typeof fetch,
-): Promise<Record<string, unknown>> {
-  const clean = taskId(id);
-  if (!Number.isInteger(limit) || limit < 1 || limit > 20)
-    throw new ReadFailure("CLICKUP_INVALID_ARGUMENT");
-  await getScopedTask(grant, id, fetcher);
-  const upstream = await requestJson(grant, fetcher, "GET", "task/" + clean + "/comment");
-  if (!Array.isArray(upstream["comments"])) throw new ReadFailure("CLICKUP_BAD_RESPONSE");
-  const comments: Record<string, unknown>[] = [];
-  for (const value of upstream["comments"].slice(0, limit)) {
-    const comment = obj(value);
-    if (!comment) throw new ReadFailure("CLICKUP_BAD_RESPONSE");
-    const rawId = comment["id"];
-    const date = comment["date"];
-    const rawText = comment["comment_text"];
-    const fallback = comment["comment"];
-    const content =
-      typeof rawText === "string"
-        ? rawText
-        : Array.isArray(fallback)
-          ? fallback
-              .map((part: unknown) => obj(part)?.["text"] ?? "")
-              .filter((part: unknown) => typeof part === "string")
-              .join("")
-          : "";
-    comments.push({
-      id: typeof rawId === "string" || typeof rawId === "number" ? String(rawId) : null,
-      text: content.slice(0, 6000),
-      date_ms:
-        (typeof date === "string" || typeof date === "number") && /^\d{1,15}$/.test(String(date))
-          ? Number(date)
-          : null,
-      author_id: obj(comment["user"])?.["id"] ?? null,
-    });
-  }
-  return {
-    source: "clickup-api-v2",
-    task_id: id,
-    comments,
-    incomplete: upstream["comments"].length >= 25 || upstream["comments"].length > limit,
-    note: "First ClickUp comment page only; ClickUp owns task history.",
-  };
-}
+// ClickUp task-ID comment reads also lack a list-scoped endpoint: an item can
+// move between preflight and the subsequent read. Keep this unavailable until
+// the same upstream atomicity issue is resolved.
 export async function getScopedList(
   grant: ReadGrant,
   fetcher: typeof fetch,
