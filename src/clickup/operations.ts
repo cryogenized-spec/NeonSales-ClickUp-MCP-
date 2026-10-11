@@ -41,19 +41,28 @@ async function requestJson(
     if (response.status === 401 || response.status === 403)
       throw new ReadFailure("CLICKUP_UPSTREAM_DENIED");
     if (response.status === 429) throw new ReadFailure("CLICKUP_RATE_LIMITED");
-    if (!response.ok) throw new ReadFailure("CLICKUP_UPSTREAM_UNAVAILABLE");
+    if (!response.ok) {
+      if (method !== "GET" && response.status >= 500) {
+        throw new ReadFailure("CLICKUP_WRITE_OUTCOME_UNKNOWN");
+      }
+      throw new ReadFailure("CLICKUP_UPSTREAM_UNAVAILABLE");
+    }
+    const malformed = () => new ReadFailure(
+      method === "GET" ? "CLICKUP_BAD_RESPONSE" : "CLICKUP_WRITE_OUTCOME_UNKNOWN",
+    );
     const type = response.headers.get("content-type") ?? "";
     const size = response.headers.get("content-length");
     if (
       !type.toLowerCase().includes("application/json") ||
       (size !== null && Number(size) > MAX_JSON_BYTES)
     )
-      throw new ReadFailure("CLICKUP_BAD_RESPONSE");
+      throw malformed();
     const text = await response.text();
-    if (text.length > MAX_JSON_BYTES) throw new ReadFailure("CLICKUP_BAD_RESPONSE");
-    const parsed: unknown = JSON.parse(text);
+    if (text.length > MAX_JSON_BYTES) throw malformed();
+    let parsed: unknown;
+    try { parsed = JSON.parse(text); } catch { throw malformed(); }
     const decoded = obj(parsed);
-    if (!decoded) throw new ReadFailure("CLICKUP_BAD_RESPONSE");
+    if (!decoded) throw malformed();
     return decoded;
   } catch (error) {
     if (error instanceof ReadFailure) throw error;
