@@ -204,8 +204,7 @@ describe("Phase 4 official SDK integration", () => {
     const outbound = vi.fn(async (url: RequestInfo | URL, options?: RequestInit) => {
       const target = String(url);
       if (options?.method === "POST") throw new Error("FORBIDDEN_WRITE");
-      if (target.endsWith("/list/12345"))
-        return Response.json({ id: "12345", space: { id: 999 } });
+      if (target.endsWith("/list/12345")) return Response.json({ id: "12345", space: { id: 999 } });
       if (target.includes("/team/555/space")) return Response.json({ spaces: [{ id: 765 }] });
       throw new Error("unexpected request");
     });
