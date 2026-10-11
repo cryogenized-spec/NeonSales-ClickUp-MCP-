@@ -3,5 +3,5 @@
   "main": "src/index.ts",
   "compatibility_date": "2026-10-10",
   "compatibility_flags": ["global_fetch_strictly_public"],
-  "workers_dev": false,
+  "workers_dev": false,\n  "durable_objects": {\n    "bindings": [{ "name": "CLICKUP_QUOTA", "class_name": "ClickUpQuota" }]\n  },\n  "migrations": [{ "tag": "phase4-v1", "new_sqlite_classes": ["ClickUpQuota"] }],
 }
