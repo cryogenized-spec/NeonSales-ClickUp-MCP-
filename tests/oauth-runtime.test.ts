@@ -72,7 +72,7 @@ function verifiedContext(id: string, overrides: Record<string, unknown> = {}): T
   return {
     props: { userId: "github:" + id },
     auth: {
-      userId: "github:" + id,
+      userId: "github_" + id,
       token: "secret-token-" + id,
       clientId: "client-" + id,
       scope: ["mcp:read"],
