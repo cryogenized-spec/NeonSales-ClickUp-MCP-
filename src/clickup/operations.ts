@@ -47,9 +47,8 @@ async function requestJson(
       }
       throw new ReadFailure("CLICKUP_UPSTREAM_UNAVAILABLE");
     }
-    const malformed = () => new ReadFailure(
-      method === "GET" ? "CLICKUP_BAD_RESPONSE" : "CLICKUP_WRITE_OUTCOME_UNKNOWN",
-    );
+    const malformed = () =>
+      new ReadFailure(method === "GET" ? "CLICKUP_BAD_RESPONSE" : "CLICKUP_WRITE_OUTCOME_UNKNOWN");
     const type = response.headers.get("content-type") ?? "";
     const size = response.headers.get("content-length");
     if (
@@ -60,7 +59,11 @@ async function requestJson(
     const text = await response.text();
     if (text.length > MAX_JSON_BYTES) throw malformed();
     let parsed: unknown;
-    try { parsed = JSON.parse(text); } catch { throw malformed(); }
+    try {
+      parsed = JSON.parse(text);
+    } catch {
+      throw malformed();
+    }
     const decoded = obj(parsed);
     if (!decoded) throw malformed();
     return decoded;
