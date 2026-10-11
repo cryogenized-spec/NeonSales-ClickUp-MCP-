@@ -1,3 +1,17 @@
+# Schema catalogue checkpoint — 11 October 2026 SAST
+
+**Scope:** Draft [PR #18](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/pull/18), `feature/phase4-complete-model-tool-schemas-20261011`, stacked on Phase 4 POC draft PR #17. No merge/deploy or new live ClickUp operation.
+
+**Delivered:** `src/mcp/tool-catalog.ts` contains all **48** named capabilities from ClickUp's published [Supported Tools](https://developer.clickup.com/docs/mcp-tools) listing, with our own closed JSON input schemas, descriptions, examples, effect classes and `schema_only` status. An authenticated `clickup_tool_catalog` offers bounded read-only discovery; **no REST request**. Official MCP SDK registers all 48 only in injected in-process `schemaPreview: true` tests, where all calls fail `CLICKUP_SCHEMA_ONLY`. A normal Worker cannot activate preview through an environment flag. Existing three scoped reads and Phase 3 diagnostic remain unchanged in behavior. See [CLICKUP_TOOL_SCHEMA.md](CLICKUP_TOOL_SCHEMA.md) for the contract and limitations.
+
+**Fresh mechanical evidence:** [Strict CI run #38131409280](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/actions/runs/38131409280) **SUCCESS** for code SHA `f81e28c3b9fc249656658a25ddd2e1a7f0ae402e`: 115/115 Vitest in 11 files, 9 repository policy regressions, pinned npm install, Prettier, ESLint, triple TypeScript, Wrangler dry-run, local workerd OAuth security smoke and npm audit (0 reported vulnerabilities). **This added state documentation advances HEAD and requires its own CI**, not a reused green claim.
+
+**What remains unverified:** True ClickUp hosted-MCP runtime JSON schema equivalence (not asserted), all 48 backends (not built), secrets and OAuth approval for ClickUp, dedicated stage deployment, real task reads and real external subscription clients, conformance and specialist review. Owner deferred API tokens. Never advertise `schema_only` entries as working ClickUp operations. No new write capability is authorized.
+
+**Next action:** Obtain exact final HEAD green CI, request specialist reviewer on that unchanged SHA, then leave draft unmerged while owner handles secrets separately. Do not add write methods merely because schemas exist.
+
+---
+
 # Current checkpoint — Phase 4 read-only POC branch (11 October 2026 SAST)
 
 **Branch:** `feature/phase4-clickup-readonly-poc-20261011` (draft [PR #17](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/pull/17)); stacked on Phase 3 security test branch from [PR #16](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/pull/16), **not merged**.
