@@ -223,4 +223,16 @@ describe("native ClickUp operations with NO duplicate journal or server approval
     ).rejects.toThrow("CLICKUP_QUOTA_UNAVAILABLE");
     expect(outbound).not.toHaveBeenCalled();
   });
+
+  it("reports malformed success and server 5xx as potentially committed writes, not safe retries", async () => {
+    const upstream500 = vi.fn(async () => json({ error: "internal" }, 503));
+    await expect(createScopedTask(grant, { name: "Never retry blindly" }, upstream500 as typeof fetch))
+      .rejects.toThrow("CLICKUP_WRITE_OUTCOME_UNKNOWN");
+    expect(upstream500).toHaveBeenCalledTimes(1);
+    const malformed = vi.fn(async () =>
+      new Response("unexpected", { status: 200, headers: { "content-type": "text/plain" } }));
+    await expect(createScopedTask(grant, { name: "May already exist" }, malformed as typeof fetch))
+      .rejects.toThrow("CLICKUP_WRITE_OUTCOME_UNKNOWN");
+    expect(malformed).toHaveBeenCalledTimes(1);
+  });
 });
