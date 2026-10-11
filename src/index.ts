@@ -16,9 +16,14 @@ export default {
         headers: { "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" },
       });
     }
+    if (new URL(request.url).pathname === "/clickup/callback") {
+      const { finishClickUpOAuth } = await import("./clickup/per-user-oauth.js");
+      return finishClickUpOAuth(request, env);
+    }
     const { handleOAuthRequest } = await import("./auth/oauth-runtime.js");
     return handleOAuthRequest(request, env, context, origin);
   },
 };
 
 export { ClickUpQuota } from "./clickup/quota-object.js";
+export { ClickUpUserConnection } from "./clickup/user-connection.js";
