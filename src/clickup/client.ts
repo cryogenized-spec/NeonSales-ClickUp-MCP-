@@ -102,7 +102,7 @@ async function quotaCall(
 ): Promise<void> {
   try {
     const binding = grant.quota;
-    const id = binding.idFromName("single-clickup-api-credential");
+    const id = binding.idFromName("clickup-account:" + grant.clickupUserId);
     const stub = binding.get(id as never);
     const response = await stub.fetch(
       new Request("https://internal.invalid/" + kind, {
