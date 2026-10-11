@@ -1,12 +1,11 @@
-import { McpServer, fromJsonSchema } from "@modelcontextprotocol/server";
+import { McpServer, fromJsonSchema, requireScopes } from "@modelcontextprotocol/server";
 import { getScopedTask, findScopedTasks } from "../clickup/client.js";
 import { ReadFailure, requireReadGrant, requireWriteGrant } from "../clickup/policy.js";
 import {
   createScopedTask,
-  updateScopedTask,
-  addScopedTaskComment,
   getScopedTaskComments,
   getScopedList,
+  verifyListWorkspace,
   type TaskInput,
 } from "../clickup/operations.js";
 import {
@@ -92,6 +91,17 @@ export function createServer(deps?: ReadDependencies): McpServer {
 
   if (!deps) return server;
   const dependencies = deps;
+
+  // Single authorization path: verified MCP identity, personal ClickUp token
+  // and live List ancestry in the designated Workspace BEFORE data access.
+  // Client-side tool confirmations are intentionally not replicated here.
+  async function scopedGrant(auth: unknown, write = false) {
+    const grant = write
+      ? await requireWriteGrant(auth, dependencies.bindings)
+      : await requireReadGrant(auth, dependencies.bindings);
+    await verifyListWorkspace(grant, dependencies.fetcher ?? fetch);
+    return grant;
+  }
 
   server.registerTool(
     "connect_clickup_account",
@@ -307,7 +317,7 @@ export function createServer(deps?: ReadDependencies): McpServer {
     },
     async (_args, extra) => {
       try {
-        const grant = await requireReadGrant(extra.http?.authInfo, dependencies.bindings);
+        const grant = await scopedGrant(extra.http?.authInfo);
         return toolSuccess(await getScopedList(grant, dependencies.fetcher ?? fetch));
       } catch (error) {
         return toolError(error);
@@ -320,6 +330,7 @@ export function createServer(deps?: ReadDependencies): McpServer {
     {
       description:
         "CREATE a real ClickUp task in the configured List using YOUR own ClickUp OAuth identity. Required scope mcp:write. This posts immediately when your AI client allows the tool; the MCP adds no extra approval or action journal. Check required Custom Fields and choose exact status first. Never retry an uncertain write blindly.",
+      scopeChallenge: requireScopes("mcp:read", "mcp:write"),
       inputSchema: fromJsonSchema<TaskInput>({
         type: "object",
         properties: taskProperties,
@@ -330,7 +341,7 @@ export function createServer(deps?: ReadDependencies): McpServer {
     },
     async (args, extra) => {
       try {
-        const grant = await requireWriteGrant(extra.http?.authInfo, dependencies.bindings);
+        const grant = await scopedGrant(extra.http?.authInfo, true);
         return toolSuccess(await createScopedTask(grant, args, dependencies.fetcher ?? fetch));
       } catch (error) {
         return toolError(error);
@@ -338,71 +349,9 @@ export function createServer(deps?: ReadDependencies): McpServer {
     },
   );
 
-  server.registerTool(
-    "update_scoped_task",
-    {
-      description:
-        "UPDATE an existing task in the configured home List. Uses YOUR ClickUp OAuth account and native ClickUp task activity, not a duplicate journal. Only supplied fields change. Required mcp:write; ask client-side confirmation according to Claude/ChatGPT settings. Do not use for unrelated Lists or retry an uncertain mutation.",
-      inputSchema: fromJsonSchema<{ task_id: string; changes: TaskInput }>({
-        type: "object",
-        properties: {
-          task_id: { type: "string", minLength: 2, maxLength: 40, pattern: "^[A-Za-z0-9_-]+$" },
-          changes: {
-            type: "object",
-            properties: taskProperties,
-            additionalProperties: false,
-            minProperties: 1,
-          },
-        },
-        required: ["task_id", "changes"],
-        additionalProperties: false,
-      }),
-      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false },
-    },
-    async (args, extra) => {
-      try {
-        const grant = await requireWriteGrant(extra.http?.authInfo, dependencies.bindings);
-        return toolSuccess(
-          await updateScopedTask(grant, args.task_id, args.changes, dependencies.fetcher ?? fetch),
-        );
-      } catch (error) {
-        return toolError(error);
-      }
-    },
-  );
-
-  server.registerTool(
-    "comment_on_scoped_task",
-    {
-      description:
-        "POST a real ClickUp task comment to a verified task in the configured home List, attributed to YOUR own ClickUp OAuth user. Client-side tool permissions decide whether to allow. Comments can notify followers and should never be blindly retried after a timeout. No internal journal or duplicate system is created.",
-      inputSchema: fromJsonSchema<{ task_id: string; comment: string }>({
-        type: "object",
-        properties: {
-          task_id: { type: "string", minLength: 2, maxLength: 40, pattern: "^[A-Za-z0-9_-]+$" },
-          comment: { type: "string", minLength: 1, maxLength: 6000 },
-        },
-        required: ["task_id", "comment"],
-        additionalProperties: false,
-      }),
-      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false },
-    },
-    async (args, extra) => {
-      try {
-        const grant = await requireWriteGrant(extra.http?.authInfo, dependencies.bindings);
-        return toolSuccess(
-          await addScopedTaskComment(
-            grant,
-            args.task_id,
-            args.comment,
-            dependencies.fetcher ?? fetch,
-          ),
-        );
-      } catch (error) {
-        return toolError(error);
-      }
-    },
-  );
+  // update_scoped_task and comment_on_scoped_task are intentionally not
+  // advertised: ClickUp's task-ID mutation endpoints lack an atomic home-List
+  // precondition. A task could move after a read but before the write.
 
   server.registerTool(
     "get_scoped_task_comments",
@@ -422,7 +371,7 @@ export function createServer(deps?: ReadDependencies): McpServer {
     },
     async (args, extra) => {
       try {
-        const grant = await requireReadGrant(extra.http?.authInfo, dependencies.bindings);
+        const grant = await scopedGrant(extra.http?.authInfo);
         return toolSuccess(
           await getScopedTaskComments(
             grant,
@@ -454,7 +403,7 @@ export function createServer(deps?: ReadDependencies): McpServer {
     },
     async (args, extra) => {
       try {
-        const grant = await requireReadGrant(extra.http?.authInfo, dependencies.bindings);
+        const grant = await scopedGrant(extra.http?.authInfo);
         const result = await findScopedTasks(
           grant,
           dependencies.fetcher ?? fetch,
@@ -485,7 +434,7 @@ export function createServer(deps?: ReadDependencies): McpServer {
     },
     async (args, extra) => {
       try {
-        const grant = await requireReadGrant(extra.http?.authInfo, dependencies.bindings);
+        const grant = await scopedGrant(extra.http?.authInfo);
         const result = await getScopedTask(grant, args.task_id, dependencies.fetcher ?? fetch);
         return toolSuccess({ source: "clickup-api-v2", ...result });
       } catch (error) {
@@ -511,7 +460,7 @@ export function createServer(deps?: ReadDependencies): McpServer {
     },
     async (args, extra) => {
       try {
-        const grant = await requireReadGrant(extra.http?.authInfo, dependencies.bindings);
+        const grant = await scopedGrant(extra.http?.authInfo);
         const result = await findScopedTasks(grant, dependencies.fetcher ?? fetch, 50);
         const report = createAttentionReport(
           result.tasks,
