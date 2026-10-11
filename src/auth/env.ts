@@ -18,6 +18,7 @@ export interface OAuthEnv {
   readonly CLICKUP_STATE_KEY?: string;
   readonly CLICKUP_TOKEN_KEY?: string;
   readonly CLICKUP_WORKSPACE_ID?: string;
+  readonly CLICKUP_STAFF_USER_MAP?: string;
   readonly CLICKUP_CONNECTIONS?: unknown;
   readonly CLICKUP_LIST_ID?: string;
   readonly CLICKUP_READ_GITHUB_IDS?: string;
