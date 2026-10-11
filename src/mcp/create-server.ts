@@ -72,8 +72,20 @@ export function createServer(deps?: ReadDependencies): McpServer {
       inputSchema: fromJsonSchema<{ max_results?: number; status?: string }>({
         type: "object",
         properties: {
-          max_results: { type: "integer", minimum: 1, maximum: 50, description: "Result cap (default 20); examine incomplete before treating a search as exhaustive." },
-          status: { type: "string", minLength: 1, maxLength: 64, description: "Optional exact ClickUp status label, case-insensitive. Not a search query." },
+          max_results: {
+            type: "integer",
+            minimum: 1,
+            maximum: 50,
+            description:
+              "Result cap (default 20); examine incomplete before treating a search as exhaustive.",
+          },
+          status: {
+            type: "string",
+            minLength: 1,
+            maxLength: 64,
+            description:
+              "Optional exact ClickUp status label, case-insensitive. Not a search query.",
+          },
         },
         additionalProperties: false,
       }),
@@ -104,7 +116,13 @@ export function createServer(deps?: ReadDependencies): McpServer {
       inputSchema: fromJsonSchema<{ task_id: string }>({
         type: "object",
         properties: {
-          task_id: { type: "string", minLength: 2, maxLength: 40, pattern: "^[a-zA-Z0-9_-]+$", description: "Exact ClickUp task ID (not title or URL)." },
+          task_id: {
+            type: "string",
+            minLength: 2,
+            maxLength: 40,
+            pattern: "^[a-zA-Z0-9_-]+$",
+            description: "Exact ClickUp task ID (not title or URL).",
+          },
         },
         required: ["task_id"],
         additionalProperties: false,
@@ -131,8 +149,16 @@ export function createServer(deps?: ReadDependencies): McpServer {
       inputSchema: fromJsonSchema<{ lookahead_hours?: number; include_overdue?: boolean }>({
         type: "object",
         properties: {
-          lookahead_hours: { type: "integer", minimum: 1, maximum: 48, description: "Forward deadline window 1–48 hours, default 24." },
-          include_overdue: { type: "boolean", description: "Whether past-due tasks appear, default true." },
+          lookahead_hours: {
+            type: "integer",
+            minimum: 1,
+            maximum: 48,
+            description: "Forward deadline window 1–48 hours, default 24.",
+          },
+          include_overdue: {
+            type: "boolean",
+            description: "Whether past-due tasks appear, default true.",
+          },
         },
         additionalProperties: false,
       }),
@@ -158,7 +184,6 @@ export function createServer(deps?: ReadDependencies): McpServer {
       }
     },
   );
-
 
   // Planned operations have complete schemas but deliberately no REST implementations.
   registerPlannedTools(server);

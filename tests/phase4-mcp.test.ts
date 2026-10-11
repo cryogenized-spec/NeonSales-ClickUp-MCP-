@@ -40,13 +40,28 @@ describe("Phase 4 official SDK integration", () => {
     try {
       await client.connect(transport);
       const tools = (await client.listTools()).tools;
-      expect(tools.filter((tool) => ["find_scoped_tasks", "get_attention_report", "get_scoped_task", "service_info"].includes(tool.name)).map((tool) => tool.name).sort()).toEqual([
-        "find_scoped_tasks",
-        "get_attention_report",
-        "get_scoped_task",
-        "service_info",
-      ]);
-      for (const tool of tools.filter((item) => ["find_scoped_tasks", "get_attention_report", "get_scoped_task", "service_info", "get_tool_catalog"].includes(item.name))) {
+      expect(
+        tools
+          .filter((tool) =>
+            [
+              "find_scoped_tasks",
+              "get_attention_report",
+              "get_scoped_task",
+              "service_info",
+            ].includes(tool.name),
+          )
+          .map((tool) => tool.name)
+          .sort(),
+      ).toEqual(["find_scoped_tasks", "get_attention_report", "get_scoped_task", "service_info"]);
+      for (const tool of tools.filter((item) =>
+        [
+          "find_scoped_tasks",
+          "get_attention_report",
+          "get_scoped_task",
+          "service_info",
+          "get_tool_catalog",
+        ].includes(item.name),
+      )) {
         expect(tool.annotations?.readOnlyHint).toBe(true);
         expect(tool.annotations?.destructiveHint).toBe(false);
       }

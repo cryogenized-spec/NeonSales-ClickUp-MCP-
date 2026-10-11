@@ -19,8 +19,14 @@ function fixture(key: string): unknown {
   if (key === "start_ms") return 1_700_000_000_000;
   if (key === "duration_ms") return 60_000;
   if (key === "due_date_ms") return 1_700_000_000_000;
-  if (key === "query" || key === "text" || key === "description" || key === "content") return "Sample user text";
-  if (key === "workspace_id" || key.endsWith("_id") && ["workspace_id", "space_id", "list_id", "folder_id", "target_list_id"].includes(key)) return "12345";
+  if (key === "query" || key === "text" || key === "description" || key === "content")
+    return "Sample user text";
+  if (
+    key === "workspace_id" ||
+    (key.endsWith("_id") &&
+      ["workspace_id", "space_id", "list_id", "folder_id", "target_list_id"].includes(key))
+  )
+    return "12345";
   return key === "name" || key === "title" ? "Sample name" : "abc123";
 }
 
@@ -48,18 +54,21 @@ describe("full model-visible ClickUp MCP catalog", () => {
   });
 
   it("exposes all 52 properly-described tools through the REAL MCP SDK without secrets", async () => {
-    const outbound = vi.fn(async () => { throw new Error("must never fetch"); });
+    const outbound = vi.fn(async () => {
+      throw new Error("must never fetch");
+    });
     const handler = createProtocolHandler({ bindings: {}, fetcher: outbound as typeof fetch });
     const client = new Client({ name: "schema-client", version: "1.0.0" });
     const transport = new StreamableHTTPClientTransport(new URL("http://local.test/mcp"), {
-      fetch: async (input, init) => handler.fetch(new Request(input, init), {
-        authInfo: {
-          token: "internal-fixture",
-          clientId: "schema-test",
-          scopes: ["mcp:read"],
-          extra: { subject: "github:11" },
-        },
-      }),
+      fetch: async (input, init) =>
+        handler.fetch(new Request(input, init), {
+          authInfo: {
+            token: "internal-fixture",
+            clientId: "schema-test",
+            scopes: ["mcp:read"],
+            extra: { subject: "github:11" },
+          },
+        }),
     });
     try {
       await client.connect(transport);
@@ -106,7 +115,9 @@ describe("full model-visible ClickUp MCP catalog", () => {
   });
 
   it("has no hidden open-ended generic REST or enabled task mutation route", () => {
-    expect(PLANNED_TOOLS.every((tool) => !/execute|request|arbitrary_api/.test(tool.name))).toBe(true);
+    expect(PLANNED_TOOLS.every((tool) => !/execute|request|arbitrary_api/.test(tool.name))).toBe(
+      true,
+    );
     for (const tool of PLANNED_TOOLS) {
       expect(plannedInputSchema(tool)).not.toHaveProperty("additionalProperties", true);
     }
