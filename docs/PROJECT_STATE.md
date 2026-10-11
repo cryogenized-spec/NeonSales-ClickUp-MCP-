@@ -1,4 +1,19 @@
-# Current checkpoint — Phase 4 read-only POC branch (11 October 2026 SAST)
+# Current checkpoint — complete ClickUp model-facing schemas (11 October 2026 SAST)
+
+**Draft PR #19**: [Full MCP schema](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/pull/19) on `feature/phase4-full-mcp-tool-schemas-20261011`, stacked only on the isolated read-only POC [PR #17](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/pull/17). No merges, no live secret changes and no deployment.
+
+**Completed code milestone:** The configured official MCP SDK v2 server registers 52 tool contracts: 3 operational (but separately secret/grant-gated) scoped read tools, 47 full input/output schema-only no-op capability contracts based on the 48 published ClickUp MCP capability areas, diagnostic `service_info`, and read-only `get_tool_catalog` availability discovery. ClickUp's Get Task is represented by the existing `get_scoped_task` home-List-limited read. Tool names, titles, action/risk descriptions, closed JSON input schemas and output contracts are in `src/mcp/`; model-facing guidance is in [FULL_TOOL_SCHEMA.md](FULL_TOOL_SCHEMA.md).
+
+**Evidence:** Strict CI [run #38131543918](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/actions/runs/38131543918) passed at code SHA `c02531a5c61a94f4c5e7996e08386430bcfe3868`: 114/114 Vitest tests over 11 test files, 9 Python policy regressions, npm lockfile install, Prettier, ESLint, three strict TypeScript profiles, Wrangler dry-run, genuine local workerd OAuth smoke, and `npm audit` zero vulnerabilities. **This earlier run is not evidence for any subsequent docs commits until their CI is green.**
+
+**Live truth:** Planned operations are advertised for schema discovery only and always return `CLICKUP_TOOL_NOT_IMPLEMENTED`, including all writes/deletes. No planned callback contains a ClickUp API method. The three real read-only paths from PR #17 remain separately disabled without owner-configured grants/secrets. No real ClickUp data has been read by this Phase 4 branch. Full 52-tool discovery has been tested in the in-process official SDK, not from a deployed client subscription.
+
+**Next:** Verify exact-final-SHA CI, then ask a focused Codex review of schema safety/outputs, protocol capability discovery and whether 47 disabled tools should remain visible to end-user clients. Keep PR #19 draft and unmerged; owner-controlled staging and future mutation design require separate decisions.
+
+---
+
+## Previous checkpoint (historical; superseded where inconsistent)
+
 
 **Branch:** `feature/phase4-clickup-readonly-poc-20261011` (draft [PR #17](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/pull/17)); stacked on Phase 3 security test branch from [PR #16](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/pull/16), **not merged**.
 
