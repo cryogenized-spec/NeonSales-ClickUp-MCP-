@@ -2,6 +2,12 @@ import { McpServer, fromJsonSchema } from "@modelcontextprotocol/server";
 import { getScopedTask, findScopedTasks } from "../clickup/client.js";
 import { ReadFailure, requireReadGrant } from "../clickup/policy.js";
 import { createAttentionReport } from "../reports/attention.js";
+import { registerPlannedTools, catalogSnapshot } from "./register-planned-tools.js";
+import {
+  FIND_TASKS_OUTPUT_SCHEMA,
+  GET_TASK_OUTPUT_SCHEMA,
+  ATTENTION_REPORT_OUTPUT_SCHEMA,
+} from "./output-schemas.js";
 
 export interface ReadDependencies {
   readonly bindings: unknown;
@@ -68,6 +74,7 @@ export function createServer(deps?: ReadDependencies): McpServer {
         },
         additionalProperties: false,
       }),
+      outputSchema: fromJsonSchema<Record<string, unknown>>(FIND_TASKS_OUTPUT_SCHEMA),
       annotations: { readOnlyHint: true, destructiveHint: false },
     },
     async (args, extra) => {
@@ -99,6 +106,7 @@ export function createServer(deps?: ReadDependencies): McpServer {
         required: ["task_id"],
         additionalProperties: false,
       }),
+      outputSchema: fromJsonSchema<Record<string, unknown>>(GET_TASK_OUTPUT_SCHEMA),
       annotations: { readOnlyHint: true, destructiveHint: false },
     },
     async (args, extra) => {
@@ -125,6 +133,7 @@ export function createServer(deps?: ReadDependencies): McpServer {
         },
         additionalProperties: false,
       }),
+      outputSchema: fromJsonSchema<Record<string, unknown>>(ATTENTION_REPORT_OUTPUT_SCHEMA),
       annotations: { readOnlyHint: true, destructiveHint: false },
     },
     async (args, extra) => {
@@ -144,6 +153,31 @@ export function createServer(deps?: ReadDependencies): McpServer {
       } catch (error) {
         return toolError(error);
       }
+    },
+  );
+
+
+  // Planned operations have complete schemas but deliberately no REST implementations.
+  registerPlannedTools(server);
+  server.registerTool(
+    "get_tool_catalog",
+    {
+      title: "Inspect ClickUp MCP capabilities",
+      description:
+        "Return the capability manifest with actual implementation status. Call before planning a multi-step workflow, especially before any requested write. Never treat a schema-only tool as available. No staff IDs, secrets, or task content are returned.",
+      inputSchema: fromJsonSchema<Record<string, never>>({
+        type: "object",
+        properties: {},
+        additionalProperties: false,
+      }),
+      annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+    },
+    async () => {
+      const snapshot = catalogSnapshot();
+      return {
+        content: [{ type: "text", text: JSON.stringify(snapshot) }],
+        structuredContent: snapshot,
+      };
     },
   );
 
