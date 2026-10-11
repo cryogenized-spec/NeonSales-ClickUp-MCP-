@@ -346,8 +346,12 @@ export async function finishClickUpOAuth(
       providerRequest(fetcher, "team", token),
     ]);
     const clickupId = decimal(obj(profile["user"])?.["id"]);
+    // Fail BEFORE /store. Otherwise a different consenting ClickUp account
+    // can silently replace a previously valid staff token in the vault.
+    const expectedUserId = expectedClickUpUserId(env, subject);
     if (
       !clickupId ||
+      clickupId !== expectedUserId ||
       !Array.isArray(teams["teams"]) ||
       !teams["teams"].some((t) => decimal(obj(t)?.["id"]) === settings.workspaceId)
     ) {
