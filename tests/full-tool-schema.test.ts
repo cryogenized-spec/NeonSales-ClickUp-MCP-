@@ -77,7 +77,7 @@ describe("full model-visible ClickUp MCP catalog", () => {
       for (const item of tools) {
         expect(item.description?.length).toBeGreaterThan(45);
         expect(item.inputSchema.type).toBe("object");
-        expect(item.inputSchema.additionalProperties).toBe(false);
+        expect(item.inputSchema["additionalProperties"]).toBe(false);
       }
 
       const planned = new Set(PLANNED_TOOLS.map((tool) => tool.name));
