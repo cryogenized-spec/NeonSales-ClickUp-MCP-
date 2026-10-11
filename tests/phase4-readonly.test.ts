@@ -6,7 +6,27 @@ import { createAttentionReport } from "../src/reports/attention.js";
 const env = {
   CLICKUP_LIVE_ENABLED: "true",
   CLICKUP_LIST_ID: "12345",
-  CLICKUP_API_TOKEN: "synthetic-nonworking-fixture",
+  CLICKUP_OAUTH_ENABLED: "true",
+  CLICKUP_CLIENT_ID: "fixture-client",
+  CLICKUP_CLIENT_SECRET: "fixture-secret",
+  CLICKUP_STATE_KEY: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+  CLICKUP_TOKEN_KEY: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+  CLICKUP_WORKSPACE_ID: "555",
+  MCP_PUBLIC_ORIGIN: "https://staging.example",
+  CLICKUP_CONNECTIONS: {
+    idFromName: (name: string) => name,
+    get: (_id: unknown) => ({
+      fetch: async (request: Request) => {
+        const path = new URL(request.url).pathname;
+        if (path === "/credential") return Response.json({
+          connected: true, clickupUserId: "456", workspaceId: "555",
+          accessToken: "nonworking-personal-oauth-token-fixture",
+        });
+        if (path === "/status") return Response.json({ connected: true, clickupUserId: "456", workspaceId: "555" });
+        return Response.json({ accepted: true, disconnected: true });
+      },
+    }),
+  },
   CLICKUP_READ_GITHUB_IDS: "11,22",
   ALLOWED_GITHUB_IDS: "11,22,33",
   CLICKUP_QUOTA: {
@@ -41,8 +61,8 @@ function json(body: unknown, status = 200) {
 }
 
 describe("Phase 4 separate authorization policy", () => {
-  it("accepts only approved verified subject and configured server List", () => {
-    const grant = requireReadGrant(auth, env);
+  it("accepts only approved verified subject and configured server List", async () => {
+    const grant = await requireReadGrant(auth, env);
     expect(grant.subject).toBe("github:11");
     expect(grant.listId).toBe("12345");
   });
@@ -57,27 +77,23 @@ describe("Phase 4 separate authorization policy", () => {
     ],
     [{ scopes: ["mcp:read"], extra: { subject: "github:011" } }, "CLICKUP_ACCESS_DENIED"],
     [null, "CLICKUP_ACCESS_DENIED"],
-  ])("denies forged, out-of-grant or unexpected scopes", (identity, code) => {
-    expect(() => requireReadGrant(identity, env)).toThrowError(code);
+  ])("denies forged, out-of-grant or unexpected scopes", async (identity, code) => {
+    await expect(requireReadGrant(identity, env)).rejects.toThrowError(code);
   });
 
-  it("fails closed if any separate configuration or the quota binding is absent", () => {
+  it("fails closed if any separate configuration or the quota binding is absent", async () => {
     for (const field of [
-      "CLICKUP_API_TOKEN",
+      "CLICKUP_CONNECTIONS",
       "CLICKUP_LIST_ID",
       "CLICKUP_QUOTA",
       "CLICKUP_READ_GITHUB_IDS",
     ]) {
       const broken: Record<string, unknown> = { ...env };
       delete broken[field];
-      expect(() => requireReadGrant(auth, broken)).toThrowError("CLICKUP_NOT_CONFIGURED");
+      await expect(requireReadGrant(auth, broken)).rejects.toThrowError("CLICKUP_NOT_CONFIGURED");
     }
-    expect(() => requireReadGrant(auth, { ...env, CLICKUP_LIVE_ENABLED: "false" })).toThrowError(
-      "CLICKUP_NOT_CONFIGURED",
-    );
-    expect(() => requireReadGrant(auth, { ...env, CLICKUP_READ_GITHUB_IDS: "11,99" })).toThrowError(
-      "CLICKUP_NOT_CONFIGURED",
-    );
+    await expect(requireReadGrant(auth, { ...env, CLICKUP_LIVE_ENABLED: "false" })).rejects.toThrowError("CLICKUP_NOT_CONFIGURED");
+    await expect(requireReadGrant(auth, { ...env, CLICKUP_READ_GITHUB_IDS: "11,99" })).rejects.toThrowError("CLICKUP_NOT_CONFIGURED");
   });
 });
 
@@ -85,6 +101,7 @@ describe("Phase 4 ClickUp GET-only transport", () => {
   const grant = requireReadGrant(auth, env);
 
   it("uses exact allowed host, GET, hardcoded List and no redirects", async () => {
+    const grant = await requireReadGrant(auth, env);
     const outbound = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) =>
       json({ tasks: [task("abc123")] }),
     );
@@ -101,6 +118,7 @@ describe("Phase 4 ClickUp GET-only transport", () => {
   });
 
   it("rejects wrong-home-List data rather than leaking another List's content", async () => {
+    const grant = await requireReadGrant(auth, env);
     const fetcher = vi.fn(async () =>
       json({ tasks: [task("private123", { list: { id: "999" } })] }),
     );
@@ -110,6 +128,7 @@ describe("Phase 4 ClickUp GET-only transport", () => {
   });
 
   it("rejects path injection with zero HTTP requests", async () => {
+    const grant = await requireReadGrant(auth, env);
     const fetcher = vi.fn(async () => json(task("ok123")));
     await expect(getScopedTask(grant, "../private", fetcher as typeof fetch)).rejects.toThrowError(
       "CLICKUP_INVALID_ARGUMENT",
@@ -118,6 +137,7 @@ describe("Phase 4 ClickUp GET-only transport", () => {
   });
 
   it("rejects task-ID substitution after a successful scoped GET", async () => {
+    const grant = await requireReadGrant(auth, env);
     const fetcher = vi.fn(async () => json(task("different")));
     await expect(getScopedTask(grant, "wanted", fetcher as typeof fetch)).rejects.toThrowError(
       "CLICKUP_SCOPE_OR_SCHEMA_REJECTED",
@@ -125,6 +145,7 @@ describe("Phase 4 ClickUp GET-only transport", () => {
   });
 
   it("denies forged redirect, upstream 401 and malformed JSON", async () => {
+    const grant = await requireReadGrant(auth, env);
     for (const response of [
       new Response(null, { status: 302, headers: { location: "https://evil.invalid" } }),
       json({ err: "unauthorized" }, 401),
@@ -139,6 +160,7 @@ describe("Phase 4 ClickUp GET-only transport", () => {
   });
 
   it("tracks pagination and makes the 50-result ceiling explicitly incomplete", async () => {
+    const grant = await requireReadGrant(auth, env);
     const fetcher = vi.fn(async () =>
       json({ tasks: Array.from({ length: 100 }, (_, i) => task("t" + i)) }),
     );
@@ -150,6 +172,7 @@ describe("Phase 4 ClickUp GET-only transport", () => {
   });
 
   it("rejects quota unavailability before any ClickUp network request", async () => {
+    const grant = await requireReadGrant(auth, env);
     const blocked: ReadGrant = {
       ...grant,
       quota: {
@@ -165,6 +188,7 @@ describe("Phase 4 ClickUp GET-only transport", () => {
   });
 
   it("recognizes a real 429 and does not immediately retry", async () => {
+    const grant = await requireReadGrant(auth, env);
     const outbound = vi.fn(async () => json({ err: "limit" }, 429));
     await expect(findScopedTasks(grant, outbound as typeof fetch)).rejects.toThrowError(
       "CLICKUP_RATE_LIMITED",
