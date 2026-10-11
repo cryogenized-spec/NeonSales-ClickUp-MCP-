@@ -1,6 +1,7 @@
 import { McpServer, fromJsonSchema } from "@modelcontextprotocol/server";
 import { getScopedTask, findScopedTasks } from "../clickup/client.js";
 import { ReadFailure, requireReadGrant } from "../clickup/policy.js";
+import { beginClickUpOAuth, clickUpConnectionStatus, disconnectClickUp } from "../clickup/per-user-oauth.js";
 import { createAttentionReport } from "../reports/attention.js";
 import {
   CLICKUP_MODEL_TOOL_CATALOG,
@@ -62,6 +63,63 @@ export function createServer(deps?: ReadDependencies): McpServer {
 
   if (!deps) return server;
   const dependencies = deps;
+
+  server.registerTool(
+    "connect_clickup_account",
+    {
+      description:
+        "Connect YOUR OWN individual ClickUp account by OAuth. Returns a one-time ClickUp authorization URL to open in a browser. Requires consent for the approved Workspace; credentials stay encrypted on Cloudflare and never appear in tool output. This does not modify any ClickUp task. Never connect on behalf of another staff member.",
+      inputSchema: fromJsonSchema<Record<string, never>>({
+        type: "object", properties: {}, additionalProperties: false,
+      }),
+      annotations: { readOnlyHint: false, destructiveHint: false },
+    },
+    async (_args, extra) => {
+      try {
+        return toolSuccess(await beginClickUpOAuth(extra.http?.authInfo, dependencies.bindings));
+      } catch (error) {
+        return toolError(error);
+      }
+    },
+  );
+
+  server.registerTool(
+    "get_clickup_connection_status",
+    {
+      description:
+        "Check your OWN ClickUp OAuth connection; returns no secrets, only connection status and authenticated ClickUp user/Workspace IDs. Connection never grants permission to modify tasks.",
+      inputSchema: fromJsonSchema<Record<string, never>>({
+        type: "object", properties: {}, additionalProperties: false,
+      }),
+      annotations: { readOnlyHint: true, destructiveHint: false },
+    },
+    async (_args, extra) => {
+      try {
+        return toolSuccess(await clickUpConnectionStatus(extra.http?.authInfo, dependencies.bindings));
+      } catch (error) {
+        return toolError(error);
+      }
+    },
+  );
+
+  server.registerTool(
+    "disconnect_clickup_account",
+    {
+      description:
+        "Delete YOUR OWN locally stored ClickUp OAuth credential, preventing further NeonSales MCP requests on that account. This does NOT revoke the app in ClickUp itself; use ClickUp Connected Apps to revoke it there. Call only after explicit user instruction.",
+      inputSchema: fromJsonSchema<Record<string, never>>({
+        type: "object", properties: {}, additionalProperties: false,
+      }),
+      annotations: { readOnlyHint: false, destructiveHint: true },
+    },
+    async (_args, extra) => {
+      try {
+        return toolSuccess(await disconnectClickUp(extra.http?.authInfo, dependencies.bindings));
+      } catch (error) {
+        return toolError(error);
+      }
+    },
+  );
 
   server.registerTool(
     "clickup_tool_catalog",
@@ -182,7 +240,7 @@ export function createServer(deps?: ReadDependencies): McpServer {
     },
     async (args, extra) => {
       try {
-        const grant = requireReadGrant(extra.http?.authInfo, dependencies.bindings);
+        const grant = await requireReadGrant(extra.http?.authInfo, dependencies.bindings);
         const result = await findScopedTasks(
           grant,
           dependencies.fetcher ?? fetch,
@@ -213,7 +271,7 @@ export function createServer(deps?: ReadDependencies): McpServer {
     },
     async (args, extra) => {
       try {
-        const grant = requireReadGrant(extra.http?.authInfo, dependencies.bindings);
+        const grant = await requireReadGrant(extra.http?.authInfo, dependencies.bindings);
         const result = await getScopedTask(grant, args.task_id, dependencies.fetcher ?? fetch);
         return toolSuccess({ source: "clickup-api-v2", ...result });
       } catch (error) {
@@ -239,7 +297,7 @@ export function createServer(deps?: ReadDependencies): McpServer {
     },
     async (args, extra) => {
       try {
-        const grant = requireReadGrant(extra.http?.authInfo, dependencies.bindings);
+        const grant = await requireReadGrant(extra.http?.authInfo, dependencies.bindings);
         const result = await findScopedTasks(grant, dependencies.fetcher ?? fetch, 50);
         const report = createAttentionReport(
           result.tasks,
