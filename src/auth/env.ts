@@ -9,6 +9,12 @@ export interface OAuthEnv {
   readonly ALLOWED_GITHUB_IDS: string;
   readonly GITHUB_CLIENT_ID: string;
   readonly GITHUB_CLIENT_SECRET: string;
+  /** Phase 4: optional and separately gated; absent bindings deny every read. */
+  readonly CLICKUP_LIVE_ENABLED?: string;
+  readonly CLICKUP_API_TOKEN?: string;
+  readonly CLICKUP_LIST_ID?: string;
+  readonly CLICKUP_READ_GITHUB_IDS?: string;
+  readonly CLICKUP_QUOTA?: unknown;
 }
 
 export function validatedOAuthOrigin(env: unknown, request: Request): string | null {
