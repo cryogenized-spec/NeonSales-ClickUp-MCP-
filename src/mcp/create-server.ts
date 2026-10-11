@@ -68,8 +68,7 @@ export function createServer(deps?: ReadDependencies): McpServer {
           settings["CLICKUP_LIVE_ENABLED"] === "true" &&
           settings["CLICKUP_OAUTH_ENABLED"] === "true",
         authentication: "github-oauth-plus-individual-clickup-oauth",
-        note:
-          "Activation flags only, NOT evidence of a completed ClickUp connection. Task activity stays in ClickUp; tool approvals stay in the MCP client.",
+        note: "Activation flags only, NOT evidence of a completed ClickUp connection. Task activity stays in ClickUp; tool approvals stay in the MCP client.",
       }
     : SERVICE_INFO;
 
