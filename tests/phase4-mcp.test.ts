@@ -86,6 +86,12 @@ describe("Phase 4 official SDK integration", () => {
         );
         expect(tool.annotations?.destructiveHint).toBe(tool.name === "disconnect_clickup_account");
       }
+      const diagnostic = await client.callTool({ name: "service_info", arguments: {} });
+      expect(diagnostic.structuredContent).toMatchObject({
+        phase: 6,
+        liveClickUp: true,
+        authentication: "github-oauth-plus-individual-clickup-oauth",
+      });
       const denied = await client.callTool({
         name: "create_scoped_task",
         arguments: { name: "No write scope" },
