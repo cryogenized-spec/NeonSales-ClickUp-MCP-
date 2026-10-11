@@ -39,8 +39,8 @@ export async function requireReadGrant(auth: unknown, bindings: unknown): Promis
     typeof subject !== "string" ||
     !/^github:[1-9]\d{0,15}$/.test(subject) ||
     !Array.isArray(scopes) ||
-    !(scopes.length === 1 && scopes[0] === "mcp:read") &&
-    !(scopes.length === 2 && scopes.includes("mcp:read") && scopes.includes("mcp:write"))
+    (!(scopes.length === 1 && scopes[0] === "mcp:read") &&
+      !(scopes.length === 2 && scopes.includes("mcp:read") && scopes.includes("mcp:write")))
   ) {
     throw new ReadFailure("CLICKUP_ACCESS_DENIED");
   }

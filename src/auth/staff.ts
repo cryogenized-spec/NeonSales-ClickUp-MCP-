@@ -47,8 +47,12 @@ export function requireActivePrincipal(
   if (
     !permitted.has(id) ||
     tokenSubject !== oauthUserIdForGitHub(id) ||
-    !(tokenScopes.length === 1 && tokenScopes[0] === "mcp:read") &&
-    !(tokenScopes.length === 2 && tokenScopes.includes("mcp:read") && tokenScopes.includes("mcp:write"))
+    (!(tokenScopes.length === 1 && tokenScopes[0] === "mcp:read") &&
+      !(
+        tokenScopes.length === 2 &&
+        tokenScopes.includes("mcp:read") &&
+        tokenScopes.includes("mcp:write")
+      ))
   ) {
     throw new Error("Staff identity is not authorized");
   }

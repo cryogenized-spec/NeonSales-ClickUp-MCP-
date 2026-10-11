@@ -146,9 +146,13 @@ ${loopbackWarning}
 
 /** MCP OAuth distinguishes reads from mutations, without duplicating client-side tool approval. */
 export function validatedReadOnlyScopes(submitted: readonly string[]): string[] {
-  if (!submitted.includes("mcp:read") || submitted.length < 1 || submitted.length > 2 ||
-      new Set(submitted).size !== submitted.length ||
-      submitted.some(scope => scope !== "mcp:read" && scope !== "mcp:write")) {
+  if (
+    !submitted.includes("mcp:read") ||
+    submitted.length < 1 ||
+    submitted.length > 2 ||
+    new Set(submitted).size !== submitted.length ||
+    submitted.some((scope) => scope !== "mcp:read" && scope !== "mcp:write")
+  ) {
     throw new Error("Invalid MCP consent scope");
   }
   return submitted.includes("mcp:write") ? ["mcp:read", "mcp:write"] : ["mcp:read"];

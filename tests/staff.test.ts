@@ -38,8 +38,10 @@ describe("active staff isolation and scope validation", () => {
 
   it("allows the separately granted write scope for authenticated staff", () => {
     const principal = requireActivePrincipal(
-      { userId: "github:22" }, "github_22",
-      ["mcp:read", "mcp:write"], "22",
+      { userId: "github:22" },
+      "github_22",
+      ["mcp:read", "mcp:write"],
+      "22",
     );
     expect(principal.scopes).toEqual(["mcp:read", "mcp:write"]);
   });

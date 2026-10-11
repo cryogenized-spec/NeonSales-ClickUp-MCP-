@@ -1,7 +1,14 @@
 import { McpServer, fromJsonSchema } from "@modelcontextprotocol/server";
 import { getScopedTask, findScopedTasks } from "../clickup/client.js";
 import { ReadFailure, requireReadGrant, requireWriteGrant } from "../clickup/policy.js";
-import { createScopedTask, updateScopedTask, addScopedTaskComment, getScopedTaskComments, getScopedList, type TaskInput } from "../clickup/operations.js";
+import {
+  createScopedTask,
+  updateScopedTask,
+  addScopedTaskComment,
+  getScopedTaskComments,
+  getScopedList,
+  type TaskInput,
+} from "../clickup/operations.js";
 import {
   beginClickUpOAuth,
   clickUpConnectionStatus,
@@ -237,11 +244,36 @@ export function createServer(deps?: ReadDependencies): McpServer {
   }
 
   const taskProperties = {
-    name: { type: "string", minLength: 1, maxLength: 180, description: "Task title, not a unique identifier." },
-    description: { type: "string", minLength: 1, maxLength: 8000, description: "Plain-text task description; no agent signature added." },
-    status: { type: "string", minLength: 1, maxLength: 80, description: "Exact status from get_scoped_list, not a guessed label." },
-    priority: { type: "integer", minimum: 1, maximum: 4, description: "1 urgent, 2 high, 3 normal, 4 low." },
-    due_date_ms: { type: "integer", minimum: 1, maximum: 9000000000000, description: "UTC Unix epoch milliseconds." },
+    name: {
+      type: "string",
+      minLength: 1,
+      maxLength: 180,
+      description: "Task title, not a unique identifier.",
+    },
+    description: {
+      type: "string",
+      minLength: 1,
+      maxLength: 8000,
+      description: "Plain-text task description; no agent signature added.",
+    },
+    status: {
+      type: "string",
+      minLength: 1,
+      maxLength: 80,
+      description: "Exact status from get_scoped_list, not a guessed label.",
+    },
+    priority: {
+      type: "integer",
+      minimum: 1,
+      maximum: 4,
+      description: "1 urgent, 2 high, 3 normal, 4 low.",
+    },
+    due_date_ms: {
+      type: "integer",
+      minimum: 1,
+      maximum: 9000000000000,
+      description: "UTC Unix epoch milliseconds.",
+    },
   } as const;
 
   server.registerTool(
@@ -250,7 +282,9 @@ export function createServer(deps?: ReadDependencies): McpServer {
       description:
         "Read the currently configured ClickUp List name and available statuses using YOUR own ClickUp OAuth connection. Does not list unapproved Lists or modify anything.",
       inputSchema: fromJsonSchema<Record<string, never>>({
-        type: "object", properties: {}, additionalProperties: false,
+        type: "object",
+        properties: {},
+        additionalProperties: false,
       }),
       annotations: { readOnlyHint: true, destructiveHint: false },
     },
@@ -258,7 +292,9 @@ export function createServer(deps?: ReadDependencies): McpServer {
       try {
         const grant = await requireReadGrant(extra.http?.authInfo, dependencies.bindings);
         return toolSuccess(await getScopedList(grant, dependencies.fetcher ?? fetch));
-      } catch (error) { return toolError(error); }
+      } catch (error) {
+        return toolError(error);
+      }
     },
   );
 
@@ -268,7 +304,9 @@ export function createServer(deps?: ReadDependencies): McpServer {
       description:
         "CREATE a real ClickUp task in the configured List using YOUR own ClickUp OAuth identity. Required scope mcp:write. This posts immediately when your AI client allows the tool; the MCP adds no extra approval or action journal. Check required Custom Fields and choose exact status first. Never retry an uncertain write blindly.",
       inputSchema: fromJsonSchema<TaskInput>({
-        type: "object", properties: taskProperties, required: ["name"],
+        type: "object",
+        properties: taskProperties,
+        required: ["name"],
         additionalProperties: false,
       }),
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false },
@@ -277,7 +315,9 @@ export function createServer(deps?: ReadDependencies): McpServer {
       try {
         const grant = await requireWriteGrant(extra.http?.authInfo, dependencies.bindings);
         return toolSuccess(await createScopedTask(grant, args, dependencies.fetcher ?? fetch));
-      } catch (error) { return toolError(error); }
+      } catch (error) {
+        return toolError(error);
+      }
     },
   );
 
@@ -290,17 +330,27 @@ export function createServer(deps?: ReadDependencies): McpServer {
         type: "object",
         properties: {
           task_id: { type: "string", minLength: 2, maxLength: 40, pattern: "^[A-Za-z0-9_-]+$" },
-          changes: { type: "object", properties: taskProperties, additionalProperties: false, minProperties: 1 },
+          changes: {
+            type: "object",
+            properties: taskProperties,
+            additionalProperties: false,
+            minProperties: 1,
+          },
         },
-        required: ["task_id", "changes"], additionalProperties: false,
+        required: ["task_id", "changes"],
+        additionalProperties: false,
       }),
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false },
     },
     async (args, extra) => {
       try {
         const grant = await requireWriteGrant(extra.http?.authInfo, dependencies.bindings);
-        return toolSuccess(await updateScopedTask(grant, args.task_id, args.changes, dependencies.fetcher ?? fetch));
-      } catch (error) { return toolError(error); }
+        return toolSuccess(
+          await updateScopedTask(grant, args.task_id, args.changes, dependencies.fetcher ?? fetch),
+        );
+      } catch (error) {
+        return toolError(error);
+      }
     },
   );
 
@@ -315,15 +365,25 @@ export function createServer(deps?: ReadDependencies): McpServer {
           task_id: { type: "string", minLength: 2, maxLength: 40, pattern: "^[A-Za-z0-9_-]+$" },
           comment: { type: "string", minLength: 1, maxLength: 6000 },
         },
-        required: ["task_id", "comment"], additionalProperties: false,
+        required: ["task_id", "comment"],
+        additionalProperties: false,
       }),
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false },
     },
     async (args, extra) => {
       try {
         const grant = await requireWriteGrant(extra.http?.authInfo, dependencies.bindings);
-        return toolSuccess(await addScopedTaskComment(grant, args.task_id, args.comment, dependencies.fetcher ?? fetch));
-      } catch (error) { return toolError(error); }
+        return toolSuccess(
+          await addScopedTaskComment(
+            grant,
+            args.task_id,
+            args.comment,
+            dependencies.fetcher ?? fetch,
+          ),
+        );
+      } catch (error) {
+        return toolError(error);
+      }
     },
   );
 
@@ -338,15 +398,25 @@ export function createServer(deps?: ReadDependencies): McpServer {
           task_id: { type: "string", minLength: 2, maxLength: 40, pattern: "^[A-Za-z0-9_-]+$" },
           max_results: { type: "integer", minimum: 1, maximum: 20 },
         },
-        required: ["task_id"], additionalProperties: false,
+        required: ["task_id"],
+        additionalProperties: false,
       }),
       annotations: { readOnlyHint: true, destructiveHint: false },
     },
     async (args, extra) => {
       try {
         const grant = await requireReadGrant(extra.http?.authInfo, dependencies.bindings);
-        return toolSuccess(await getScopedTaskComments(grant, args.task_id, args.max_results ?? 10, dependencies.fetcher ?? fetch));
-      } catch (error) { return toolError(error); }
+        return toolSuccess(
+          await getScopedTaskComments(
+            grant,
+            args.task_id,
+            args.max_results ?? 10,
+            dependencies.fetcher ?? fetch,
+          ),
+        );
+      } catch (error) {
+        return toolError(error);
+      }
     },
   );
 

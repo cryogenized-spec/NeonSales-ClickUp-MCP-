@@ -10,9 +10,7 @@ const ROOT = "https://api.clickup.com/api/v2/";
 const MAX_JSON_BYTES = 1_000_000;
 const idPattern = /^[A-Za-z0-9_-]{2,40}$/;
 const obj = (v: unknown): Record<string, unknown> | null =>
-  v !== null && typeof v === "object" && !Array.isArray(v)
-    ? (v as Record<string, unknown>)
-    : null;
+  v !== null && typeof v === "object" && !Array.isArray(v) ? (v as Record<string, unknown>) : null;
 
 function taskId(id: string): string {
   if (!idPattern.test(id)) throw new ReadFailure("CLICKUP_INVALID_ARGUMENT");
@@ -46,8 +44,10 @@ async function requestJson(
     if (!response.ok) throw new ReadFailure("CLICKUP_UPSTREAM_UNAVAILABLE");
     const type = response.headers.get("content-type") ?? "";
     const size = response.headers.get("content-length");
-    if (!type.toLowerCase().includes("application/json") ||
-        (size !== null && Number(size) > MAX_JSON_BYTES))
+    if (
+      !type.toLowerCase().includes("application/json") ||
+      (size !== null && Number(size) > MAX_JSON_BYTES)
+    )
       throw new ReadFailure("CLICKUP_BAD_RESPONSE");
     const text = await response.text();
     if (text.length > MAX_JSON_BYTES) throw new ReadFailure("CLICKUP_BAD_RESPONSE");
@@ -58,7 +58,9 @@ async function requestJson(
   } catch (error) {
     if (error instanceof ReadFailure) throw error;
     // A timeout after POST/PUT may mean the operation actually succeeded.
-    throw new ReadFailure(method === "GET" ? "CLICKUP_UPSTREAM_UNAVAILABLE" : "CLICKUP_WRITE_OUTCOME_UNKNOWN");
+    throw new ReadFailure(
+      method === "GET" ? "CLICKUP_UPSTREAM_UNAVAILABLE" : "CLICKUP_WRITE_OUTCOME_UNKNOWN",
+    );
   } finally {
     clearTimeout(timeout);
   }
@@ -90,7 +92,12 @@ export interface TaskInput {
 }
 function bodyFromInput(raw: unknown, create: boolean): Record<string, unknown> {
   const value = obj(raw);
-  if (!value || Object.keys(value).some((key) => !["name", "description", "status", "priority", "due_date_ms"].includes(key)))
+  if (
+    !value ||
+    Object.keys(value).some(
+      (key) => !["name", "description", "status", "priority", "due_date_ms"].includes(key),
+    )
+  )
     throw new ReadFailure("CLICKUP_INVALID_ARGUMENT");
   const name = optionalText(value["name"], 180);
   const description = optionalText(value["description"], 8000);
@@ -115,20 +122,34 @@ function responseId(payload: Record<string, unknown>, expected?: string): string
   return id;
 }
 export async function createScopedTask(
-  grant: ReadGrant, data: TaskInput, fetcher: typeof fetch,
+  grant: ReadGrant,
+  data: TaskInput,
+  fetcher: typeof fetch,
 ): Promise<Record<string, unknown>> {
   const body = bodyFromInput(data, true);
-  const upstream = await requestJson(grant, fetcher, "POST", "list/" + grant.listId + "/task", body);
+  const upstream = await requestJson(
+    grant,
+    fetcher,
+    "POST",
+    "list/" + grant.listId + "/task",
+    body,
+  );
   const id = responseId(upstream);
   if (upstream["list"] !== undefined && String(obj(upstream["list"])?.["id"]) !== grant.listId)
     throw new ReadFailure("CLICKUP_WRITE_OUTCOME_UNKNOWN");
   return {
-    action: "task_created", task_id: id, list_id: grant.listId,
-    source: "clickup-api-v2", accepted: true,
+    action: "task_created",
+    task_id: id,
+    list_id: grant.listId,
+    source: "clickup-api-v2",
+    accepted: true,
   };
 }
 export async function updateScopedTask(
-  grant: ReadGrant, id: string, changes: TaskInput, fetcher: typeof fetch,
+  grant: ReadGrant,
+  id: string,
+  changes: TaskInput,
+  fetcher: typeof fetch,
 ): Promise<Record<string, unknown>> {
   const clean = taskId(id);
   const body = bodyFromInput(changes, false);
@@ -136,12 +157,18 @@ export async function updateScopedTask(
   const upstream = await requestJson(grant, fetcher, "PUT", "task/" + clean, body);
   responseId(upstream, id);
   return {
-    action: "task_updated", task_id: id, list_id: grant.listId,
-    source: "clickup-api-v2", accepted: true,
+    action: "task_updated",
+    task_id: id,
+    list_id: grant.listId,
+    source: "clickup-api-v2",
+    accepted: true,
   };
 }
 export async function addScopedTaskComment(
-  grant: ReadGrant, id: string, comment: string, fetcher: typeof fetch,
+  grant: ReadGrant,
+  id: string,
+  comment: string,
+  fetcher: typeof fetch,
 ): Promise<Record<string, unknown>> {
   const clean = taskId(id);
   const text = optionalText(comment, 6000);
@@ -155,12 +182,18 @@ export async function addScopedTaskComment(
   if (typeof commentId !== "string" && typeof commentId !== "number")
     throw new ReadFailure("CLICKUP_WRITE_OUTCOME_UNKNOWN");
   return {
-    action: "comment_created", task_id: id, comment_id: String(commentId),
-    source: "clickup-api-v2", accepted: true,
+    action: "comment_created",
+    task_id: id,
+    comment_id: String(commentId),
+    source: "clickup-api-v2",
+    accepted: true,
   };
 }
 export async function getScopedTaskComments(
-  grant: ReadGrant, id: string, limit: number, fetcher: typeof fetch,
+  grant: ReadGrant,
+  id: string,
+  limit: number,
+  fetcher: typeof fetch,
 ): Promise<Record<string, unknown>> {
   const clean = taskId(id);
   if (!Number.isInteger(limit) || limit < 1 || limit > 20)
@@ -176,36 +209,51 @@ export async function getScopedTaskComments(
     const date = comment["date"];
     const rawText = comment["comment_text"];
     const fallback = comment["comment"];
-    const content = typeof rawText === "string"
-      ? rawText
-      : Array.isArray(fallback)
-        ? fallback.map((part: unknown) => obj(part)?.["text"] ?? "").filter((part: unknown) => typeof part === "string").join("")
-        : "";
+    const content =
+      typeof rawText === "string"
+        ? rawText
+        : Array.isArray(fallback)
+          ? fallback
+              .map((part: unknown) => obj(part)?.["text"] ?? "")
+              .filter((part: unknown) => typeof part === "string")
+              .join("")
+          : "";
     comments.push({
-      id: (typeof rawId === "string" || typeof rawId === "number") ? String(rawId) : null,
+      id: typeof rawId === "string" || typeof rawId === "number" ? String(rawId) : null,
       text: content.slice(0, 6000),
-      date_ms: (typeof date === "string" || typeof date === "number") && /^\d{1,15}$/.test(String(date))
-        ? Number(date) : null,
+      date_ms:
+        (typeof date === "string" || typeof date === "number") && /^\d{1,15}$/.test(String(date))
+          ? Number(date)
+          : null,
       author_id: obj(comment["user"])?.["id"] ?? null,
     });
   }
   return {
-    source: "clickup-api-v2", task_id: id,
-    comments, incomplete: upstream["comments"].length >= 25 || upstream["comments"].length > limit,
+    source: "clickup-api-v2",
+    task_id: id,
+    comments,
+    incomplete: upstream["comments"].length >= 25 || upstream["comments"].length > limit,
     note: "First ClickUp comment page only; ClickUp owns task history.",
   };
 }
 export async function getScopedList(
-  grant: ReadGrant, fetcher: typeof fetch,
+  grant: ReadGrant,
+  fetcher: typeof fetch,
 ): Promise<Record<string, unknown>> {
   const list = await requestJson(grant, fetcher, "GET", "list/" + grant.listId);
-  if (String(list["id"]) !== grant.listId) throw new ReadFailure("CLICKUP_SCOPE_OR_SCHEMA_REJECTED");
+  if (String(list["id"]) !== grant.listId)
+    throw new ReadFailure("CLICKUP_SCOPE_OR_SCHEMA_REJECTED");
   if (typeof list["name"] !== "string") throw new ReadFailure("CLICKUP_BAD_RESPONSE");
   const statuses = Array.isArray(list["statuses"])
-    ? list["statuses"].slice(0, 60).map((v: unknown) => obj(v)?.["status"]).filter((v: unknown) => typeof v === "string")
+    ? list["statuses"]
+        .slice(0, 60)
+        .map((v: unknown) => obj(v)?.["status"])
+        .filter((v: unknown) => typeof v === "string")
     : [];
   return {
-    source: "clickup-api-v2", list_id: grant.listId,
-    name: list["name"].slice(0, 180), statuses,
+    source: "clickup-api-v2",
+    list_id: grant.listId,
+    name: list["name"].slice(0, 180),
+    statuses,
   };
 }
