@@ -103,7 +103,7 @@ function hexToBytes(value: string): Uint8Array<ArrayBuffer> {
 async function key(secret: string): Promise<CryptoKey> {
   const bytes = Uint8Array.from(atob(secret), (x) => x.charCodeAt(0));
   if (bytes.byteLength !== 32) throw new ReadFailure("CLICKUP_OAUTH_NOT_CONFIGURED");
-  return crypto.subtle.importKey("raw", bytes, "HMAC", false, ["sign", "verify"]);
+  return crypto.subtle.importKey("raw", bytes, { name: "HMAC", hash: "SHA-256" }, false, ["sign", "verify"]);
 }
 async function nonceHash(nonceHex: string): Promise<string> {
   const sha = new Uint8Array(await crypto.subtle.digest("SHA-256", hexToBytes(nonceHex)));
