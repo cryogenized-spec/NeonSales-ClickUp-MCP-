@@ -6,7 +6,7 @@ import {
 } from "@cloudflare/workers-oauth-provider";
 import { renderConsentPage, validatedReadOnlyScopes } from "./consent.js";
 import { exchangeGithubIdentity, githubAuthorizeUrl, pkceChallenge } from "./github.js";
-import { parseStaffAllowlist, requireActivePrincipal } from "./staff.js";
+import { oauthUserIdForGitHub, parseStaffAllowlist, requireActivePrincipal } from "./staff.js";
 import type { OAuthEnv } from "./env.js";
 
 async function showConsent(request: Request, oauth: OAuthHelpers): Promise<Response> {
@@ -83,17 +83,19 @@ async function finishGitHub(
     callbackUrl: origin + "/github/callback",
   });
   const subject = "github:" + identity.githubId;
+  const oauthUserId = oauthUserIdForGitHub(identity.githubId);
   if (!parseStaffAllowlist(env.ALLOWED_GITHUB_IDS).has(identity.githubId)) {
     upstream.headers.set("Location", authorizationErrorRedirect(upstream.request, "access_denied"));
     return new Response(null, { status: 302, headers: upstream.headers });
   }
   // Check the exact subject before storing the grant. No GitHub access token is persisted.
-  requireActivePrincipal({ userId: subject }, subject, ["mcp:read"], env.ALLOWED_GITHUB_IDS);
+  const consentedScopes = validatedReadOnlyScopes(upstream.request.scope);
+  requireActivePrincipal({ userId: subject }, oauthUserId, consentedScopes, env.ALLOWED_GITHUB_IDS);
   const completed = await oauth.completeAuthorization({
     request: upstream.request,
-    userId: subject,
+    userId: oauthUserId,
     metadata: {},
-    scope: upstream.request.scope.filter((scope) => scope === "mcp:read"),
+    scope: consentedScopes,
     props: { userId: subject },
   });
   upstream.headers.set("Location", completed.redirectTo);

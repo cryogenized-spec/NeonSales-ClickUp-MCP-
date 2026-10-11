@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { parseStaffAllowlist, requireActivePrincipal } from "../src/auth/staff.js";
+import {
+  oauthUserIdForGitHub,
+  parseStaffAllowlist,
+  requireActivePrincipal,
+} from "../src/auth/staff.js";
 
 describe("active staff isolation and scope validation", () => {
   it("accepts one to four distinct stable numeric GitHub identities", () => {
@@ -15,28 +19,87 @@ describe("active staff isolation and scope validation", () => {
 
   it("accepts only an independently authenticated and currently allowlisted identity", () => {
     expect(
-      requireActivePrincipal({ userId: "github:22" }, "github:22", ["mcp:read"], "11,22"),
+      requireActivePrincipal({ userId: "github:22" }, "github_22", ["mcp:read"], "11,22"),
     ).toEqual({
       subject: "github:22",
       githubId: "22",
       scopes: ["mcp:read"],
     });
     expect(() =>
-      requireActivePrincipal({ userId: "github:22" }, "github:23", ["mcp:read"], "22"),
+      requireActivePrincipal({ userId: "github:22" }, "github_23", ["mcp:read"], "22"),
     ).toThrow();
     expect(() =>
-      requireActivePrincipal({ userId: "github:22" }, "github:22", ["mcp:write"], "22"),
+      requireActivePrincipal({ userId: "github:22" }, "github_22", ["mcp:write"], "22"),
     ).toThrow();
     expect(() =>
-      requireActivePrincipal({ userId: "github:22" }, "github:22", ["mcp:read"], "11"),
+      requireActivePrincipal({ userId: "github:22" }, "github_22", ["mcp:read"], "11"),
     ).toThrow();
+  });
+
+  it("allows the separately granted write scope for authenticated staff", () => {
+    const principal = requireActivePrincipal(
+      { userId: "github:22" },
+      "github_22",
+      ["mcp:read", "mcp:write"],
+      "22",
+    );
+    expect(principal.scopes).toEqual(["mcp:read", "mcp:write"]);
+  });
+
+  it("uses a colon-free, canonical OAuth grant ID while preserving the GitHub principal", () => {
+    expect(oauthUserIdForGitHub("256972168")).toBe("github_256972168");
+    expect(oauthUserIdForGitHub("256972168")).not.toContain(":");
+    for (const bad of ["", "0", "001", "1:2", "name", "9007199254740992"]) {
+      expect(() => oauthUserIdForGitHub(bad)).toThrow();
+    }
+    expect(() =>
+      requireActivePrincipal({ userId: "github:22" }, "github:22", ["mcp:read"], "22"),
+    ).toThrow();
+    expect(
+      requireActivePrincipal({ userId: "github:22" }, "github_22", ["mcp:read"], "22"),
+    ).toEqual({ subject: "github:22", githubId: "22", scopes: ["mcp:read"] });
+  });
+
+  it.each([
+    [[]],
+    [["mcp:read", "mcp:read"]],
+    [["offline_access", "mcp:read"]],
+    [["MCP:READ"]],
+    [[""]],
+  ])("rejects elevated, duplicate or malformed token scopes %j", (scopes) => {
+    expect(() =>
+      requireActivePrincipal({ userId: "github:22" }, "github_22", scopes, "22"),
+    ).toThrow("Staff identity is not authorized");
+  });
+
+  it("immediately removes access when an ID is removed from the live allowlist", () => {
+    const props = { userId: "github:22" };
+    expect(requireActivePrincipal(props, "github_22", ["mcp:read"], "11,22").githubId).toBe("22");
+    expect(() => requireActivePrincipal(props, "github_22", ["mcp:read"], "11")).toThrow(
+      "Staff identity is not authorized",
+    );
+    expect(
+      requireActivePrincipal({ userId: "github:11" }, "github_11", ["mcp:read"], "11").githubId,
+    ).toBe("11");
+  });
+
+  it.each([
+    "github:0",
+    "github:001",
+    "github:22:other",
+    "github:9007199254740992",
+    "github: 22",
+    "GITHUB:22",
+    "",
+  ])("rejects non-canonical subject %j", (userId) => {
+    expect(() => requireActivePrincipal({ userId }, "github_22", ["mcp:read"], "22")).toThrow();
   });
 
   it("isolates four concurrent authenticated requests without any shared principal", async () => {
     const requests = ["11", "22", "33", "44"].map(async (id) =>
       requireActivePrincipal(
         { userId: "github:" + id },
-        "github:" + id,
+        "github_" + id,
         ["mcp:read"],
         "11,22,33,44",
       ),
