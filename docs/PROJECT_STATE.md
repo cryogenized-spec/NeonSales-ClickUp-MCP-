@@ -1,3 +1,21 @@
+# Codex P1/P2 remediation — 11 October 2026 SAST
+
+**Current draft:** [PR #23](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/pull/23) stacked on draft PR #22. Source: Codex's five findings on #22 (two P1, three P2). Not merged, deployed or tested against live ClickUp.
+
+- **P1 cross-Workspace configuration:** `workspaceId` carried from the individual user's verified ClickUp OAuth grant; every operational tool preflights the configured List's actual Space against the Workspace-specific `GET /team/{workspace_id}/space`. Missing, mismatched or malformed hierarchy fails closed; no model-supplied tenant/list IDs.
+- **P1 task move TOCTOU:** remove `update_scoped_task` and `comment_on_scoped_task` entirely from operational tool advertisement and native adapters. There is no documented atomic List-bound precondition on ClickUp task-ID writes, and a GET followed by PUT/POST would not be safe. `get_scoped_task_comments` is also removed due to a related read-after-move exposure risk. Leave ClickUp-native history in ClickUp.
+- **P2 write OAuth:** official SDK `requireScopes("mcp:read","mcp:write")` scope challenge for the remaining create task tool, plus existing handler authorization. No server-side permission UI.
+- **P2 destructive metadata:** the unsafe task update is no longer advertised or callable, so no false non-destructive annotation is exposed.
+- **P2 rate-limit:** propagate bounded upstream write HTTP 429 reset into the same ClickUp-user quota Durable Object; no automatic retries.
+
+**Available direct ClickUp task operations after this change:** read/list/attention report, List metadata, List-bound task creation. The 48 schema-only proposed tools remain inert; no independent audit journal or rollback is built.
+
+**Residual limitations:** List ancestry is verified through upstream reads and is not an atomic lock against a concurrent *List* move; ClickUp's native authorization is the final authority. No task-ID write will be re-enabled without an upstream atomic condition or a proven restricted upstream credential. GitHub-only synthetic CI is not proof of real ClickUp attribution or account consent.
+
+**Release checklist:** strict CI SUCCESS for exact PR #23 SHA, fresh Codex review of that SHA, owner-controlled merge of entire dependency stack, Cloudflare/GitHub secrets staging deployment, four-user OAuth/live List tests and tool response validation. All production mutations remain disabled until acceptance.
+
+---
+
 # Phase 6 native ClickUp tools checkpoint — 11 October 2026 SAST
 
 **Owner-accepted scope:** No NeonSales action journal, rollback backend, duplicate activity UI or duplicate per-tool approval control. ClickUp handles task activity/attribution; AI clients handle allow/deny prompts. Native MCP OAuth `mcp:read` and optional `mcp:write` authenticate access to the MCP resource; individually consented ClickUp OAuth tokens grant actual upstream data rights. No shared ClickUp API token and no laptop-bound service.
