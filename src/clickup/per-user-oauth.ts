@@ -81,7 +81,7 @@ function expectedClickUpUserId(env: unknown, subject: string): string {
     if (!map) throw new Error("bad map");
     const entries = Object.entries(map);
     if (entries.length < 1 || entries.length > 4 ||
-        entries.some(([id, value]) => !/^[1-9]\\d{0,15}$/.test(id) || !decimal(value)) ||
+        entries.some(([id, value]) => !/^[1-9]\d{0,15}$/.test(id) || !decimal(value)) ||
         new Set(entries.map(([, v]) => String(v))).size !== entries.length) {
       throw new Error("ambiguous user mapping");
     }
