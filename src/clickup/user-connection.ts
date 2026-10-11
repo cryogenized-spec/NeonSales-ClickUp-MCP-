@@ -7,7 +7,7 @@ interface IdentitySecrets {
   readonly CLICKUP_TOKEN_KEY?: string;
 }
 
-interface StoredAccount {
+interface StoredAccount extends Record<string, string | number | null> {
   readonly subject: string;
   readonly clickup_user_id: string;
   readonly workspace_id: string;
