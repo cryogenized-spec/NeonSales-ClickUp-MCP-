@@ -66,6 +66,33 @@ function config(raw: unknown): ClickUpConfig {
   };
 }
 
+/**
+ * Owner-approved one-to-one identity binding; the ClickUp token owner must
+ * match the expected individual user, even when a signed OAuth link is leaked.
+ */
+function expectedClickUpUserId(env: unknown, subject: string): string {
+  const config = obj(env);
+  const raw = config?.["CLICKUP_STAFF_USER_MAP"];
+  if (typeof raw !== "string" || raw.length > 1024) {
+    throw new ReadFailure("CLICKUP_USER_MAPPING_REQUIRED");
+  }
+  try {
+    const map = obj(JSON.parse(raw));
+    if (!map) throw new Error("bad map");
+    const entries = Object.entries(map);
+    if (entries.length < 1 || entries.length > 4 ||
+        entries.some(([id, value]) => !/^[1-9]\\d{0,15}$/.test(id) || !decimal(value)) ||
+        new Set(entries.map(([, v]) => String(v))).size !== entries.length) {
+      throw new Error("ambiguous user mapping");
+    }
+    const id = map[subject.slice(7)];
+    if (!decimal(id)) throw new Error("missing staff mapping");
+    return String(id);
+  } catch {
+    throw new ReadFailure("CLICKUP_USER_MAPPING_REQUIRED");
+  }
+}
+
 function verifiedSubject(auth: unknown, env: unknown): string {
   const identity = obj(auth);
   const extra = obj(identity?.["extra"]);
@@ -143,6 +170,7 @@ export async function beginClickUpOAuth(
 ): Promise<{ authorization_url: string }> {
   const subject = verifiedSubject(auth, env);
   const settings = config(env);
+  expectedClickUpUserId(env, subject);
   const created = Date.now();
   const nonce = bytesToHex(crypto.getRandomValues(new Uint8Array(32)));
   const base = subject.slice(7) + "." + created + "." + nonce;
@@ -209,6 +237,9 @@ export async function personalClickUpCredential(
     record["workspaceId"] !== settings.workspaceId
   ) {
     throw new ReadFailure("CLICKUP_ACCOUNT_NOT_CONNECTED");
+  }
+  if (String(record["clickupUserId"]) !== expectedClickUpUserId(env, subject)) {
+    throw new ReadFailure("CLICKUP_ACCESS_DENIED");
   }
   return {
     subject,
