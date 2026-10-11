@@ -20,3 +20,4 @@ export default {
     return handleOAuthRequest(request, env, context, origin);
   },
 };
+\nexport { ClickUpQuota } from "./clickup/quota-object.js";\n
