@@ -93,8 +93,12 @@ function verifiedSubject(auth: unknown, env: unknown): string {
 function bytesToHex(b: Uint8Array): string {
   return Array.from(b, (x) => x.toString(16).padStart(2, "0")).join("");
 }
-function hexToBytes(value: string): Uint8Array {
-  return Uint8Array.from(value.match(/../g) ?? [], (x) => parseInt(x, 16));
+function hexToBytes(value: string): Uint8Array<ArrayBuffer> {
+  const result = new Uint8Array(value.length / 2);
+  for (let i = 0; i < result.length; i++) {
+    result[i] = parseInt(value.slice(i * 2, i * 2 + 2), 16);
+  }
+  return result;
 }
 async function key(secret: string): Promise<CryptoKey> {
   const bytes = Uint8Array.from(atob(secret), (x) => x.charCodeAt(0));
