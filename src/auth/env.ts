@@ -9,6 +9,20 @@ export interface OAuthEnv {
   readonly ALLOWED_GITHUB_IDS: string;
   readonly GITHUB_CLIENT_ID: string;
   readonly GITHUB_CLIENT_SECRET: string;
+  /** Phase 4: optional and separately gated; absent bindings deny every read. */
+  readonly CLICKUP_LIVE_ENABLED?: string;
+  /** Individually consented ClickUp accounts; no shared API token. */
+  readonly CLICKUP_OAUTH_ENABLED?: string;
+  readonly CLICKUP_CLIENT_ID?: string;
+  readonly CLICKUP_CLIENT_SECRET?: string;
+  readonly CLICKUP_STATE_KEY?: string;
+  readonly CLICKUP_TOKEN_KEY?: string;
+  readonly CLICKUP_WORKSPACE_ID?: string;
+  readonly CLICKUP_STAFF_USER_MAP?: string;
+  readonly CLICKUP_CONNECTIONS?: unknown;
+  readonly CLICKUP_LIST_ID?: string;
+  readonly CLICKUP_READ_GITHUB_IDS?: string;
+  readonly CLICKUP_QUOTA?: unknown;
 }
 
 export function validatedOAuthOrigin(env: unknown, request: Request): string | null {

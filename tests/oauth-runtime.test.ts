@@ -121,6 +121,19 @@ describe("Codex P1 OAuth integration regressions", () => {
     });
   });
 
+  it("forwards a separately authorized write scope without accepting spoofed headers", async () => {
+    const response = await handleOAuthRequest(
+      new Request(origin + "/mcp", { method: "POST", headers: { "X-User": "github:99" } }),
+      env,
+      verifiedContext("11", { scope: ["mcp:read", "mcp:write"] }),
+      origin,
+    );
+    expect(response.status).toBe(200);
+    expect(captures.requests[0]?.options).toEqual({
+      authInfo: expect.objectContaining({ scopes: ["mcp:read", "mcp:write"] }),
+    });
+  });
+
   it("forwards four concurrent staff requests with distinct verified identities", async () => {
     await Promise.all(
       ["11", "22", "33", "44"].map((id) =>
@@ -139,6 +152,45 @@ describe("Codex P1 OAuth integration regressions", () => {
           (options as { authInfo?: { extra?: { subject?: string } } })?.authInfo?.extra?.subject,
       ),
     ).toEqual(["github:11", "github:22", "github:33", "github:44"]);
+  });
+
+  it.each([
+    ["wrong audience", { audience: origin + "/other" }],
+    ["untrusted issuer host", { audience: "https://impostor.example/mcp" }],
+    ["missing access token", { token: "" }],
+    ["missing client ID", { clientId: "" }],
+    ["invalid token expiry", { expiresAt: Number.NaN }],
+    ["infinite token expiry", { expiresAt: Number.POSITIVE_INFINITY }],
+    ["string token expiry", { expiresAt: "1990000000" }],
+    ["missing read scope", { scope: [] }],
+    ["unexpected scopes", { scope: ["mcp:read", "admin"] }],
+    ["duplicate read scope", { scope: ["mcp:read", "mcp:read"] }],
+    ["non-string scope", { scope: ["mcp:read", 1] }],
+    ["incorrect token identity", { userId: "github_44" }],
+  ])("rejects %s before dispatching an MCP request", async (_name, overrides) => {
+    const response = await handleOAuthRequest(
+      new Request(origin + "/mcp", { method: "POST" }),
+      env,
+      verifiedContext("11", overrides),
+      origin,
+    );
+    expect(response.status).toBe(403);
+    expect(captures.requests).toHaveLength(0);
+    expect(await response.text()).toBe("Forbidden");
+  });
+
+  it("enforces a changed allowlist for an existing authenticated context", async () => {
+    const request = () => new Request(origin + "/mcp", { method: "POST" });
+    const previouslyAuthorized = verifiedContext("22");
+    const accepted = await handleOAuthRequest(request(), env, previouslyAuthorized, origin);
+    expect(accepted.status).toBe(200);
+    const revokedEnv = { ...env, ALLOWED_GITHUB_IDS: "11,33,44" } as OAuthEnv;
+    const rejected = await handleOAuthRequest(request(), revokedEnv, previouslyAuthorized, origin);
+    expect(rejected.status).toBe(403);
+    expect(captures.requests).toHaveLength(1);
+    const retained = await handleOAuthRequest(request(), revokedEnv, verifiedContext("11"), origin);
+    expect(retained.status).toBe(200);
+    expect(captures.requests).toHaveLength(2);
   });
 
   it("rejects expired provider token facts even for an allowlisted staff member", async () => {
