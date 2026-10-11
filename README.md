@@ -1,6 +1,6 @@
 # NeonSales ClickUp MCP — phased development
 
-**Project status:** Phase 3 OAuth identity code is on **draft stacked PR #4** (2026-10-10 SAST). It is **not deployed**: Cloudflare KV, real GitHub OAuth App credentials, live four-user sign-in, ChatGPT/Claude connectors and ClickUp remain unconfigured/unverified. The Phase 2 SDK still provides only synthetic `service_info`. Public `/mcp` fails closed without valid OAuth deployment bindings. The older local v0.1 archive has not been imported.
+**Project status (11 October 2026):** Draft Phase 4 [read-only POC PR #17](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/pull/17) and stacked [full schema PR #19](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/pull/19) are isolated and **NOT merged or deployed**. Phase 3 staging OAuth was independently exercised through Claude earlier, but full revocation/conformance review remains open. The configured server now defines 52 MCP tool contracts: three bounded live-ready read tools (still blocked without new owner-approved credentials and grant), 47 no-op planned schemas, service_info and get_tool_catalog. **No ClickUp write capability is active.** Read [the full tool schema](docs/FULL_TOOL_SCHEMA.md) and [the project checkpoint](docs/PROJECT_STATE.md) before treating a schema as functionality.
 
 **Purpose:** Build a private, authenticated, vendor-neutral remote MCP service that gives ChatGPT and Claude controlled access to NeonSales ClickUp data through ClickUp's official REST API. Prove the workflow against real, permitted records before showing management. This is an internal prototype, not a product offering.
 
@@ -28,6 +28,8 @@
 - [docs/SKILLS.md](docs/SKILLS.md) — six pinned, upstream-authored development skills and license.
 - [docs/BRANCH_PROTECTION.md](docs/BRANCH_PROTECTION.md) — strict CI, rulesets, plan restrictions and manual enforcement step.
 - [docs/PHASE3_SETUP.md](docs/PHASE3_SETUP.md) — manual Cloudflare KV/GitHub OAuth setup and live multi-user acceptance.
+- [docs/FULL_TOOL_SCHEMA.md](docs/FULL_TOOL_SCHEMA.md) — complete model-facing ClickUp MCP capability catalog, typed inputs/outputs, risks and actual availability status.
+- [docs/PHASE4_POC_SETUP.md](docs/PHASE4_POC_SETUP.md) — read-only staging authorization and acceptance runbook.
 - [docs/phases/ROADMAP.md](docs/phases/ROADMAP.md) — mandatory one-phase-at-a-time delivery.
 - [docs/SECURITY_PERIMETER.md](docs/SECURITY_PERIMETER.md) — trust boundaries and single-authority design.
 - [docs/CODEX_REVIEW.md](docs/CODEX_REVIEW.md) — after-CI-green exact-SHA specialist review handoff.
