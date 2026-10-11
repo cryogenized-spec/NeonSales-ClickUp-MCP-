@@ -1,3 +1,17 @@
+# Phase 6 native ClickUp tools checkpoint — 11 October 2026 SAST
+
+**Owner-accepted scope:** No NeonSales action journal, rollback backend, duplicate activity UI or duplicate per-tool approval control. ClickUp handles task activity/attribution; AI clients handle allow/deny prompts. Native MCP OAuth `mcp:read` and optional `mcp:write` authenticate access to the MCP resource; individually consented ClickUp OAuth tokens grant actual upstream data rights. No shared ClickUp API token and no laptop-bound service.
+
+**Branch:** `feature/phase6-native-clickup-tools-no-journal-20261011` on [draft PR #22](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/pull/22), stacked on #21 → #20 → #18 → #17 → Phase 3. No merge/deploy/real ClickUp mutation. The former [PHASE6_AUDIT_ROLLBACK_CONTRACT.md] proposal has been deleted on this branch.
+
+**Added operational adapters:** `get_scoped_list`, `get_scoped_task_comments`, `create_scoped_task`, `update_scoped_task`, `comment_on_scoped_task`. Each task mutation uses the authenticated staff member's ClickUp token and fixed configured home List, not an LLM-supplied token or arbitrary URL. The 48-model-schema catalogue remains explicitly nonoperational. `service_info` now reports runtime flags without claiming real connectivity.
+
+**Latest full code-only Strict CI:** [run #38148621790](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/actions/runs/38148621790) **SUCCESS** on `0bf390c5ae418bd381c4a71eef768a0f22cbe509`. Expected tests: 134/134, strict TypeScript, Prettier, ESLint, pinned Worker build, real local workerd HTTPS OAuth security smoke, 9 Python repository regressions and npm security audit. This documentation update advances HEAD, requiring an **exact-HEAD CI run** before specialist review.
+
+**Not yet proven:** real ClickUp OAuth, permission attribution, REST response shapes, live staging, official MCP conformance, Claude/ChatGPT subscription integration, full 48-capability backend parity, or a clean human-reviewed merge stack. GitHub Actions deployment requires owner-provided Cloudflare GitHub Environment secrets and Worker secrets; none entered in chat.
+
+---
+
 # Owner update — 11 October 2026 SAST: ClickUp-native actions ONLY
 
 Owner explicitly rejected an external action journal, a duplicate rollback system and a separate MCP tool-permission interface. **ClickUp records task history, the AI client controls tool allow/deny prompts, and the MCP merely validates OAuth identity and upstream ClickUp permissions.** The previous Phase 6 audit/rollback proposal is cancelled and deleted on the new feature branch. This branch adds core scoped task create/update/comment and reads, with explicit OAuth `mcp:write` scope. **No deployment, merge or real task mutation has occurred.**
