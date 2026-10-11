@@ -17,7 +17,7 @@ function configuration() {
 }
 
 describe("Phase 4 official SDK integration", () => {
-  it("advertises exactly three read-only tools plus diagnostic under server-managed deps", async () => {
+  it("advertises three operational read tools plus catalogue and diagnostic", async () => {
     const outbound = vi.fn(async () =>
       Response.json({ tasks: [] }, { headers: { "content-type": "application/json" } }),
     );
@@ -41,6 +41,7 @@ describe("Phase 4 official SDK integration", () => {
       await client.connect(transport);
       const tools = (await client.listTools()).tools;
       expect(tools.map((tool) => tool.name).sort()).toEqual([
+        "clickup_tool_catalog",
         "find_scoped_tasks",
         "get_attention_report",
         "get_scoped_task",
