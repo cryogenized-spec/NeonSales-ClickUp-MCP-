@@ -6,7 +6,24 @@ function configuration() {
   return {
     CLICKUP_LIVE_ENABLED: "true",
     CLICKUP_LIST_ID: "12345",
-    CLICKUP_API_TOKEN: "nonworking-synthetic-test-token",
+    CLICKUP_OAUTH_ENABLED: "true",
+    CLICKUP_CLIENT_ID: "fixture-client",
+    CLICKUP_CLIENT_SECRET: "fixture-secret",
+    CLICKUP_STATE_KEY: btoa(String.fromCharCode(...new Uint8Array(32))),
+    CLICKUP_TOKEN_KEY: btoa(String.fromCharCode(...new Uint8Array(32))),
+    CLICKUP_WORKSPACE_ID: "555",
+    MCP_PUBLIC_ORIGIN: "https://staging.example",
+    CLICKUP_CONNECTIONS: {
+      idFromName: (name: string) => name,
+      get: () => ({
+        fetch: async () => Response.json({
+          connected: true,
+          clickupUserId: "456",
+          workspaceId: "555",
+          accessToken: "nonworking-personal-fixture",
+        }),
+      }),
+    },
     CLICKUP_READ_GITHUB_IDS: "11",
     ALLOWED_GITHUB_IDS: "11,22",
     CLICKUP_QUOTA: {
@@ -42,14 +59,17 @@ describe("Phase 4 official SDK integration", () => {
       const tools = (await client.listTools()).tools;
       expect(tools.map((tool) => tool.name).sort()).toEqual([
         "clickup_tool_catalog",
+        "connect_clickup_account",
+        "disconnect_clickup_account",
+        "get_clickup_connection_status",
         "find_scoped_tasks",
         "get_attention_report",
         "get_scoped_task",
         "service_info",
       ]);
       for (const tool of tools) {
-        expect(tool.annotations?.readOnlyHint).toBe(true);
-        expect(tool.annotations?.destructiveHint).toBe(false);
+        expect(tool.annotations?.readOnlyHint).toBe(!["connect_clickup_account", "disconnect_clickup_account"].includes(tool.name));
+        expect(tool.annotations?.destructiveHint).toBe(tool.name === "disconnect_clickup_account");
       }
       const response = await client.callTool({
         name: "find_scoped_tasks",
