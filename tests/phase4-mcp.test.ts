@@ -62,9 +62,9 @@ describe("Phase 4 official SDK integration", () => {
         "clickup_tool_catalog",
         "connect_clickup_account",
         "disconnect_clickup_account",
-        "get_clickup_connection_status",
         "find_scoped_tasks",
         "get_attention_report",
+        "get_clickup_connection_status",
         "get_scoped_task",
         "service_info",
       ]);
