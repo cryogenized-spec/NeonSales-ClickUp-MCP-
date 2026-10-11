@@ -4,8 +4,7 @@ const SERVICE_INFO = Object.freeze({
   phase: 3,
   liveClickUp: false,
   authentication: "github-oauth-required",
-  note:
-    "Phase 3 read-only diagnostic; GitHub OAuth gates the public MCP endpoint. Live ClickUp access is disabled.",
+  note: "Phase 3 read-only diagnostic; GitHub OAuth gates the public MCP endpoint. Live ClickUp access is disabled.",
 });
 
 export function createServer(): McpServer {
