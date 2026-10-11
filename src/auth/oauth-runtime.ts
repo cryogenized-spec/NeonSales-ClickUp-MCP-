@@ -57,7 +57,7 @@ export function handleOAuthRequest(
           );
           // These facts come ONLY from the OAuthProvider-validated context.
           // MCP does not validate Authorization headers or reconstruct authInfo.
-          return createProtocolHandler().fetch(incoming, {
+          return createProtocolHandler({ bindings: currentEnv }).fetch(incoming, {
             authInfo: {
               token: claims.token,
               clientId: claims.clientId,
