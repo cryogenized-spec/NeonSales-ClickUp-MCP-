@@ -1,4 +1,19 @@
-# Project state — canonical handoff
+# Current checkpoint — Phase 4 read-only POC branch (11 October 2026 SAST)
+
+**Branch:** `feature/phase4-clickup-readonly-poc-20261011` (draft [PR #17](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/pull/17)); stacked on Phase 3 security test branch from [PR #16](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/pull/16), **not merged**.
+
+**Verified evidence:** [Strict CI #38129729291](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/actions/runs/38129729291) passed on commit `ffe0d690dfb1c298d30ca8cbc4cf64e4cf363f65`: 108 Vitest tests, nine repository-policy tests, strict triple TypeScript, formatting, ESLint, Wrangler build, workerd OAuth smoke and npm audit (zero vulnerabilities). **Any later commits require fresh CI; this older run does not certify them.**
+
+**Implemented under separate owner-authorized development:** official MCP SDK registrations for `find_scoped_tasks`, `get_scoped_task` and `get_attention_report`; separate GitHub-ID read grant, server-only List ID, GET-only ClickUp REST adapter, conservative shared SQLite Durable Object quota, bounded pagination, 48h SAST attention report and synthetic adversarial tests. See [Phase 4 POC runbook](PHASE4_POC_SETUP.md).
+
+**Live truth:** Earlier Phase 3 staging was independently reported in PR #15 as successfully authenticated from Claude with `service_info`. This does not mean Phase 3 revocation/conformance/multi-staff gates passed. **Phase 4 is not deployed or enabled, has no live ClickUp credential, has not read a ClickUp task through this server and has performed no write.**
+
+**Pending:** Fresh final SHA CI, focused security review, owner-approved single test List + staff READ grant, isolated Cloudflare staging Durable Object migration and secret provisioning, and actual Claude task read/denial. Keep `CLICKUP_LIVE_ENABLED` unset until these approvals. Do not touch the production Worker, merge Phase 3 or merge Phase 4.
+
+---
+
+## Earlier checkpoint (historical; superseded where inconsistent)
+
 
 **Checkpoint:** 2026-10-10 SAST (time not independently captured). **Current Phase 3:** draft PR [#4](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/pull/4), now based on **main**.
 **Merged foundation:** PRs [#1](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/pull/1), [#2](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/pull/2), and [#3](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/pull/3) are already merged into main at commit `914c5e69e7366b465f823787225861c3ac40ad29`. Phase 4 design-only PR [#8](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/pull/8) remains stacked on #4. Unsafe Node/npm modernization PR #5 is CLOSED without merge.
