@@ -66,18 +66,13 @@ describe("active staff isolation and scope validation", () => {
 
   it("immediately removes access when an ID is removed from the live allowlist", () => {
     const props = { userId: "github:22" };
-    expect(requireActivePrincipal(props, "github_22", ["mcp:read"], "11,22").githubId).toBe(
-      "22",
+    expect(requireActivePrincipal(props, "github_22", ["mcp:read"], "11,22").githubId).toBe("22");
+    expect(() => requireActivePrincipal(props, "github_22", ["mcp:read"], "11")).toThrow(
+      "Staff identity is not authorized",
     );
-    expect(() =>
-      requireActivePrincipal(props, "github_22", ["mcp:read"], "11"),
-    ).toThrow("Staff identity is not authorized");
-    expect(requireActivePrincipal(
-      { userId: "github:11" },
-      "github_11",
-      ["mcp:read"],
-      "11",
-    ).githubId).toBe("11");
+    expect(
+      requireActivePrincipal({ userId: "github:11" }, "github_11", ["mcp:read"], "11").githubId,
+    ).toBe("11");
   });
 
   it.each([
@@ -89,9 +84,7 @@ describe("active staff isolation and scope validation", () => {
     "GITHUB:22",
     "",
   ])("rejects non-canonical subject %j", (userId) => {
-    expect(() =>
-      requireActivePrincipal({ userId }, "github_22", ["mcp:read"], "22"),
-    ).toThrow();
+    expect(() => requireActivePrincipal({ userId }, "github_22", ["mcp:read"], "22")).toThrow();
   });
 
   it("isolates four concurrent authenticated requests without any shared principal", async () => {
