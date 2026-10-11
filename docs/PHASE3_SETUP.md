@@ -1,6 +1,16 @@
 # Phase 3 OAuth deployment and acceptance checklist
 
-**This is a configuration runbook, NOT a deployment record.** As of 2026-10-10 SAST, no real Cloudflare OAuth App, public endpoint, secret, KV namespace or staff sign-in was verified by this project.
+**Configuration runbook and staging acceptance tracker.** The original 10 October runbook preceded live deployment. Staging subsequently went live on 11 October 2026 (SAST). Keep the distinction between **observed manual evidence** below and automated tests: the current document is not a production approval.
+
+## Hosted Phase 3 staging acceptance — 11 October 2026 SAST
+
+The operator confirmed a Cloudflare-hosted staging Worker at `https://neonsales-clickup-mcp-staging.cryogenized.workers.dev`, dedicated `OAUTH_KV`, configured GitHub OAuth application, successful allowlisted GitHub login through Claude, discovery of one diagnostic tool, and **an actual Claude invocation** returning the updated `service_info` JSON: `{"phase":3,"liveClickUp":false,"authentication":"github-oauth-required",...}`. The live deployment used repository commit `6d2677d` and Worker version `ec86fb4c-0017-4955-b9e8-52c944c8bbea`. These confirmations were provided from the operator's terminal and Claude session; this repo does not independently attest to external account state.
+
+Previous hosted probes also confirmed unauthenticated `/mcp` returned HTTP 401 with an RFC 9728 bearer challenge and a fabricated bearer token / `X-User` header returned HTTP 401 with `invalid_token`. GitHub OAuth user-ID validation and completion were exercised by the genuine Claude sign-in.
+
+**Still unverified live (do not mark Phase 3 fully accepted):** removal of an already authorized second tester from the real Cloudflare allowlist, pre-existing token denial, two-to-four distinct human accounts and concurrent requests, refresh/revocation/expiry against hosted Cloudflare, callback state/PKCE replay-denial on the hosted endpoint, and official MCP conformance. Do not paste authorization codes, state parameters, Client Secrets, bearer tokens or callback URLs containing live credentials into issues, logs or conversations.
+
+Automated adversarial tests in this branch simulate token facts and allowlist changes; they do **not** substitute for the hosted revocation exercise. No Phase 4 ClickUp API access and no write tools have been enabled.
 
 ## Identity architecture
 
