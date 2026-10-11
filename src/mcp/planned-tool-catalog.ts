@@ -83,7 +83,7 @@ export const PLANNED_TOOLS: readonly PlannedTool[] = [
     use: "the user explicitly requests a task field change",
     required: ["task_id"],
     optional: ["name", "description", "status", "priority", "due_date_ms", "assignee_ids"],
-    risk: "write",
+    risk: "destructive",
   },
   {
     category: "tasks",
@@ -93,7 +93,7 @@ export const PLANNED_TOOLS: readonly PlannedTool[] = [
     use: "the user specifies a valid task and existing field",
     required: ["task_id", "field_id", "field_value"],
     optional: [],
-    risk: "write",
+    risk: "destructive",
   },
   {
     category: "tasks",
@@ -123,7 +123,7 @@ export const PLANNED_TOOLS: readonly PlannedTool[] = [
     use: "the user approves coordinated changes to multiple tasks",
     required: ["updates"],
     optional: [],
-    risk: "write",
+    risk: "destructive",
   },
   {
     category: "attachments",
@@ -183,7 +183,7 @@ export const PLANNED_TOOLS: readonly PlannedTool[] = [
     use: "the user explicitly asks to remove a tag",
     required: ["task_id", "tag_name"],
     optional: [],
-    risk: "write",
+    risk: "destructive",
   },
   {
     category: "relationships",
@@ -203,7 +203,7 @@ export const PLANNED_TOOLS: readonly PlannedTool[] = [
     use: "the user asks to unlink related tasks",
     required: ["task_id", "other_task_id"],
     optional: [],
-    risk: "write",
+    risk: "destructive",
   },
   {
     category: "relationships",
@@ -223,7 +223,7 @@ export const PLANNED_TOOLS: readonly PlannedTool[] = [
     use: "the user explicitly requests removal of a dependency",
     required: ["task_id", "depends_on_task_id"],
     optional: [],
-    risk: "write",
+    risk: "destructive",
   },
   {
     category: "lists",
@@ -233,7 +233,7 @@ export const PLANNED_TOOLS: readonly PlannedTool[] = [
     use: "the user specifically requests a home List move",
     required: ["task_id", "target_list_id"],
     optional: [],
-    risk: "write",
+    risk: "destructive",
   },
   {
     category: "lists",
@@ -273,7 +273,7 @@ export const PLANNED_TOOLS: readonly PlannedTool[] = [
     use: "the user explicitly asks to start a timer",
     required: ["task_id"],
     optional: [],
-    risk: "write",
+    risk: "destructive",
   },
   {
     category: "time",
@@ -283,7 +283,7 @@ export const PLANNED_TOOLS: readonly PlannedTool[] = [
     use: "the user explicitly asks to stop a timer",
     required: [],
     optional: [],
-    risk: "write",
+    risk: "destructive",
   },
   {
     category: "time",
@@ -353,7 +353,7 @@ export const PLANNED_TOOLS: readonly PlannedTool[] = [
     use: "the user explicitly asks to rename or edit a List",
     required: ["list_id", "name"],
     optional: [],
-    risk: "write",
+    risk: "destructive",
   },
   {
     category: "hierarchy",
@@ -383,7 +383,7 @@ export const PLANNED_TOOLS: readonly PlannedTool[] = [
     use: "the user explicitly asks to edit a Folder",
     required: ["folder_id", "name"],
     optional: [],
-    risk: "write",
+    risk: "destructive",
   },
   {
     category: "members",
@@ -483,7 +483,7 @@ export const PLANNED_TOOLS: readonly PlannedTool[] = [
     use: "the user explicitly approves a Doc page edit",
     required: ["doc_id", "page_id", "content"],
     optional: [],
-    risk: "write",
+    risk: "destructive",
   },
   {
     category: "reports",
@@ -804,7 +804,7 @@ export function plannedDescription(tool: PlannedTool): string {
     tool.risk === "read"
       ? "Read backend not implemented; no ClickUp data will be retrieved. Server-side scope checks are required before any future activation."
       : tool.risk === "destructive"
-        ? "DESTRUCTIVE operation. Not implemented or authorized; deletion requires a distinct owner-controlled approval mechanism."
+        ? "Destructive or state-replacing operation. Not implemented or authorized; a separate owner-controlled, auditable approval gate is required before any future implementation."
         : "Write operation not implemented or authorized. This schema cannot mutate ClickUp; a future approval gate and server-side grants are mandatory.";
   return [
     "[SCHEMA ONLY — NOT AVAILABLE]",
