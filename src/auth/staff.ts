@@ -25,7 +25,7 @@ export function parseStaffAllowlist(config: unknown): ReadonlySet<string> {
  *  Keep the public github:<id> subject, but issue grants with a colon-free userId.
  */
 export function oauthUserIdForGitHub(githubId: string): string {
-  if (!/^[1-9]\\d*$/.test(githubId) || !Number.isSafeInteger(Number(githubId))) {
+  if (!/^[1-9]\d*$/.test(githubId) || !Number.isSafeInteger(Number(githubId))) {
     throw new Error("Invalid numeric GitHub identity");
   }
   return "github_" + githubId;
