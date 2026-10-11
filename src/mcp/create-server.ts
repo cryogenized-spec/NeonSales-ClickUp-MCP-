@@ -7,6 +7,8 @@ import {
   FIND_TASKS_OUTPUT_SCHEMA,
   GET_TASK_OUTPUT_SCHEMA,
   ATTENTION_REPORT_OUTPUT_SCHEMA,
+  SERVICE_INFO_OUTPUT_SCHEMA,
+  TOOL_CATALOG_OUTPUT_SCHEMA,
 } from "./output-schemas.js";
 
 export interface ReadDependencies {
@@ -44,12 +46,13 @@ export function createServer(deps?: ReadDependencies): McpServer {
     "service_info",
     {
       description:
-        "Read-only Phase 3 staging diagnostic; reports OAuth requirement and ClickUp disabled status.",
+        "Report service phase and OAuth requirement without touching ClickUp. Use first to distinguish diagnostic server operation from live backend connectivity; this tool does not authenticate anyone, authorize a task, or demonstrate access to ClickUp data.",
       inputSchema: fromJsonSchema<Record<string, never>>({
         type: "object",
         properties: {},
         additionalProperties: false,
       }),
+      outputSchema: fromJsonSchema<Record<string, unknown>>(SERVICE_INFO_OUTPUT_SCHEMA),
       annotations: { readOnlyHint: true, destructiveHint: false },
     },
     async () => ({
@@ -65,12 +68,12 @@ export function createServer(deps?: ReadDependencies): McpServer {
     "find_scoped_tasks",
     {
       description:
-        "Read up to 50 tasks from the one server-authorized ClickUp List. Results may be incomplete; never searches arbitrary Lists.",
+        "Find tasks in the ONE server-authorized ClickUp home List. Use to browse tasks or filter by exact status, then inspect IDs with get_scoped_task. Returns up to 50 bounded results plus source, pages_scanned and incomplete. Do not claim global Workspace search or completeness if incomplete is true. This operation only works after a separately approved read grant and staging credentials.",
       inputSchema: fromJsonSchema<{ max_results?: number; status?: string }>({
         type: "object",
         properties: {
-          max_results: { type: "integer", minimum: 1, maximum: 50 },
-          status: { type: "string", minLength: 1, maxLength: 64 },
+          max_results: { type: "integer", minimum: 1, maximum: 50, description: "Result cap (default 20); examine incomplete before treating a search as exhaustive." },
+          status: { type: "string", minLength: 1, maxLength: 64, description: "Optional exact ClickUp status label, case-insensitive. Not a search query." },
         },
         additionalProperties: false,
       }),
@@ -97,11 +100,11 @@ export function createServer(deps?: ReadDependencies): McpServer {
     "get_scoped_task",
     {
       description:
-        "Read one task by ID, only if its verified home List matches the server-side grant.",
+        "Retrieve minimal metadata for one specific ClickUp task by its exact task ID. Use find_scoped_tasks first if the user knows only the title. The server compares the task's verified home List with the authorized List. Never accept user-supplied List IDs as authorization; returns no descriptions or unrelated List data.",
       inputSchema: fromJsonSchema<{ task_id: string }>({
         type: "object",
         properties: {
-          task_id: { type: "string", minLength: 2, maxLength: 40, pattern: "^[a-zA-Z0-9_-]+$" },
+          task_id: { type: "string", minLength: 2, maxLength: 40, pattern: "^[a-zA-Z0-9_-]+$", description: "Exact ClickUp task ID (not title or URL)." },
         },
         required: ["task_id"],
         additionalProperties: false,
@@ -124,12 +127,12 @@ export function createServer(deps?: ReadDependencies): McpServer {
     "get_attention_report",
     {
       description:
-        "Read-only scoped metadata summary: overdue, due soon, and not updated for 48h. Staleness does not prove inactivity.",
+        "Prepare a scoped task attention summary: past-due tasks, tasks due within lookahead_hours, and tasks whose metadata has not changed for at least 48h. Use for daily management reviews; include SAST and UTC time, source, pages_scanned and incomplete. A stale task is NOT evidence an employee did no work. The report can cover at most 50 tasks, never an entire unknown Workspace.",
       inputSchema: fromJsonSchema<{ lookahead_hours?: number; include_overdue?: boolean }>({
         type: "object",
         properties: {
-          lookahead_hours: { type: "integer", minimum: 1, maximum: 48 },
-          include_overdue: { type: "boolean" },
+          lookahead_hours: { type: "integer", minimum: 1, maximum: 48, description: "Forward deadline window 1–48 hours, default 24." },
+          include_overdue: { type: "boolean", description: "Whether past-due tasks appear, default true." },
         },
         additionalProperties: false,
       }),
@@ -170,6 +173,7 @@ export function createServer(deps?: ReadDependencies): McpServer {
         properties: {},
         additionalProperties: false,
       }),
+      outputSchema: fromJsonSchema<Record<string, unknown>>(TOOL_CATALOG_OUTPUT_SCHEMA),
       annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
     },
     async () => {
