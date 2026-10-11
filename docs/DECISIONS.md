@@ -30,6 +30,9 @@
 | D-020 | 2026-10-10 | PROPOSED (Phase 3 compiler design) | Run isolated strict `skipLibCheck:false` checks for OAuth and MCP modules AND combined `strict:true` full-project check with `skipLibCheck:true` for incompatible third-party CF/Node globals | Preserves strict app/test checking; requires Codex scrutiny of dependency declaration compatibility |
 | D-021 | 2026-10-10 | ACCEPTED (owner architecture) | Two parallel agents work on isolated branches; reconcile Phase 3 only after Phase 2 remediation is reviewed | Avoid write collisions and stale parent commits |
 
+| D-022 | 2026-10-11 | ACCEPTED (owner direction) | Each staff member authorizes ClickUp through their own ClickUp OAuth; retire shared ClickUp API-token design. GitHub OAuth still authenticates each MCP principal. | Preserve ClickUp-native user attribution and independent token permissions; Cloudflare stores credentials encrypted per verified staff subject. |
+| D-023 | 2026-10-11 | ACCEPTED (owner direction) | No laptop-bound hosting or deployments. GitHub Actions is the cloud-based CI/CD runner; Cloudflare Workers is the persistent remote MCP host. | Manual reviewed staging deploy; GitHub encrypted secrets for Cloudflare deploy, Worker secrets for app runtime. |
+
 ## Record an accepted decision
 
 Add a new row (or change PROPOSED → ACCEPTED) with the owner's actual review decision, date/time in SAST if known, trade-offs, and affected files. For changed decisions, mark original SUPERSEDED and link the replacement. Don't fabricate approval.
