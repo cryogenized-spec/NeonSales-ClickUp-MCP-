@@ -39,7 +39,8 @@ describe("Phase 4 official SDK integration", () => {
   it("advertises three operational read tools plus catalogue and diagnostic", async () => {
     const outbound = vi.fn(async (url: RequestInfo | URL) => {
       const pathname = new URL(String(url)).pathname;
-      if (pathname.endsWith("/list/12345")) return Response.json({ id: "12345", space: { id: "765" } });
+      if (pathname.endsWith("/list/12345"))
+        return Response.json({ id: "12345", space: { id: "765" } });
       if (pathname.endsWith("/team/555/space")) return Response.json({ spaces: [{ id: "765" }] });
       return Response.json({ tasks: [] });
     });
@@ -77,7 +78,9 @@ describe("Phase 4 official SDK integration", () => {
       ]);
       for (const tool of tools) {
         expect(tool.annotations?.readOnlyHint).toBe(
-          !["connect_clickup_account", "disconnect_clickup_account", "create_scoped_task"].includes(tool.name),
+          !["connect_clickup_account", "disconnect_clickup_account", "create_scoped_task"].includes(
+            tool.name,
+          ),
         );
         expect(tool.annotations?.destructiveHint).toBe(tool.name === "disconnect_clickup_account");
       }
@@ -87,10 +90,12 @@ describe("Phase 4 official SDK integration", () => {
         liveClickUp: true,
         authentication: "github-oauth-plus-individual-clickup-oauth",
       });
-      await expect(client.callTool({
-        name: "create_scoped_task",
-        arguments: { name: "No write scope" },
-      })).rejects.toThrow();
+      await expect(
+        client.callTool({
+          name: "create_scoped_task",
+          arguments: { name: "No write scope" },
+        }),
+      ).rejects.toThrow();
       expect(outbound).not.toHaveBeenCalled();
       const response = await client.callTool({
         name: "find_scoped_tasks",

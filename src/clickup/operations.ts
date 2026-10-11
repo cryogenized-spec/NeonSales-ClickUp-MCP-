@@ -151,26 +151,34 @@ function responseId(payload: Record<string, unknown>, expected?: string): string
  * claim to lock a List against concurrent Workspace moves.
  */
 export async function verifyListWorkspace(grant: ReadGrant, fetcher: typeof fetch): Promise<void> {
-  if (!/^[1-9]\d{0,17}$/.test(grant.workspaceId) ||
-      !/^[1-9]\d{0,17}$/.test(grant.listId)) {
+  if (!/^[1-9]\d{0,17}$/.test(grant.workspaceId) || !/^[1-9]\d{0,17}$/.test(grant.listId)) {
     throw new ReadFailure("CLICKUP_SCOPE_OR_SCHEMA_REJECTED");
   }
   const list = await requestJson(grant, fetcher, "GET", "list/" + grant.listId);
   const space = obj(list["space"]);
   const spaceId = space?.["id"];
-  if (String(list["id"]) !== grant.listId ||
-      (typeof spaceId !== "string" && typeof spaceId !== "number") ||
-      !/^[1-9]\d{0,17}$/.test(String(spaceId))) {
+  if (
+    String(list["id"]) !== grant.listId ||
+    (typeof spaceId !== "string" && typeof spaceId !== "number") ||
+    !/^[1-9]\d{0,17}$/.test(String(spaceId))
+  ) {
     throw new ReadFailure("CLICKUP_SCOPE_OR_SCHEMA_REJECTED");
   }
-  const workspace = await requestJson(grant, fetcher, "GET",
-    "team/" + grant.workspaceId + "/space?archived=false");
+  const workspace = await requestJson(
+    grant,
+    fetcher,
+    "GET",
+    "team/" + grant.workspaceId + "/space?archived=false",
+  );
   const spaces = workspace["spaces"];
-  if (!Array.isArray(spaces) || spaces.length > 500 ||
-      !spaces.some(value => {
-        const entry = obj(value);
-        return entry !== null && String(entry["id"]) === String(spaceId);
-      })) {
+  if (
+    !Array.isArray(spaces) ||
+    spaces.length > 500 ||
+    !spaces.some((value) => {
+      const entry = obj(value);
+      return entry !== null && String(entry["id"]) === String(spaceId);
+    })
+  ) {
     throw new ReadFailure("CLICKUP_SCOPE_OR_SCHEMA_REJECTED");
   }
 }
