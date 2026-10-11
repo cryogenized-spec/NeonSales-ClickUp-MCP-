@@ -51,13 +51,13 @@ describe("active staff isolation and scope validation", () => {
   });
 
   it.each([
-    [],
-    ["mcp:read", "mcp:read"],
-    ["mcp:read", "mcp:write"],
-    ["mcp:write", "mcp:read"],
-    ["offline_access", "mcp:read"],
-    ["MCP:READ"],
-    [""],
+    [[]],
+    [["mcp:read", "mcp:read"]],
+    [["mcp:read", "mcp:write"]],
+    [["mcp:write", "mcp:read"]],
+    [["offline_access", "mcp:read"]],
+    [["MCP:READ"]],
+    [[""]],
   ])("rejects elevated, duplicate or malformed token scopes %j", (scopes) => {
     expect(() =>
       requireActivePrincipal({ userId: "github:22" }, "github_22", scopes, "22"),
