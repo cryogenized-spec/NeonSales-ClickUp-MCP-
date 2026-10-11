@@ -17,7 +17,7 @@ The older `@modelcontextprotocol/sdk` v1.x implements the 2025-11-25 spec only. 
 - Revised **Streamable HTTP** over HTTPS, one `/mcp` POST endpoint as specified for 2026-07-28; do not blindly copy pre-2026 session IDs, long-lived GET stream endpoints or old HTTP+SSE examples.
 - Honor MCP protocol version negotiation, correct headers, request-scoped streams if used, bounded request size, timeouts and cancellation where supported. Never report protocol-level success for a business operation that failed.
 - The server must require authenticated access before it can touch any real ClickUp record. Implement standard OAuth authorization compatible with the clients' actual capabilities, protected resource / authorization server metadata as needed, PKCE, scope/identity checks and exact redirect URI rules. Do not confuse MCP client OAuth with backend ClickUp API credential storage.
-- Enforce Workspace/List allowlists, read/write scopes, output minimization and human approval independently of tool metadata. Tool descriptions are NOT an access-control system.
+- Enforce Workspace/List allowlists, read/write scopes, output minimization and OAuth read/write scopes independently of tool metadata. Claude/ChatGPT own their tool approval prompts; the server does not duplicate those settings. Tool descriptions are NOT an access-control system.
 - Treat task body content as untrusted; logs must omit secrets. Negative tests must cover unauthenticated, wrong scope, wrong list, replay and 429/partial pagination cases.
 - Never return simulated data as live. Tool responses expose explicit `source` and partial-result status when applicable.
 
@@ -36,3 +36,9 @@ The *same* URL, registered tool definitions and backend adapter must be usable f
 7. Refuse deployment or 'fully compliant' claim if a required protocol, auth or conformance test fails. Never use `continue-on-error` or baseline known failures to conceal failures.
 
 **Implementation update, 2026-10-10:** Phase 2 uses the official `@modelcontextprotocol/server@2.3.1` factory and actual `@modelcontextprotocol/client` to verify tool listing, modern 2026-07-28 handshake, legacy path, invalid argument rejection and four concurrent protocol test clients. These passed on [CI run 38054050247](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/actions/runs/38054050247). The public Worker deliberately DENIES access (HTTP 503) pending Phase 3 OAuth. **The official conformance runner, MCP Inspector and two real subscription clients have not been tested. Do not claim conformance certification.**
+
+## Phase 3 OAuth verification status (2026-10-10 SAST)
+
+OAuth code was added with upstream Cloudflare Workers OAuthProvider v1.2.3, its `/mcp` protected route, client-metadata discovery support, per-client consent helpers, GitHub PKCE upstream sign-in and read-only per-request staff allowlist. No homemade token issuance, no GitHub token passthrough to ClickUp or models.
+
+**What CI proves:** strict TypeScript app checks including separate `skipLibCheck:false` Cloudflare and MCP profiles, combined project check, unit/adversarial tests and build/audit. **What it does not prove:** a deployed Cloudflare Worker with KV and GitHub OAuth credentials, end-to-end 401/redirect/token flow, both subscription clients, or the official MCP conformance suite. These require the manual acceptance gates in [PHASE3_SETUP.md](PHASE3_SETUP.md). No MCP conformance certification is asserted.

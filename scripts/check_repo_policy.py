@@ -23,6 +23,10 @@ REQUIRED = [
     "docs/CODEX_REVIEW.md", "docs/SECURITY_PERIMETER.md",
     "docs/superpowers/specs/2026-10-10-phase1-perimeter-design.md",
     "docs/superpowers/plans/2026-10-10-phase1-perimeter.md",
+    "docs/PHASE3_SETUP.md",
+    "docs/superpowers/specs/2026-10-10-phase3-auth-design.md",
+    "docs/superpowers/plans/2026-10-10-phase3-auth.md",
+    "tsconfig.auth.json", "tsconfig.mcp.json",
     ".github/workflows/strict-ci.yml",
     ".github/CODEOWNERS", ".github/dependabot.yml",
 ]
@@ -85,6 +89,33 @@ def verify_skills() -> None:
     if stray:
         error("Unpinned upstream skill file(s): " + ", ".join(sorted(stray)))
 
+def verify_phase3_typecheck(scripts: dict[str, str]) -> None:
+    """Fail closed if a future change silently drops an isolated strict typecheck."""
+    expected = (
+        "tsc -p tsconfig.auth.json --noEmit && "
+        "tsc -p tsconfig.mcp.json --noEmit && "
+        "tsc -p tsconfig.json --noEmit"
+    )
+    if scripts.get("typecheck") != expected:
+        error("Phase 3 must run strict auth + MCP + combined TS checks")
+    for path, expected_types in (
+        ("tsconfig.auth.json", ["@cloudflare/workers-types"]),
+        ("tsconfig.mcp.json", ["node"]),
+    ):
+        file = require_file(path)
+        if not file.is_file():
+            continue
+        try:
+            cfg = json.loads(file.read_text(encoding="utf-8"))
+            compiler = cfg.get("compilerOptions", {})
+            if (cfg.get("extends") != "./tsconfig.json"
+                or compiler.get("skipLibCheck") is not False
+                or compiler.get("strict") is False
+                or compiler.get("types") != expected_types):
+                error("Weakened isolated TypeScript profile: " + path)
+        except (OSError, ValueError, AttributeError) as exc:
+            error("Invalid isolated TS profile " + path + ": " + str(exc))
+
 def verify_application() -> None:
     excluded = {".git", ".github", ".agents", "node_modules", "dist", "build", "coverage"}
     code_files = [
@@ -114,6 +145,8 @@ def verify_application() -> None:
         if (not isinstance(command, str) or not command.strip()
                 or re.search(r"(^|\s)(echo|true|exit\s+0)(\s|$)|\|\|\s*true", command)):
             error("Missing or obvious no-op npm script: " + name)
+    if (ROOT / "src/auth/oauth-runtime.ts").is_file():
+        verify_phase3_typecheck(scripts)
     tsconfig = ROOT / "tsconfig.json"
     if tsconfig.is_file():
         try:

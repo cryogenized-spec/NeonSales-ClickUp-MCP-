@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { Client, StreamableHTTPClientTransport } from "@modelcontextprotocol/client";
+import { createMcpHandler, McpServer, fromJsonSchema } from "@modelcontextprotocol/server";
 import { createProtocolHandler } from "../src/mcp/handler.js";
 
 /** Drive raw HTTP frames directly through the real SDK handler, without Client sanitization. */
@@ -41,7 +42,7 @@ describe("official MCP SDK v2 in-process transport", () => {
   it("negotiates current protocol and discovers exactly one safe diagnostic tool", async () => {
     const handler = createProtocolHandler();
     const client = new Client(
-      { name: "phase2-test", version: "0.1.0" },
+      { name: "phase3-test", version: "0.1.0" },
       { versionNegotiation: { mode: { pin: "2026-07-28" } } },
     );
     const transport = new StreamableHTTPClientTransport(new URL("http://local.test/mcp"), {
@@ -58,11 +59,12 @@ describe("official MCP SDK v2 in-process transport", () => {
       if (block?.type !== "text") {
         throw new Error("SDK did not return a diagnostic text block");
       }
+      expect(result.structuredContent).toEqual(JSON.parse(block.text));
       expect(JSON.parse(block.text)).toEqual({
-        phase: 2,
+        phase: 3,
         liveClickUp: false,
-        authentication: "not-configured",
-        note: "Internal SDK contract test only; no live ClickUp tasks or OAuth.",
+        authentication: "github-oauth-required",
+        note: "Phase 3 read-only diagnostic; GitHub OAuth gates the public MCP endpoint. Live ClickUp access is disabled.",
       });
     } finally {
       await client.close();
@@ -72,7 +74,7 @@ describe("official MCP SDK v2 in-process transport", () => {
 
   it("uses the official SDK to reject invalid tool arguments", async () => {
     const handler = createProtocolHandler();
-    const client = new Client({ name: "phase2-test", version: "0.1.0" });
+    const client = new Client({ name: "phase3-test", version: "0.1.0" });
     const transport = new StreamableHTTPClientTransport(new URL("http://local.test/mcp"), {
       fetch: async (input, init) => handler.fetch(new Request(input, init)),
     });
@@ -110,6 +112,57 @@ describe("official MCP SDK v2 in-process transport", () => {
       expect(values.every((value) => !value.isError)).toBe(true);
     } finally {
       await Promise.all(clients.map((client) => client.close()));
+      await handler.close();
+    }
+  });
+
+  it("passes four request-scoped authenticated subjects into real SDK tool callbacks", async () => {
+    const handler = createMcpHandler(() => {
+      const server = new McpServer({ name: "subject-isolation-test", version: "0.1.0" });
+      server.registerTool(
+        "whoami",
+        {
+          inputSchema: fromJsonSchema<Record<string, never>>({
+            type: "object",
+            properties: {},
+            additionalProperties: false,
+          }),
+        },
+        async (_args, extra) => ({
+          content: [
+            { type: "text", text: String(extra.http?.authInfo?.extra?.["subject"] ?? "missing") },
+          ],
+        }),
+      );
+      return server;
+    });
+    try {
+      const actual = await Promise.all(
+        ["11", "22", "33", "44"].map(async (id) => {
+          const client = new Client({ name: "verified-" + id, version: "0.1.0" });
+          const transport = new StreamableHTTPClientTransport(new URL("http://local.test/mcp"), {
+            fetch: async (input, init) =>
+              handler.fetch(new Request(input, init), {
+                authInfo: {
+                  token: "internal-test-" + id,
+                  clientId: "client-" + id,
+                  scopes: ["mcp:read"],
+                  extra: { subject: "github:" + id },
+                },
+              }),
+          });
+          try {
+            await client.connect(transport);
+            const response = await client.callTool({ name: "whoami", arguments: {} });
+            const block = response.content?.find((item) => item.type === "text");
+            return block?.type === "text" ? block.text : "missing";
+          } finally {
+            await client.close();
+          }
+        }),
+      );
+      expect(actual).toEqual(["github:11", "github:22", "github:33", "github:44"]);
+    } finally {
       await handler.close();
     }
   });

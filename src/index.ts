@@ -1,27 +1,29 @@
-/**
- * Public Worker is deliberately inert during Phase 2.
- *
- * No alternate path, header, query string, staff identity, or test-mode
- * override is allowed to expose the internal MCP protocol handler.
- */
-export default {
-  async fetch(request: Request): Promise<Response> {
-    const pathname = new URL(request.url).pathname;
+import type { OAuthProvider } from "@cloudflare/workers-oauth-provider";
+import { configurationUnavailable, validatedOAuthOrigin, type OAuthEnv } from "./auth/env.js";
 
-    if (pathname === "/mcp") {
-      return new Response(JSON.stringify({ code: "AUTH_NOT_CONFIGURED" }), {
-        status: 503,
-        headers: {
-          "Content-Type": "application/json; charset=utf-8",
-          "Cache-Control": "no-store",
-          "X-Content-Type-Options": "nosniff",
-        },
+/** No query/header/test escape hatch can expose MCP without full OAuth configuration. */
+export default {
+  async fetch(
+    request: Request,
+    env?: OAuthEnv,
+    context?: Parameters<OAuthProvider<OAuthEnv>["fetch"]>[2],
+  ): Promise<Response> {
+    const origin = validatedOAuthOrigin(env, request);
+    if (!origin || !env || !context) {
+      if (new URL(request.url).pathname === "/mcp") return configurationUnavailable();
+      return new Response(null, {
+        status: 404,
+        headers: { "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" },
       });
     }
-
-    return new Response(null, {
-      status: 404,
-      headers: { "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" },
-    });
+    if (new URL(request.url).pathname === "/clickup/callback") {
+      const { finishClickUpOAuth } = await import("./clickup/per-user-oauth.js");
+      return finishClickUpOAuth(request, env);
+    }
+    const { handleOAuthRequest } = await import("./auth/oauth-runtime.js");
+    return handleOAuthRequest(request, env, context, origin);
   },
 };
+
+export { ClickUpQuota } from "./clickup/quota-object.js";
+export { ClickUpUserConnection } from "./clickup/user-connection.js";
