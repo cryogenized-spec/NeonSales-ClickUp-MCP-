@@ -1,0 +1,139 @@
+import { describe, expect, it, vi } from "vitest";
+import { Client, StreamableHTTPClientTransport } from "@modelcontextprotocol/client";
+import { createProtocolHandler } from "../src/mcp/handler.js";
+import { CLICKUP_MODEL_TOOL_CATALOG, CLICKUP_TOOL_GROUPS, catalogPage } from "../src/mcp/tool-catalog.js";
+
+async function clientHarness(schemaPreview: boolean, fetcher: typeof fetch) {
+  const handler = createProtocolHandler({
+    bindings: { CLICKUP_SCHEMA_PREVIEW: "true" }, // cannot enable preview on its own
+    schemaPreview,
+    fetcher,
+  });
+  const client = new Client({ name: "catalog-schema-test", version: "0.1.0" });
+  const transport = new StreamableHTTPClientTransport(new URL("http://local.test/mcp"), {
+    fetch: async (input, init) =>
+      handler.fetch(new Request(input, init), {
+        authInfo: {
+          token: "synthetic",
+          clientId: "catalog-test",
+          scopes: ["mcp:read"],
+          extra: { subject: "github:11" },
+        },
+      }),
+  });
+  await client.connect(transport);
+  return { client, handler };
+}
+
+describe("Official ClickUp MCP capability catalogue (model-facing only)", () => {
+  it("contains exactly 48 unique planned capabilities across all official categories", () => {
+    expect(CLICKUP_MODEL_TOOL_CATALOG).toHaveLength(48);
+    expect(new Set(CLICKUP_MODEL_TOOL_CATALOG.map((tool) => tool.name)).size).toBe(48);
+    expect(new Set(CLICKUP_MODEL_TOOL_CATALOG.map((tool) => tool.group))).toEqual(
+      new Set(CLICKUP_TOOL_GROUPS),
+    );
+    for (const spec of CLICKUP_MODEL_TOOL_CATALOG) {
+      expect(spec.name).toMatch(/^clickup_[a-z_]+$/);
+      expect(spec.title.trim().length).toBeGreaterThan(2);
+      expect(spec.purpose.trim().length).toBeGreaterThan(40);
+      expect(spec.example.trim().length).toBeGreaterThan(10);
+      expect(spec.status).toBe("schema_only");
+      expect(spec.inputSchema.type).toBe("object");
+      expect(spec.inputSchema.additionalProperties).toBe(false);
+      expect(new Set(spec.inputSchema.required).size).toBe(spec.inputSchema.required.length);
+      for (const required of spec.inputSchema.required) {
+        expect(Object.keys(spec.inputSchema.properties)).toContain(required);
+      }
+      for (const field of Object.values(spec.inputSchema.properties)) {
+        expect(field.description.trim().length).toBeGreaterThan(10);
+        if (field.type === "array") expect(field.maxItems).toBeGreaterThan(0);
+        if (field.type === "object") expect(field.additionalProperties).toBe(false);
+      }
+    }
+  });
+
+  it("returns bounded catalogue pages and complete JSON schemas by category", () => {
+    const first = catalogPage({ group: "tasks", maxResults: 2, includeSchema: true });
+    expect(first.count).toBe(5);
+    expect(first.entries).toHaveLength(2);
+    expect(first.has_more).toBe(true);
+    expect(first.entries[0]).toMatchObject({
+      name: "clickup_create_task",
+      effect: "write",
+      status: "schema_only",
+      inputSchema: { type: "object", additionalProperties: false },
+    });
+    expect(catalogPage({ group: "tasks", page: 2, maxResults: 2 }).entries).toHaveLength(1);
+    expect(() => catalogPage({ maxResults: 99 })).toThrow();
+    expect(() => catalogPage({ page: -1 })).toThrow();
+  });
+
+  it("advertises only actually implemented tools by default even if a malicious env requests preview", async () => {
+    const outbound = vi.fn(async () => Response.json({ tasks: [] }));
+    const { client, handler } = await clientHarness(false, outbound as typeof fetch);
+    try {
+      const tools = (await client.listTools()).tools;
+      expect(tools.map((tool) => tool.name).sort()).toEqual([
+        "clickup_tool_catalog", "find_scoped_tasks", "get_attention_report",
+        "get_scoped_task", "service_info",
+      ]);
+      const answer = await client.callTool({
+        name: "clickup_tool_catalog",
+        arguments: { group: "relationships", include_schema: true },
+      });
+      expect(answer.isError).not.toBe(true);
+      expect(answer.structuredContent).toMatchObject({
+        status: "schema_only",
+        count: 4,
+        entries: [{ name: "clickup_add_task_link" }],
+      });
+      expect(outbound).not.toHaveBeenCalled();
+    } finally {
+      await client.close();
+      await handler.close();
+    }
+  });
+
+  it("registers all 48 exact schemas through official SDK only in isolated explicit preview", async () => {
+    const outbound = vi.fn(async () => Response.json({ tasks: [] }));
+    const { client, handler } = await clientHarness(true, outbound as typeof fetch);
+    try {
+      const tools = (await client.listTools()).tools;
+      const preview = tools.filter((tool) => tool.name.startsWith("clickup_") &&
+        tool.name !== "clickup_tool_catalog");
+      expect(preview).toHaveLength(48);
+      for (const spec of CLICKUP_MODEL_TOOL_CATALOG) {
+        const tool = preview.find((value) => value.name === spec.name);
+        expect(tool).toBeDefined();
+        expect(tool?.description).toContain("SCHEMA-ONLY, NOT OPERATIONAL");
+        expect(tool?.description).toContain(spec.purpose);
+        expect(tool?.inputSchema).toMatchObject({
+          type: "object", additionalProperties: false, required: spec.inputSchema.required,
+        });
+        expect(tool?.annotations?.readOnlyHint).toBe(spec.effect === "read");
+        expect(tool?.annotations?.destructiveHint).toBe(spec.effect === "destructive");
+      }
+      const mutation = await client.callTool({
+        name: "clickup_create_task",
+        arguments: { list_id: "12345", new_task: { name: "synthetic example" } },
+      });
+      expect(mutation.isError).toBe(true);
+      expect(JSON.stringify(mutation.content)).toContain("CLICKUP_SCHEMA_ONLY");
+      const deletion = await client.callTool({
+        name: "clickup_delete_task",
+        arguments: { task_id: "taskABC" },
+      });
+      expect(deletion.isError).toBe(true);
+      expect(JSON.stringify(deletion.content)).toContain("CLICKUP_SCHEMA_ONLY");
+      const missing = await client.callTool({
+        name: "clickup_create_task",
+        arguments: { list_id: "12345" },
+      });
+      expect(missing.isError).toBe(true);
+      expect(outbound).not.toHaveBeenCalled();
+    } finally {
+      await client.close();
+      await handler.close();
+    }
+  });
+});
