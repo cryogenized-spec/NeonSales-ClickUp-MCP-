@@ -106,8 +106,8 @@ function verifiedSubject(auth: unknown, env: unknown): string {
     typeof subject !== "string" ||
     !/^github:[1-9]\d{0,15}$/.test(subject) ||
     !Array.isArray(scopes) ||
-    scopes.length !== 1 ||
-    scopes[0] !== "mcp:read"
+    (!(scopes.length === 1 && scopes[0] === "mcp:read") &&
+      !(scopes.length === 2 && scopes.includes("mcp:read") && scopes.includes("mcp:write")))
   ) {
     throw new ReadFailure("CLICKUP_ACCESS_DENIED");
   }
@@ -346,8 +346,12 @@ export async function finishClickUpOAuth(
       providerRequest(fetcher, "team", token),
     ]);
     const clickupId = decimal(obj(profile["user"])?.["id"]);
+    // Fail BEFORE /store. Otherwise a different consenting ClickUp account
+    // can silently replace a previously valid staff token in the vault.
+    const expectedUserId = expectedClickUpUserId(env, subject);
     if (
       !clickupId ||
+      clickupId !== expectedUserId ||
       !Array.isArray(teams["teams"]) ||
       !teams["teams"].some((t) => decimal(obj(t)?.["id"]) === settings.workspaceId)
     ) {

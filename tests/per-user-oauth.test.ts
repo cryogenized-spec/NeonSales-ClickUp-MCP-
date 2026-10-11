@@ -196,4 +196,49 @@ describe("independent ClickUp OAuth identity against current MCP principal", () 
     expect(response.status).toBe(400);
     expect(fixture.connected.size).toBe(0);
   });
+  it("rejects wrong ClickUp account before storing a token, preserving an earlier valid connection", async () => {
+    const fixture = fakeBindings();
+    const correct = await beginClickUpOAuth(login("11"), fixture.env);
+    const callback = new URL("https://stage.example/clickup/callback");
+    callback.searchParams.set(
+      "state",
+      new URL(correct.authorization_url).searchParams.get("state")!,
+    );
+    callback.searchParams.set("code", "correct_token");
+    const first = await finishClickUpOAuth(
+      new Request(callback),
+      fixture.env,
+      fixture.upstream as typeof fetch,
+    );
+    expect(first.status).toBe(200);
+    expect(fixture.connected.get("staff-clickup:github:11")?.token).toBe(
+      "test-user-token-no-value",
+    );
+
+    const wrong = await beginClickUpOAuth(login("11"), fixture.env);
+    const wrongCallback = new URL("https://stage.example/clickup/callback");
+    wrongCallback.searchParams.set(
+      "state",
+      new URL(wrong.authorization_url).searchParams.get("state")!,
+    );
+    wrongCallback.searchParams.set("code", "wrong_account");
+    const wrongAccount = vi.fn(async (target: RequestInfo | URL) => {
+      const url = String(target);
+      if (url.endsWith("/oauth/token"))
+        return Response.json({ access_token: "wrong-person-token" });
+      if (url.endsWith("/user")) return Response.json({ user: { id: 809 } });
+      if (url.endsWith("/team")) return Response.json({ teams: [{ id: 999 }] });
+      throw new Error("unexpected path");
+    });
+    const result = await finishClickUpOAuth(
+      new Request(wrongCallback),
+      fixture.env,
+      wrongAccount as typeof fetch,
+    );
+    expect(result.status).toBe(400);
+    expect(fixture.connected.get("staff-clickup:github:11")?.token).toBe(
+      "test-user-token-no-value",
+    );
+    expect(fixture.calls.filter((entry) => entry.endsWith("/store"))).toHaveLength(1);
+  });
 });
