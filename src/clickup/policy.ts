@@ -5,6 +5,7 @@ export interface ReadGrant {
   readonly subject: string;
   readonly clickupUserId: string;
   readonly listId: string;
+  readonly workspaceId: string;
   readonly apiToken: string;
   readonly quota: {
     readonly idFromName: (name: string) => unknown;
@@ -75,6 +76,7 @@ export async function requireReadGrant(auth: unknown, bindings: unknown): Promis
     subject,
     clickupUserId: user.clickupUserId,
     listId,
+    workspaceId: user.workspaceId,
     apiToken: user.token,
     quota: quota as unknown as ReadGrant["quota"],
   };

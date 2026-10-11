@@ -1,4 +1,4 @@
-import { getScopedTask, quotaCall } from "./client.js";
+import { quotaCall } from "./client.js";
 import { ReadFailure, type ReadGrant } from "./policy.js";
 
 /**
@@ -12,10 +12,6 @@ const idPattern = /^[A-Za-z0-9_-]{2,40}$/;
 const obj = (v: unknown): Record<string, unknown> | null =>
   v !== null && typeof v === "object" && !Array.isArray(v) ? (v as Record<string, unknown>) : null;
 
-function taskId(id: string): string {
-  if (!idPattern.test(id)) throw new ReadFailure("CLICKUP_INVALID_ARGUMENT");
-  return encodeURIComponent(id);
-}
 async function requestJson(
   grant: ReadGrant,
   fetcher: typeof fetch,
@@ -40,7 +36,14 @@ async function requestJson(
     });
     if (response.status === 401 || response.status === 403)
       throw new ReadFailure("CLICKUP_UPSTREAM_DENIED");
-    if (response.status === 429) throw new ReadFailure("CLICKUP_RATE_LIMITED");
+    if (response.status === 429) {
+      const reset = response.headers.get("X-RateLimit-Reset");
+      const seconds = reset && /^\d{1,12}$/.test(reset) ? Number(reset) : 0;
+      if (Number.isSafeInteger(seconds) && seconds > Date.now() / 1000) {
+        await quotaCall(grant, "cooldown", seconds * 1000);
+      }
+      throw new ReadFailure("CLICKUP_RATE_LIMITED");
+    }
     if (!response.ok) {
       if (method !== "GET" && response.status >= 500) {
         throw new ReadFailure("CLICKUP_WRITE_OUTCOME_UNKNOWN");
@@ -133,6 +136,49 @@ function responseId(payload: Record<string, unknown>, expected?: string): string
     throw new ReadFailure("CLICKUP_WRITE_OUTCOME_UNKNOWN");
   return id;
 }
+
+/**
+ * Fail closed unless ClickUp itself associates the configured List with
+ * a Space returned by its authorized Workspace-specific endpoint.
+ * The account credential is individual, and workspaceId comes from
+ * its verified OAuth connection, never from model-supplied arguments.
+ *
+ * This guards mistaken cross-Workspace LIST_ID configuration. It does not
+ * claim to lock a List against concurrent Workspace moves.
+ */
+export async function verifyListWorkspace(grant: ReadGrant, fetcher: typeof fetch): Promise<void> {
+  if (!/^[1-9]\d{0,17}$/.test(grant.workspaceId) || !/^[1-9]\d{0,17}$/.test(grant.listId)) {
+    throw new ReadFailure("CLICKUP_SCOPE_OR_SCHEMA_REJECTED");
+  }
+  const list = await requestJson(grant, fetcher, "GET", "list/" + grant.listId);
+  const space = obj(list["space"]);
+  const spaceId = space?.["id"];
+  if (
+    String(list["id"]) !== grant.listId ||
+    (typeof spaceId !== "string" && typeof spaceId !== "number") ||
+    !/^[1-9]\d{0,17}$/.test(String(spaceId))
+  ) {
+    throw new ReadFailure("CLICKUP_SCOPE_OR_SCHEMA_REJECTED");
+  }
+  const workspace = await requestJson(
+    grant,
+    fetcher,
+    "GET",
+    "team/" + grant.workspaceId + "/space?archived=false",
+  );
+  const spaces = workspace["spaces"];
+  if (
+    !Array.isArray(spaces) ||
+    spaces.length > 500 ||
+    !spaces.some((value) => {
+      const entry = obj(value);
+      return entry !== null && String(entry["id"]) === String(spaceId);
+    })
+  ) {
+    throw new ReadFailure("CLICKUP_SCOPE_OR_SCHEMA_REJECTED");
+  }
+}
+
 export async function createScopedTask(
   grant: ReadGrant,
   data: TaskInput,
@@ -157,97 +203,16 @@ export async function createScopedTask(
     accepted: true,
   };
 }
-export async function updateScopedTask(
-  grant: ReadGrant,
-  id: string,
-  changes: TaskInput,
-  fetcher: typeof fetch,
-): Promise<Record<string, unknown>> {
-  const clean = taskId(id);
-  const body = bodyFromInput(changes, false);
-  await getScopedTask(grant, id, fetcher); // verified home List before any write
-  const upstream = await requestJson(grant, fetcher, "PUT", "task/" + clean, body);
-  responseId(upstream, id);
-  return {
-    action: "task_updated",
-    task_id: id,
-    list_id: grant.listId,
-    source: "clickup-api-v2",
-    accepted: true,
-  };
-}
-export async function addScopedTaskComment(
-  grant: ReadGrant,
-  id: string,
-  comment: string,
-  fetcher: typeof fetch,
-): Promise<Record<string, unknown>> {
-  const clean = taskId(id);
-  const text = optionalText(comment, 6000);
-  if (!text) throw new ReadFailure("CLICKUP_INVALID_ARGUMENT");
-  await getScopedTask(grant, id, fetcher);
-  const upstream = await requestJson(grant, fetcher, "POST", "task/" + clean + "/comment", {
-    comment_text: text,
-    notify_all: false,
-  });
-  const commentId = upstream["id"];
-  if (typeof commentId !== "string" && typeof commentId !== "number")
-    throw new ReadFailure("CLICKUP_WRITE_OUTCOME_UNKNOWN");
-  return {
-    action: "comment_created",
-    task_id: id,
-    comment_id: String(commentId),
-    source: "clickup-api-v2",
-    accepted: true,
-  };
-}
-export async function getScopedTaskComments(
-  grant: ReadGrant,
-  id: string,
-  limit: number,
-  fetcher: typeof fetch,
-): Promise<Record<string, unknown>> {
-  const clean = taskId(id);
-  if (!Number.isInteger(limit) || limit < 1 || limit > 20)
-    throw new ReadFailure("CLICKUP_INVALID_ARGUMENT");
-  await getScopedTask(grant, id, fetcher);
-  const upstream = await requestJson(grant, fetcher, "GET", "task/" + clean + "/comment");
-  if (!Array.isArray(upstream["comments"])) throw new ReadFailure("CLICKUP_BAD_RESPONSE");
-  const comments: Record<string, unknown>[] = [];
-  for (const value of upstream["comments"].slice(0, limit)) {
-    const comment = obj(value);
-    if (!comment) throw new ReadFailure("CLICKUP_BAD_RESPONSE");
-    const rawId = comment["id"];
-    const date = comment["date"];
-    const rawText = comment["comment_text"];
-    const fallback = comment["comment"];
-    const content =
-      typeof rawText === "string"
-        ? rawText
-        : Array.isArray(fallback)
-          ? fallback
-              .map((part: unknown) => obj(part)?.["text"] ?? "")
-              .filter((part: unknown) => typeof part === "string")
-              .join("")
-          : "";
-    comments.push({
-      id: typeof rawId === "string" || typeof rawId === "number" ? String(rawId) : null,
-      text: content.slice(0, 6000),
-      date_ms:
-        (typeof date === "string" || typeof date === "number") && /^\d{1,15}$/.test(String(date))
-          ? Number(date)
-          : null,
-      author_id: obj(comment["user"])?.["id"] ?? null,
-    });
-  }
-  return {
-    source: "clickup-api-v2",
-    task_id: id,
-    comments,
-    incomplete: upstream["comments"].length >= 25 || upstream["comments"].length > limit,
-    note: "First ClickUp comment page only; ClickUp owns task history.",
-  };
-}
+/**
+ * Intentionally no task-ID write endpoints.
+ * ClickUp v2 PUT /task/{id} and POST /task/{id}/comment do not accept an
+ * atomic home-List precondition. The task can be moved after a GET, so
+ * advertising these mutations would violate our strict List boundary.
+ * Restore only when upstream provides a List-bound conditional mutation.
+ */
+// ClickUp task-ID comment reads also lack a list-scoped endpoint: an item can
+// move between preflight and the subsequent read. Keep this unavailable until
+// the same upstream atomicity issue is resolved.
 export async function getScopedList(
   grant: ReadGrant,
   fetcher: typeof fetch,

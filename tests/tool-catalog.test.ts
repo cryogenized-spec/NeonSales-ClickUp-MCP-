@@ -79,7 +79,6 @@ describe("Official ClickUp MCP capability catalogue (model-facing only)", () => 
       const tools = (await client.listTools()).tools;
       expect(tools.map((tool) => tool.name).sort()).toEqual([
         "clickup_tool_catalog",
-        "comment_on_scoped_task",
         "connect_clickup_account",
         "create_scoped_task",
         "disconnect_clickup_account",
@@ -88,9 +87,7 @@ describe("Official ClickUp MCP capability catalogue (model-facing only)", () => 
         "get_clickup_connection_status",
         "get_scoped_list",
         "get_scoped_task",
-        "get_scoped_task_comments",
         "service_info",
-        "update_scoped_task",
       ]);
       const answer = await client.callTool({
         name: "clickup_tool_catalog",
