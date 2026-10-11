@@ -1,4 +1,4 @@
-import { claudeGlyph, cryogenizedBadgeDataUri } from "./brand-assets.js";
+import { claudeGlyph, neonSalesMcpBadgeDataUri } from "./brand-assets.js";
 
 interface ConsentDisplay {
   readonly clientName: string;
@@ -106,16 +106,16 @@ h1{font-size:clamp(26px,5vw,32px);line-height:1.16;letter-spacing:-.035em;margin
 </head>
 <body>
 <header class="page masthead">
-<div class="brand"><span class="brand-mark" aria-hidden="true">C</span><span>CRYOGENIZED</span></div>
+<div class="brand"><span class="brand-mark" aria-hidden="true">N</span><span>NEONSALES</span></div>
 <span class="environment">MCP · STAGING</span>
 </header>
 <main class="page">
 <section class="card" aria-labelledby="consent-heading">
 <div class="eyebrow">Secure authorization</div>
-<div class="connection-flow" role="group" aria-label="Client application connects to Cryogenized's ClickUp MCP">
+<div class="connection-flow" role="group" aria-label="Client application connects to NeonSales ClickUp MCP Staging">
 <div class="connection-endpoint"><div class="connection-tile" aria-hidden="true">${clientGlyph}</div><span>${name}</span></div>
 <div class="connection-arrows" aria-hidden="true"><svg viewBox="0 0 36 36" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13h25m0 0-7-7m7 7-7 7M31 24H6m0 0 7-7m-7 7 7 7"/></svg></div>
-<div class="connection-endpoint"><div class="connection-tile mcp"><img width="78" height="78" src="${cryogenizedBadgeDataUri}" alt=""></div><span>Cryogenized MCP</span></div>
+<div class="connection-endpoint"><div class="connection-tile mcp"><img width="78" height="78" src="${neonSalesMcpBadgeDataUri}" alt=""></div><span>NeonSales MCP</span></div>
 </div>
 <h1 id="consent-heading">Allow ${name} to connect?</h1>
 <p class="intro">Review the application, destination, and requested permission before continuing.</p>
@@ -139,7 +139,7 @@ ${loopbackWarning}
 <div class="disclaimer"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 7.5v.5"/></svg><span>Authorization grants access to the capabilities shown above. Never approve a request you do not recognize.</span></div>
 </section>
 </main>
-<footer class="footer page">Cryogenized’s ClickUp MCP · Secure staging environment</footer>
+<footer class="footer page">NeonSales ClickUp MCP · Secure staging environment</footer>
 </body>
 </html>`;
 }
