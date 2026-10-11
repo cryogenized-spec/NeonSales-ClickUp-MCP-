@@ -88,9 +88,21 @@ describe("branded consent identity diagram", () => {
 
   it("never lends Claude branding to a spoofed or unrecognized client", () => {
     for (const client of [
-      { clientName: "Claude", clientDomain: "claude.ai", redirectHost: "evil.example" },
-      { clientName: "Other", clientDomain: "claude.ai", redirectHost: "claude.ai" },
-      { clientName: "Claude", clientDomain: "evil.example", redirectHost: "claude.ai" },
+      {
+        clientName: "Claude",
+        clientDomain: "claude.ai",
+        redirectHost: "evil.example",
+      },
+      {
+        clientName: "Other",
+        clientDomain: "claude.ai",
+        redirectHost: "claude.ai",
+      },
+      {
+        clientName: "Claude",
+        clientDomain: "evil.example",
+        redirectHost: "claude.ai",
+      },
     ]) {
       const html = renderConsentPage(
         { ...client, redirectIsLoopback: false, scope: ["mcp:read"] },
