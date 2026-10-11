@@ -89,12 +89,13 @@ async function finishGitHub(
     return new Response(null, { status: 302, headers: upstream.headers });
   }
   // Check the exact subject before storing the grant. No GitHub access token is persisted.
-  requireActivePrincipal({ userId: subject }, oauthUserId, ["mcp:read"], env.ALLOWED_GITHUB_IDS);
+  const consentedScopes = validatedReadOnlyScopes(upstream.request.scope);
+  requireActivePrincipal({ userId: subject }, oauthUserId, consentedScopes, env.ALLOWED_GITHUB_IDS);
   const completed = await oauth.completeAuthorization({
     request: upstream.request,
     userId: oauthUserId,
     metadata: {},
-    scope: upstream.request.scope.filter((scope) => scope === "mcp:read"),
+    scope: consentedScopes,
     props: { userId: subject },
   });
   upstream.headers.set("Location", completed.redirectTo);

@@ -6,3 +6,5 @@ dist/
 .wrangler/
 coverage/
 *.log
+
+.wrangler-staging.generated.jsonc

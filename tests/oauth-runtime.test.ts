@@ -121,6 +121,19 @@ describe("Codex P1 OAuth integration regressions", () => {
     });
   });
 
+  it("forwards a separately authorized write scope without accepting spoofed headers", async () => {
+    const response = await handleOAuthRequest(
+      new Request(origin + "/mcp", { method: "POST", headers: { "X-User": "github:99" } }),
+      env,
+      verifiedContext("11", { scope: ["mcp:read", "mcp:write"] }),
+      origin,
+    );
+    expect(response.status).toBe(200);
+    expect(captures.requests[0]?.options).toEqual({
+      authInfo: expect.objectContaining({ scopes: ["mcp:read", "mcp:write"] }),
+    });
+  });
+
   it("forwards four concurrent staff requests with distinct verified identities", async () => {
     await Promise.all(
       ["11", "22", "33", "44"].map((id) =>
@@ -150,7 +163,7 @@ describe("Codex P1 OAuth integration regressions", () => {
     ["infinite token expiry", { expiresAt: Number.POSITIVE_INFINITY }],
     ["string token expiry", { expiresAt: "1990000000" }],
     ["missing read scope", { scope: [] }],
-    ["elevated scopes", { scope: ["mcp:read", "mcp:write"] }],
+    ["unexpected scopes", { scope: ["mcp:read", "admin"] }],
     ["duplicate read scope", { scope: ["mcp:read", "mcp:read"] }],
     ["non-string scope", { scope: ["mcp:read", 1] }],
     ["incorrect token identity", { userId: "github_44" }],
