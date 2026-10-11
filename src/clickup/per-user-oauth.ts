@@ -80,9 +80,12 @@ function expectedClickUpUserId(env: unknown, subject: string): string {
     const map = obj(JSON.parse(raw));
     if (!map) throw new Error("bad map");
     const entries = Object.entries(map);
-    if (entries.length < 1 || entries.length > 4 ||
-        entries.some(([id, value]) => !/^[1-9]\d{0,15}$/.test(id) || !decimal(value)) ||
-        new Set(entries.map(([, v]) => String(v))).size !== entries.length) {
+    if (
+      entries.length < 1 ||
+      entries.length > 4 ||
+      entries.some(([id, value]) => !/^[1-9]\d{0,15}$/.test(id) || !decimal(value)) ||
+      new Set(entries.map(([, v]) => String(v))).size !== entries.length
+    ) {
       throw new Error("ambiguous user mapping");
     }
     const id = map[subject.slice(7)];
@@ -130,13 +133,10 @@ function hexToBytes(value: string): Uint8Array<ArrayBuffer> {
 async function key(secret: string): Promise<CryptoKey> {
   const bytes = Uint8Array.from(atob(secret), (x) => x.charCodeAt(0));
   if (bytes.byteLength !== 32) throw new ReadFailure("CLICKUP_OAUTH_NOT_CONFIGURED");
-  return crypto.subtle.importKey(
-    "raw",
-    bytes,
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign", "verify"],
-  );
+  return crypto.subtle.importKey("raw", bytes, { name: "HMAC", hash: "SHA-256" }, false, [
+    "sign",
+    "verify",
+  ]);
 }
 async function nonceHash(nonceHex: string): Promise<string> {
   const sha = new Uint8Array(await crypto.subtle.digest("SHA-256", hexToBytes(nonceHex)));
