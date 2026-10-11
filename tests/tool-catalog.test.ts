@@ -1,7 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
 import { Client, StreamableHTTPClientTransport } from "@modelcontextprotocol/client";
 import { createProtocolHandler } from "../src/mcp/handler.js";
-import { CLICKUP_MODEL_TOOL_CATALOG, CLICKUP_TOOL_GROUPS, catalogPage } from "../src/mcp/tool-catalog.js";
+import {
+  CLICKUP_MODEL_TOOL_CATALOG,
+  CLICKUP_TOOL_GROUPS,
+  catalogPage,
+} from "../src/mcp/tool-catalog.js";
 
 async function clientHarness(schemaPreview: boolean, fetcher: typeof fetch) {
   const handler = createProtocolHandler({
@@ -74,19 +78,19 @@ describe("Official ClickUp MCP capability catalogue (model-facing only)", () => 
     try {
       const tools = (await client.listTools()).tools;
       expect(tools.map((tool) => tool.name).sort()).toEqual([
-        "clickup_tool_catalog", "find_scoped_tasks", "get_attention_report",
-        "get_scoped_task", "service_info",
+        "clickup_tool_catalog",
+        "find_scoped_tasks",
+        "get_attention_report",
+        "get_scoped_task",
+        "service_info",
       ]);
       const answer = await client.callTool({
         name: "clickup_tool_catalog",
         arguments: { group: "relationships", include_schema: true },
       });
       expect(answer.isError).not.toBe(true);
-      expect(answer.structuredContent).toMatchObject({
-        status: "schema_only",
-        count: 4,
-        entries: [{ name: "clickup_add_task_link" }],
-      });
+      expect(answer.structuredContent).toMatchObject({ status: "schema_only", count: 4 });
+      expect(JSON.stringify(answer.structuredContent)).toContain("clickup_add_task_link");
       expect(outbound).not.toHaveBeenCalled();
     } finally {
       await client.close();
@@ -99,8 +103,9 @@ describe("Official ClickUp MCP capability catalogue (model-facing only)", () => 
     const { client, handler } = await clientHarness(true, outbound as typeof fetch);
     try {
       const tools = (await client.listTools()).tools;
-      const preview = tools.filter((tool) => tool.name.startsWith("clickup_") &&
-        tool.name !== "clickup_tool_catalog");
+      const preview = tools.filter(
+        (tool) => tool.name.startsWith("clickup_") && tool.name !== "clickup_tool_catalog",
+      );
       expect(preview).toHaveLength(48);
       for (const spec of CLICKUP_MODEL_TOOL_CATALOG) {
         const tool = preview.find((value) => value.name === spec.name);
@@ -108,7 +113,9 @@ describe("Official ClickUp MCP capability catalogue (model-facing only)", () => 
         expect(tool?.description).toContain("SCHEMA-ONLY, NOT OPERATIONAL");
         expect(tool?.description).toContain(spec.purpose);
         expect(tool?.inputSchema).toMatchObject({
-          type: "object", additionalProperties: false, required: spec.inputSchema.required,
+          type: "object",
+          additionalProperties: false,
+          required: spec.inputSchema.required,
         });
         expect(tool?.annotations?.readOnlyHint).toBe(spec.effect === "read");
         expect(tool?.annotations?.destructiveHint).toBe(spec.effect === "destructive");

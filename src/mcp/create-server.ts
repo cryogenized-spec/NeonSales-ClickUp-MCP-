@@ -2,7 +2,12 @@ import { McpServer, fromJsonSchema } from "@modelcontextprotocol/server";
 import { getScopedTask, findScopedTasks } from "../clickup/client.js";
 import { ReadFailure, requireReadGrant } from "../clickup/policy.js";
 import { createAttentionReport } from "../reports/attention.js";
-import { CLICKUP_MODEL_TOOL_CATALOG, CLICKUP_TOOL_GROUPS, catalogPage, type ToolGroup } from "./tool-catalog.js";
+import {
+  CLICKUP_MODEL_TOOL_CATALOG,
+  CLICKUP_TOOL_GROUPS,
+  catalogPage,
+  type ToolGroup,
+} from "./tool-catalog.js";
 
 export interface ReadDependencies {
   readonly bindings: unknown;
@@ -76,9 +81,16 @@ export function createServer(deps?: ReadDependencies): McpServer {
             enum: [...CLICKUP_TOOL_GROUPS],
             description: "Optional capability category to inspect; omit to list all.",
           },
-          page: { type: "integer", minimum: 0, maximum: 99, description: "Zero-based catalogue page." },
+          page: {
+            type: "integer",
+            minimum: 0,
+            maximum: 99,
+            description: "Zero-based catalogue page.",
+          },
           max_results: {
-            type: "integer", minimum: 1, maximum: 20,
+            type: "integer",
+            minimum: 1,
+            maximum: 20,
             description: "Number of catalogue entries returned per page; default 10.",
           },
           include_schema: {
@@ -120,8 +132,12 @@ export function createServer(deps?: ReadDependencies): McpServer {
         spec.name,
         {
           description:
-            "[SCHEMA-ONLY, NOT OPERATIONAL] " + spec.title + ": " + spec.purpose +
-            " Example: " + spec.example +
+            "[SCHEMA-ONLY, NOT OPERATIONAL] " +
+            spec.title +
+            ": " +
+            spec.purpose +
+            " Example: " +
+            spec.example +
             " This tool is not implemented in NeonSales. Do not call it for real ClickUp work; " +
             "ask for the approved implementation rather than claiming success.",
           inputSchema: fromJsonSchema<Record<string, unknown>>(spec.inputSchema),
@@ -133,14 +149,17 @@ export function createServer(deps?: ReadDependencies): McpServer {
         },
         async () => ({
           isError: true,
-          content: [{
-            type: "text",
-            text: JSON.stringify({
-              code: "CLICKUP_SCHEMA_ONLY",
-              tool: spec.name,
-              message: "Schema registered only for model-discovery tests; no backend operation exists.",
-            }),
-          }],
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify({
+                code: "CLICKUP_SCHEMA_ONLY",
+                tool: spec.name,
+                message:
+                  "Schema registered only for model-discovery tests; no backend operation exists.",
+              }),
+            },
+          ],
         }),
       );
     }
