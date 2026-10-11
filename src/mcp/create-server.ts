@@ -1,10 +1,10 @@
 import { McpServer, fromJsonSchema } from "@modelcontextprotocol/server";
 
 const SERVICE_INFO = Object.freeze({
-  phase: 2,
+  phase: 3,
   liveClickUp: false,
-  authentication: "not-configured",
-  note: "Internal SDK contract test only; no live ClickUp tasks or OAuth.",
+  authentication: "github-oauth-required",
+  note: "Phase 3 read-only diagnostic; GitHub OAuth gates the public MCP endpoint. Live ClickUp access is disabled.",
 });
 
 export function createServer(): McpServer {
@@ -13,7 +13,7 @@ export function createServer(): McpServer {
   server.registerTool(
     "service_info",
     {
-      description: "Non-sensitive phase-2 diagnostic. Never indicates live connectivity.",
+      description: "Read-only Phase 3 staging diagnostic; reports OAuth requirement and ClickUp disabled status.",
       inputSchema: fromJsonSchema<Record<string, never>>({
         type: "object",
         properties: {},
