@@ -1,4 +1,4 @@
-import { McpServer, fromJsonSchema } from "@modelcontextprotocol/server";
+import { fromJsonSchema, type McpServer } from "@modelcontextprotocol/server";
 import {
   PLANNED_TOOLS,
   plannedDescription,
