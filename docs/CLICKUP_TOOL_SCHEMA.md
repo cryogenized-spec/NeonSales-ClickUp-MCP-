@@ -1,5 +1,7 @@
 # ClickUp model-facing tool schemas — official capability inventory
 
+> **11 October 2026 owner direction:** There is no separate AI action journal, rollback database or tool-approval settings. ClickUp is the native task/activity record and Claude/ChatGPT control prompts. On unmerged PR #22, five further tools (`create_scoped_task`, `update_scoped_task`, `comment_on_scoped_task`, `get_scoped_task_comments`, `get_scoped_list`) are **real REST-backed implementations**, requiring per-user ClickUp OAuth and `mcp:write` for mutations. The **48** separately named catalogue tools remain schema-only, and preview registrations remain inert. No API keys, real ClickUp writes or deployments were performed.
+
 **Date:** 11 October 2026 SAST. **Scope:** documentation and SDK schema-preview only; no new live ClickUp features, secrets, write endpoints or deployment.
 
 **Primary source:** [ClickUp's official Supported Tools list](https://developer.clickup.com/docs/mcp-tools), with REST cross-reference from [ClickUp's API index](https://developer.clickup.com/llms.txt). The upstream ClickUp hosted MCP catalogue and the public REST API are DIFFERENT services and their tool/request schemas are not guaranteed to match. This file and `src/mcp/tool-catalog.ts` are **our proposed schema contracts** based on the **48** named capabilities in that published hosted MCP list, **not a verbatim dump of ClickUp's hidden runtime tools/list response**.
@@ -14,7 +16,7 @@ The server uses the official `@modelcontextprotocol/server` v2 SDK. In normal op
 - `get_scoped_task`: implemented home-List checked read of a known task ID, with the same explicit grant.
 - `get_attention_report`: implemented 48-hour bounded overdue/due-soon/stale metadata calculation on results of scoped task reads, with explicit provenance and incomplete signal.
 
-**The 48 additional `clickup_*` tools are NOT visible as executable tools to normal clients.** They exist in `CLICKUP_MODEL_TOOL_CATALOG` for development and model documentation. In a deliberately injected in-process `schemaPreview: true` *test harness only*, all 48 are registered using the official SDK, with their actual schema, model-facing examples, and truthful read/write/destructive annotations. Every such callback always returns `CLICKUP_SCHEMA_ONLY` and makes zero HTTP requests. Production Worker startup has no configuration flag to enable the preview. Merely adding secrets cannot enable write behavior.
+**The 48 additional `clickup_*` catalogue tools are NOT visible as executable tools to normal clients.** They exist in `CLICKUP_MODEL_TOOL_CATALOG` for development and model documentation. In a deliberately injected in-process `schemaPreview: true` *test harness only*, all 48 are registered using the official SDK, with their actual schema, model-facing examples, and truthful read/write/destructive annotations. Every such callback always returns `CLICKUP_SCHEMA_ONLY` and makes zero HTTP requests. Production Worker startup has no configuration flag to enable the preview. Merely adding secrets cannot enable write behavior.
 
 ## What the model should do
 
