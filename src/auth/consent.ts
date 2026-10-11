@@ -26,6 +26,9 @@ export function renderConsentPage(details: ConsentDisplay, handle: string): stri
         "</label>",
     )
     .join("\n");
+  const loopbackWarning = details.redirectIsLoopback
+    ? '<div class="info warning"><strong>Local destination:</strong> This sends access to an app on your computer. Verify that you trust it.</div>'
+    : "";
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -97,7 +100,7 @@ h1{font-size:clamp(26px,5vw,32px);line-height:1.16;letter-spacing:-.035em;margin
 <div class="detail"><span class="detail-title">Access returned to</span><span class="detail-value">${escapeHtml(details.redirectHost)}</span></div>
 </div>
 <p class="publisher">${origin}</p>
-${details.redirectIsLoopback ? '<div class="info warning"><strong>Local destination:</strong> This sends access to an app on your computer. Verify that you trust it.</div>' : ''}
+${loopbackWarning}
 <h2 class="permissions-title" id="permissions-heading">Requested permission</h2>
 <p class="permissions-intro">The initial staging connector provides diagnostic read access only. No ClickUp production data is connected.</p>
 <form method="post" action="/authorize" aria-labelledby="permissions-heading">
