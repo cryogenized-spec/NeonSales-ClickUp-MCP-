@@ -148,7 +148,7 @@ try {
   assert.equal(metadataResponse.status, 200, "resource metadata must be discoverable");
   const metadata = JSON.parse(metadataResponse.body);
   assert.equal(metadata.resource, origin + "/mcp");
-  assert.deepEqual(metadata.scopes_supported, ["mcp:read"]);
+  assert.deepEqual(metadata.scopes_supported, ["mcp:read", "mcp:write"]);
   assert.deepEqual(metadata.authorization_servers, [origin]);
   console.log("PASS local workerd: unauthenticated /mcp returns 401 and discoverable RFC 9728 metadata");
 
@@ -156,7 +156,7 @@ try {
   assert.equal(authMetadata.status, 200, "authorization server metadata must be discoverable");
   const advertised = JSON.parse(authMetadata.body);
   assert.equal(advertised.issuer, origin);
-  assert.deepEqual(advertised.scopes_supported, ["mcp:read"]);
+  assert.deepEqual(advertised.scopes_supported, ["mcp:read", "mcp:write"]);
   console.log("PASS local workerd: issuer and supported scopes match protected resource");
 
   const spoofed = await request(port, "/mcp", { method: "POST", headers: {
