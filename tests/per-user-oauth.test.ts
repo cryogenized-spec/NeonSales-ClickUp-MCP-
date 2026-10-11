@@ -88,6 +88,7 @@ function fakeBindings() {
     CLICKUP_STATE_KEY: key,
     CLICKUP_TOKEN_KEY: key,
     CLICKUP_WORKSPACE_ID: "999",
+    CLICKUP_STAFF_USER_MAP: JSON.stringify({ "11": "707", "22": "809" }),
     CLICKUP_CONNECTIONS: connections,
     MCP_PUBLIC_ORIGIN: "https://stage.example",
   };
