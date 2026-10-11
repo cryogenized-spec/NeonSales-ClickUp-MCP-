@@ -148,7 +148,9 @@ try {
   assert.equal(metadataResponse.status, 200, "resource metadata must be discoverable");
   const metadata = JSON.parse(metadataResponse.body);
   assert.equal(metadata.resource, origin + "/mcp");
-  assert.deepEqual(metadata.scopes_supported, ["mcp:read", "mcp:write"]);
+  // Protected-resource metadata advertises the mandatory minimum scope, while the
+  // authorization server also advertises the optional write scope below.
+  assert.deepEqual(metadata.scopes_supported, ["mcp:read"]);
   assert.deepEqual(metadata.authorization_servers, [origin]);
   console.log("PASS local workerd: unauthenticated /mcp returns 401 and discoverable RFC 9728 metadata");
 
