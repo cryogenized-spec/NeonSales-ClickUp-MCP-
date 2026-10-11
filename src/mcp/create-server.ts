@@ -55,11 +55,29 @@ function toolSuccess(value: Record<string, unknown>) {
 export function createServer(deps?: ReadDependencies): McpServer {
   const server = new McpServer({ name: "neonsales-clickup-mcp", version: "0.2.0" });
 
+  // Retain the historical Phase 3 diagnostic for a standalone SDK test,
+  // but never misreport a configured Phase 6 Worker as Phase 3 read-only.
+  const settings =
+    deps?.bindings && typeof deps.bindings === "object"
+      ? (deps.bindings as Record<string, unknown>)
+      : null;
+  const runtimeInfo = settings
+    ? {
+        phase: 6,
+        liveClickUp:
+          settings["CLICKUP_LIVE_ENABLED"] === "true" &&
+          settings["CLICKUP_OAUTH_ENABLED"] === "true",
+        authentication: "github-oauth-plus-individual-clickup-oauth",
+        note:
+          "Activation flags only, NOT evidence of a completed ClickUp connection. Task activity stays in ClickUp; tool approvals stay in the MCP client.",
+      }
+    : SERVICE_INFO;
+
   server.registerTool(
     "service_info",
     {
       description:
-        "Read-only Phase 3 staging diagnostic; reports OAuth requirement and ClickUp disabled status.",
+        "Describe this instance, configured activation flags, per-user OAuth and native ClickUp history. Flags do not prove live ClickUp connectivity.",
       inputSchema: fromJsonSchema<Record<string, never>>({
         type: "object",
         properties: {},
@@ -68,8 +86,8 @@ export function createServer(deps?: ReadDependencies): McpServer {
       annotations: { readOnlyHint: true, destructiveHint: false },
     },
     async () => ({
-      content: [{ type: "text", text: JSON.stringify(SERVICE_INFO) }],
-      structuredContent: SERVICE_INFO,
+      content: [{ type: "text", text: JSON.stringify(runtimeInfo) }],
+      structuredContent: runtimeInfo,
     }),
   );
 
