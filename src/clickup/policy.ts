@@ -39,8 +39,8 @@ export async function requireReadGrant(auth: unknown, bindings: unknown): Promis
     typeof subject !== "string" ||
     !/^github:[1-9]\d{0,15}$/.test(subject) ||
     !Array.isArray(scopes) ||
-    scopes.length !== 1 ||
-    scopes[0] !== "mcp:read"
+    !(scopes.length === 1 && scopes[0] === "mcp:read") &&
+    !(scopes.length === 2 && scopes.includes("mcp:read") && scopes.includes("mcp:write"))
   ) {
     throw new ReadFailure("CLICKUP_ACCESS_DENIED");
   }
@@ -78,4 +78,14 @@ export async function requireReadGrant(auth: unknown, bindings: unknown): Promis
     apiToken: user.token,
     quota: quota as unknown as ReadGrant["quota"],
   };
+}
+
+/** OAuth write scope: the AI client owns its tool-by-tool permission settings. */
+export async function requireWriteGrant(auth: unknown, bindings: unknown): Promise<ReadGrant> {
+  const details = record(auth);
+  const scopes = details?.["scopes"];
+  if (!Array.isArray(scopes) || !scopes.includes("mcp:write")) {
+    throw new ReadFailure("CLICKUP_WRITE_SCOPE_REQUIRED");
+  }
+  return requireReadGrant(auth, bindings);
 }

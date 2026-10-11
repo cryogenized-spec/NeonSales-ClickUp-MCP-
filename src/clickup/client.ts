@@ -95,7 +95,7 @@ function normalizeTask(raw: unknown, requiredListId: string): ScopedTask {
   };
 }
 
-async function quotaCall(
+export async function quotaCall(
   grant: ReadGrant,
   kind: "reserve" | "cooldown",
   until?: number,
