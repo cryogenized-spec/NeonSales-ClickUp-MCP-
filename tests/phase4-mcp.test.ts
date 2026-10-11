@@ -21,30 +21,45 @@ describe("Phase 4 official SDK integration", () => {
     const outbound = vi.fn(async () =>
       Response.json({ tasks: [] }, { headers: { "content-type": "application/json" } }),
     );
-    const handler = createProtocolHandler({ bindings: configuration(), fetcher: outbound as typeof fetch });
+    const handler = createProtocolHandler({
+      bindings: configuration(),
+      fetcher: outbound as typeof fetch,
+    });
     const client = new Client({ name: "scoped-test", version: "0.1.0" });
     const transport = new StreamableHTTPClientTransport(new URL("http://local.test/mcp"), {
-      fetch: async (input, init) => handler.fetch(new Request(input, init), {
-        authInfo: {
-          token: "verified-internal-only", clientId: "mcp-test", scopes: ["mcp:read"],
-          extra: { subject: "github:11" },
-        },
-      }),
+      fetch: async (input, init) =>
+        handler.fetch(new Request(input, init), {
+          authInfo: {
+            token: "verified-internal-only",
+            clientId: "mcp-test",
+            scopes: ["mcp:read"],
+            extra: { subject: "github:11" },
+          },
+        }),
     });
     try {
       await client.connect(transport);
       const tools = (await client.listTools()).tools;
       expect(tools.map((tool) => tool.name).sort()).toEqual([
-        "find_scoped_tasks", "get_attention_report", "get_scoped_task", "service_info",
+        "find_scoped_tasks",
+        "get_attention_report",
+        "get_scoped_task",
+        "service_info",
       ]);
       for (const tool of tools) {
         expect(tool.annotations?.readOnlyHint).toBe(true);
         expect(tool.annotations?.destructiveHint).toBe(false);
       }
-      const response = await client.callTool({ name: "find_scoped_tasks", arguments: { max_results: 4 } });
+      const response = await client.callTool({
+        name: "find_scoped_tasks",
+        arguments: { max_results: 4 },
+      });
       expect(response.isError).not.toBe(true);
       expect(response.structuredContent).toMatchObject({
-        source: "clickup-api-v2", list_id: "12345", incomplete: false, pages_scanned: 1,
+        source: "clickup-api-v2",
+        list_id: "12345",
+        incomplete: false,
+        pages_scanned: 1,
       });
       expect(outbound).toHaveBeenCalledTimes(1);
     } finally {
@@ -57,7 +72,10 @@ describe("Phase 4 official SDK integration", () => {
     const outbound = vi.fn(async () =>
       Response.json({ tasks: [] }, { headers: { "content-type": "application/json" } }),
     );
-    const handler = createProtocolHandler({ bindings: configuration(), fetcher: outbound as typeof fetch });
+    const handler = createProtocolHandler({
+      bindings: configuration(),
+      fetcher: outbound as typeof fetch,
+    });
     const client = new Client({ name: "forger", version: "0.1.0" });
     const transport = new StreamableHTTPClientTransport(new URL("http://local.test/mcp"), {
       fetch: async (input, init) => {
@@ -65,7 +83,9 @@ describe("Phase 4 official SDK integration", () => {
         request.headers.set("X-User", "github:11");
         return handler.fetch(request, {
           authInfo: {
-            token: "verified-internal-only", clientId: "mcp-test", scopes: ["mcp:read"],
+            token: "verified-internal-only",
+            clientId: "mcp-test",
+            scopes: ["mcp:read"],
             extra: { subject: "github:22" },
           },
         });
@@ -75,7 +95,9 @@ describe("Phase 4 official SDK integration", () => {
       await client.connect(transport);
       const response = await client.callTool({ name: "get_attention_report", arguments: {} });
       expect(response.isError).toBe(true);
-      expect(response.content).toMatchObject([{ type: "text", text: '{"code":"CLICKUP_ACCESS_DENIED"}' }]);
+      expect(response.content).toMatchObject([
+        { type: "text", text: '{"code":"CLICKUP_ACCESS_DENIED"}' },
+      ]);
       expect(outbound).not.toHaveBeenCalled();
     } finally {
       await client.close();

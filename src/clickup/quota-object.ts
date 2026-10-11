@@ -45,9 +45,7 @@ export class ClickUpQuota {
     const result = this.state.storage.transactionSync(() => {
       this.state.storage.sql.exec("DELETE FROM reservations WHERE at_ms <= ?", now - 60_000);
       const block = this.state.storage.sql
-        .exec<{ blocked_until_ms: number }>(
-          "SELECT blocked_until_ms FROM limits WHERE id = 1",
-        )
+        .exec<{ blocked_until_ms: number }>("SELECT blocked_until_ms FROM limits WHERE id = 1")
         .one();
       if (block.blocked_until_ms > now) {
         return { allowed: false, retryAfterMs: block.blocked_until_ms - now };

@@ -32,7 +32,8 @@ function object(raw: unknown): JsonObject | null {
 
 function epoch(raw: unknown): number | null {
   if (raw === null || raw === undefined || raw === "") return null;
-  if (typeof raw !== "string" && typeof raw !== "number") throw new ReadFailure("CLICKUP_BAD_RESPONSE");
+  if (typeof raw !== "string" && typeof raw !== "number")
+    throw new ReadFailure("CLICKUP_BAD_RESPONSE");
   if (!/^\d{1,15}$/.test(String(raw))) throw new ReadFailure("CLICKUP_BAD_RESPONSE");
   const number = Number(raw);
   if (!Number.isSafeInteger(number)) throw new ReadFailure("CLICKUP_BAD_RESPONSE");
@@ -69,9 +70,13 @@ function normalizeTask(raw: unknown, requiredListId: string): ScopedTask {
   if (typeof rawUrl === "string") {
     try {
       const parsed = new URL(rawUrl);
-      if (parsed.protocol === "https:" && parsed.hostname === "app.clickup.com" &&
-          parsed.username === "" && parsed.password === "" &&
-          parsed.pathname.startsWith("/t/")) {
+      if (
+        parsed.protocol === "https:" &&
+        parsed.hostname === "app.clickup.com" &&
+        parsed.username === "" &&
+        parsed.password === "" &&
+        parsed.pathname.startsWith("/t/")
+      ) {
         safeUrl = parsed.href;
       }
     } catch {
@@ -90,16 +95,22 @@ function normalizeTask(raw: unknown, requiredListId: string): ScopedTask {
   };
 }
 
-async function quotaCall(grant: ReadGrant, kind: "reserve" | "cooldown", until?: number): Promise<void> {
+async function quotaCall(
+  grant: ReadGrant,
+  kind: "reserve" | "cooldown",
+  until?: number,
+): Promise<void> {
   try {
     const binding = grant.quota;
     const id = binding.idFromName("single-clickup-api-credential");
     const stub = binding.get(id as never);
-    const response = await stub.fetch(new Request("https://internal.invalid/" + kind, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ subject: grant.subject, ...(until === undefined ? {} : { until }) }),
-    }));
+    const response = await stub.fetch(
+      new Request("https://internal.invalid/" + kind, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ subject: grant.subject, ...(until === undefined ? {} : { until }) }),
+      }),
+    );
     if (!response.ok) throw new Error("quota request failure");
     const body: unknown = await response.json();
     if (object(body)?.["allowed"] !== true) throw new ReadFailure("CLICKUP_RATE_LIMITED");
@@ -129,12 +140,15 @@ async function getJson(grant: ReadGrant, path: string, fetcher: Fetcher): Promis
       }
       throw new ReadFailure("CLICKUP_RATE_LIMITED");
     }
-    if (response.status === 401 || response.status === 403) throw new ReadFailure("CLICKUP_UPSTREAM_DENIED");
+    if (response.status === 401 || response.status === 403)
+      throw new ReadFailure("CLICKUP_UPSTREAM_DENIED");
     if (!response.ok) throw new ReadFailure("CLICKUP_UPSTREAM_UNAVAILABLE");
     const declaredSize = response.headers.get("content-length");
-    if (declaredSize !== null && Number(declaredSize) > MAX_BODY) throw new ReadFailure("CLICKUP_BAD_RESPONSE");
+    if (declaredSize !== null && Number(declaredSize) > MAX_BODY)
+      throw new ReadFailure("CLICKUP_BAD_RESPONSE");
     const contentType = response.headers.get("content-type") ?? "";
-    if (!contentType.toLowerCase().includes("application/json")) throw new ReadFailure("CLICKUP_BAD_RESPONSE");
+    if (!contentType.toLowerCase().includes("application/json"))
+      throw new ReadFailure("CLICKUP_BAD_RESPONSE");
     const body = await response.text();
     if (body.length > MAX_BODY) throw new ReadFailure("CLICKUP_BAD_RESPONSE");
     try {
@@ -156,8 +170,12 @@ export async function findScopedTasks(
   maxResults = 20,
   requestedStatus?: string,
 ): Promise<PageResult> {
-  if (!Number.isInteger(maxResults) || maxResults < 1 || maxResults > 50 ||
-      (requestedStatus !== undefined && (requestedStatus.length > 64 || !requestedStatus.trim()))) {
+  if (
+    !Number.isInteger(maxResults) ||
+    maxResults < 1 ||
+    maxResults > 50 ||
+    (requestedStatus !== undefined && (requestedStatus.length > 64 || !requestedStatus.trim()))
+  ) {
     throw new ReadFailure("CLICKUP_INVALID_ARGUMENT");
   }
   const found: ScopedTask[] = [];
@@ -165,12 +183,17 @@ export async function findScopedTasks(
   let pages = 0;
   let incomplete = false;
   for (let page = 0; page < 3; page++) {
-    const raw = object(await getJson(
-      grant,
-      "list/" + grant.listId + "/task?page=" + page +
-        "&include_closed=false&subtasks=false&include_timl=false",
-      fetcher,
-    ));
+    const raw = object(
+      await getJson(
+        grant,
+        "list/" +
+          grant.listId +
+          "/task?page=" +
+          page +
+          "&include_closed=false&subtasks=false&include_timl=false",
+        fetcher,
+      ),
+    );
     if (!raw || !Array.isArray(raw["tasks"]) || raw["tasks"].length > 100) {
       throw new ReadFailure("CLICKUP_BAD_RESPONSE");
     }
@@ -190,7 +213,13 @@ export async function findScopedTasks(
     if (raw["tasks"].length < 100 || raw["last_page"] === true) break;
     if (page === 2) incomplete = true;
   }
-  return { tasks: found, pages_scanned: pages, incomplete, source: "clickup-api-v2", list_id: grant.listId };
+  return {
+    tasks: found,
+    pages_scanned: pages,
+    incomplete,
+    source: "clickup-api-v2",
+    list_id: grant.listId,
+  };
 }
 
 export async function getScopedTask(
@@ -199,7 +228,11 @@ export async function getScopedTask(
   fetcher: Fetcher,
 ): Promise<ScopedTask> {
   if (!/^[a-zA-Z0-9_-]{2,40}$/.test(taskId)) throw new ReadFailure("CLICKUP_INVALID_ARGUMENT");
-  const raw = await getJson(grant, "task/" + encodeURIComponent(taskId) + "?custom_task_ids=false", fetcher);
+  const raw = await getJson(
+    grant,
+    "task/" + encodeURIComponent(taskId) + "?custom_task_ids=false",
+    fetcher,
+  );
   const task = normalizeTask(raw, grant.listId);
   if (task.id !== taskId) throw new ReadFailure("CLICKUP_SCOPE_OR_SCHEMA_REJECTED");
   return task;

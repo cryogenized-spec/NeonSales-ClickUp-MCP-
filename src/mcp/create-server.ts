@@ -89,7 +89,8 @@ export function createServer(deps?: ReadDependencies): McpServer {
   server.registerTool(
     "get_scoped_task",
     {
-      description: "Read one task by ID, only if its verified home List matches the server-side grant.",
+      description:
+        "Read one task by ID, only if its verified home List matches the server-side grant.",
       inputSchema: fromJsonSchema<{ task_id: string }>({
         type: "object",
         properties: {

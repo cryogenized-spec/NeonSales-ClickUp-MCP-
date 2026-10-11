@@ -23,19 +23,21 @@ export function createAttentionReport(
   includeOverdue: boolean,
   now: number,
 ): AttentionReport {
-  if (!Number.isInteger(lookaheadHours) || lookaheadHours < 1 || lookaheadHours > 48 ||
-      !Number.isFinite(now)) {
+  if (
+    !Number.isInteger(lookaheadHours) ||
+    lookaheadHours < 1 ||
+    lookaheadHours > 48 ||
+    !Number.isFinite(now)
+  ) {
     throw new Error("Invalid attention report parameters");
   }
   const due = tasks.filter((task) => task.due_date_ms !== null);
-  const overdue = includeOverdue
-    ? due.filter((task) => task.due_date_ms! < now)
-    : [];
-  const dueSoon = due.filter((task) =>
-    task.due_date_ms! >= now && task.due_date_ms! <= now + lookaheadHours * 3_600_000,
+  const overdue = includeOverdue ? due.filter((task) => task.due_date_ms! < now) : [];
+  const dueSoon = due.filter(
+    (task) => task.due_date_ms! >= now && task.due_date_ms! <= now + lookaheadHours * 3_600_000,
   );
-  const stale = tasks.filter((task) =>
-    task.date_updated_ms !== null && task.date_updated_ms <= now - 48 * 3_600_000,
+  const stale = tasks.filter(
+    (task) => task.date_updated_ms !== null && task.date_updated_ms <= now - 48 * 3_600_000,
   );
   const byDue = (a: ScopedTask, b: ScopedTask) =>
     (a.due_date_ms ?? 0) - (b.due_date_ms ?? 0) || a.id.localeCompare(b.id);
