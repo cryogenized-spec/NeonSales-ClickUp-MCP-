@@ -1,3 +1,5 @@
+import { claudeGlyph, neonSalesMcpBadgeDataUri } from "./brand-assets.js";
+
 interface ConsentDisplay {
   readonly clientName: string;
   readonly clientDomain?: string | undefined;
@@ -26,6 +28,15 @@ export function renderConsentPage(details: ConsentDisplay, handle: string): stri
         "</label>",
     )
     .join("\n");
+  // Only a recognized Claude identity gets Claude's mark; arbitrary metadata
+  // must not select remote images or impersonate another provider visually.
+  const recognizedClaude =
+    details.clientName === "Claude" &&
+    details.clientDomain === "claude.ai" &&
+    details.redirectHost === "claude.ai";
+  const clientGlyph = recognizedClaude
+    ? claudeGlyph
+    : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="4"/><path d="M9 12h6M12 9v6"/></svg>';
   const loopbackWarning = details.redirectIsLoopback
     ? '<div class="info warning"><strong>Local destination:</strong> This sends access to an app on your computer. Verify that you trust it.</div>'
     : "";
@@ -51,6 +62,15 @@ main{flex:1;display:flex;align-items:center;padding:8px 0 32px}
 .card{width:100%;background:linear-gradient(145deg,#17243b 0%,#101a2d 55%,#0f192a 100%);border:1px solid #30425f;border-radius:22px;padding:32px;box-shadow:0 28px 80px #0007,0 2px 10px #0004}
 .eyebrow{display:flex;align-items:center;gap:8px;text-transform:uppercase;color:#a9c4ff;font-size:11px;font-weight:800;letter-spacing:.14em}
 .eyebrow:before{content:"";width:7px;height:7px;border-radius:50%;background:#66d6b1;box-shadow:0 0 0 4px #66d6b11a}
+.connection-flow{display:grid;grid-template-columns:minmax(0,1fr) 52px minmax(0,1fr);align-items:center;gap:9px;max-width:388px;margin:25px auto 20px}
+.connection-endpoint{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;min-width:0;color:#c3d1e8;font-size:12px;font-weight:650;text-align:center}
+.connection-endpoint span{max-width:100%;overflow-wrap:anywhere}
+.connection-tile{display:grid;place-items:center;width:92px;height:92px;border:1px solid #3a5277;border-radius:22px;background:#091428;box-shadow:0 12px 26px #0003}
+.connection-tile svg{width:49px;height:49px;color:#f8fbff}
+.connection-tile.mcp{background:radial-gradient(ellipse at center,#1a3e77 0%,#091428 74%)}
+.connection-tile img{width:78px;height:78px;object-fit:contain;display:block}
+.connection-arrows{display:grid;place-items:center;color:#85b9ff;padding-bottom:24px}
+.connection-arrows svg{width:35px;height:35px;overflow:visible}
 .hero-icon{margin-top:25px;width:54px;height:54px;border-radius:16px;display:grid;place-items:center;background:#1a3561;border:1px solid #3b6096;color:#a8d0ff}
 .hero-icon svg{width:27px;height:27px}
 h1{font-size:clamp(26px,5vw,32px);line-height:1.16;letter-spacing:-.035em;margin:18px 0 9px;font-weight:760;overflow-wrap:anywhere}
@@ -80,7 +100,7 @@ h1{font-size:clamp(26px,5vw,32px);line-height:1.16;letter-spacing:-.035em;margin
 .disclaimer{border-top:1px solid #293b56;margin-top:25px;padding-top:17px;display:flex;gap:10px;align-items:flex-start;color:#92a5c4;font-size:11px;line-height:1.65}
 .disclaimer svg{flex:none;margin-top:2px}
 .footer{padding:0 0 24px;text-align:center;color:#7187a8;font-size:11px}
-@media(max-width:520px){.masthead{padding:20px 0 12px}.card{padding:23px 19px;border-radius:17px}.detail{display:block}.detail-value{text-align:left;margin-top:5px}.detail-title{min-width:0}.hero-icon{margin-top:20px}.environment{font-size:9px}}
+@media(max-width:520px){.masthead{padding:20px 0 12px}.card{padding:23px 19px;border-radius:17px}.detail{display:block}.detail-value{text-align:left;margin-top:5px}.detail-title{min-width:0}.hero-icon{margin-top:20px}.connection-flow{grid-template-columns:minmax(0,1fr) 38px minmax(0,1fr);gap:4px}.connection-tile{width:76px;height:76px;border-radius:18px}.connection-tile img{width:66px;height:66px}.connection-tile svg{width:42px;height:42px}.connection-arrows svg{width:28px;height:28px}.environment{font-size:9px}}
 @media(prefers-reduced-motion:reduce){.actions button{transition:none}}
 </style>
 </head>
@@ -92,7 +112,11 @@ h1{font-size:clamp(26px,5vw,32px);line-height:1.16;letter-spacing:-.035em;margin
 <main class="page">
 <section class="card" aria-labelledby="consent-heading">
 <div class="eyebrow">Secure authorization</div>
-<div class="hero-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></svg></div>
+<div class="connection-flow" role="group" aria-label="Client application connects to NeonSales ClickUp MCP Staging">
+<div class="connection-endpoint"><div class="connection-tile" aria-hidden="true">${clientGlyph}</div><span>${name}</span></div>
+<div class="connection-arrows" aria-hidden="true"><svg viewBox="0 0 36 36" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13h25m0 0-7-7m7 7-7 7M31 24H6m0 0 7-7m-7 7 7 7"/></svg></div>
+<div class="connection-endpoint"><div class="connection-tile mcp"><img width="78" height="78" src="${neonSalesMcpBadgeDataUri}" alt=""></div><span>NeonSales MCP</span></div>
+</div>
 <h1 id="consent-heading">Allow ${name} to connect?</h1>
 <p class="intro">Review the application, destination, and requested permission before continuing.</p>
 <div class="details">
@@ -102,7 +126,7 @@ h1{font-size:clamp(26px,5vw,32px);line-height:1.16;letter-spacing:-.035em;margin
 <p class="publisher">${origin}</p>
 ${loopbackWarning}
 <h2 class="permissions-title" id="permissions-heading">Requested permission</h2>
-<p class="permissions-intro">The initial staging connector provides diagnostic read access only. No ClickUp production data is connected.</p>
+<p class="permissions-intro">Read and optional write OAuth scopes are shown here. Per-tool approvals are handled by your Claude or ChatGPT client.</p>
 <form method="post" action="/authorize" aria-labelledby="permissions-heading">
 <input type="hidden" name="handle" value="${escapeHtml(handle)}">
 <div class="permission-list">${scopes}</div>
@@ -115,15 +139,21 @@ ${loopbackWarning}
 <div class="disclaimer"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 7.5v.5"/></svg><span>Authorization grants access to the capabilities shown above. Never approve a request you do not recognize.</span></div>
 </section>
 </main>
-<footer class="footer page">NeonSales · Secure staging environment</footer>
+<footer class="footer page">NeonSales ClickUp MCP · Secure staging environment</footer>
 </body>
 </html>`;
 }
 
-/** Fail closed: Phase 3 exposes only the diagnostic read-only MCP capability. */
+/** MCP OAuth distinguishes reads from mutations, without duplicating client-side tool approval. */
 export function validatedReadOnlyScopes(submitted: readonly string[]): string[] {
-  if (submitted.length !== 1 || submitted[0] !== "mcp:read") {
-    throw new Error("Consent must grant exactly mcp:read");
+  if (
+    !submitted.includes("mcp:read") ||
+    submitted.length < 1 ||
+    submitted.length > 2 ||
+    new Set(submitted).size !== submitted.length ||
+    submitted.some((scope) => scope !== "mcp:read" && scope !== "mcp:write")
+  ) {
+    throw new Error("Invalid MCP consent scope");
   }
-  return ["mcp:read"];
+  return submitted.includes("mcp:write") ? ["mcp:read", "mcp:write"] : ["mcp:read"];
 }

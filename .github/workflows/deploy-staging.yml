@@ -1,0 +1,55 @@
+name: Deploy NeonSales MCP staging (manual)
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: neonsales-mcp-staging-deploy
+  cancel-in-progress: false
+
+jobs:
+  staging:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: staging
+    timeout-minutes: 20
+    steps:
+      - name: Checkout commit after owner-controlled merge
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Set up Node 22 for pinned Cloudflare Wrangler
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Reproducible install
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Mandatory full verification before any deploy
+        run: |
+          python3 scripts/check_repo_policy.py
+          python3 -m unittest discover -s scripts/tests -p 'test_*.py' -v
+          npm run format:check
+          npm run lint
+          npm run typecheck
+          npm test
+          npm run build
+          node scripts/staging-local-smoke.mjs
+          npm audit --audit-level=high
+      - name: Generate isolated staging config from GitHub environment variable
+        env:
+          STAGING_OAUTH_KV_ID: ${{ vars.STAGING_OAUTH_KV_ID }}
+        run: node scripts/generate-staging-config.mjs
+      - name: Deploy reviewed HEAD to staging Worker only
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+          npx wrangler deploy --config .wrangler-staging.generated.jsonc
+      - name: Remove temporary generated config
+        if: always()
+        run: rm -f .wrangler-staging.generated.jsonc

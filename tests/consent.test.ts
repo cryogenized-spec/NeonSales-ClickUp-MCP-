@@ -13,7 +13,7 @@ describe("browser-bound OAuth consent UI", () => {
       },
       '" onfocus="alert(4)',
     );
-    expect(html).not.toContain("<img");
+    expect(html).not.toContain("<img src=x");
     expect(html).not.toContain("evil.example<svg");
     expect(html).not.toContain("<script");
     expect(html).not.toContain('value="" onfocus');
@@ -63,18 +63,70 @@ describe("professional consent page invariants", () => {
   });
 });
 
-describe("read-only OAuth consent scope enforcement", () => {
-  it.each([
-    [["mcp:read", "offline_access"]],
-    [["mcp:read", "mcp:write"]],
-    [["mcp:read", "mcp:read"]],
-    [[""]],
-    [[]],
-  ])("rejects forged, duplicate and empty scopes: %j", (values) => {
-    expect(() => validatedReadOnlyScopes(values)).toThrow();
+describe("branded consent identity diagram", () => {
+  it("renders a self-contained Claude glyph and the approved NeonSales staging badge", () => {
+    const html = renderConsentPage(
+      {
+        clientName: "Claude",
+        clientDomain: "claude.ai",
+        redirectHost: "claude.ai",
+        redirectIsLoopback: false,
+        scope: ["mcp:read"],
+      },
+      "browser-bound-handle",
+    );
+    expect(html).toContain('class="connection-flow"');
+    expect(html).toContain('class="connection-arrows"');
+    expect(html).toContain('class="connection-tile mcp"');
+    expect(html).toContain('src="data:image/webp;base64,UklG');
+    expect(html).toContain('viewBox="0 0 256 257"');
+    expect(html).toContain("NeonSales MCP");
+    expect(html).toContain("NEONSALES");
+    expect(html).not.toContain("Cryogenized MCP");
+    expect(html).toContain("@media(max-width:520px)");
+    expect(html).not.toContain('src="https://');
+    expect(html).not.toContain("<script");
   });
 
-  it("allows only exactly one explicitly approved mcp:read scope", () => {
+  it("never lends Claude branding to a spoofed or unrecognized client", () => {
+    for (const client of [
+      {
+        clientName: "Claude",
+        clientDomain: "claude.ai",
+        redirectHost: "evil.example",
+      },
+      {
+        clientName: "Other",
+        clientDomain: "claude.ai",
+        redirectHost: "claude.ai",
+      },
+      {
+        clientName: "Claude",
+        clientDomain: "evil.example",
+        redirectHost: "claude.ai",
+      },
+    ]) {
+      const html = renderConsentPage(
+        { ...client, redirectIsLoopback: false, scope: ["mcp:read"] },
+        "handle",
+      );
+      expect(html).not.toContain('viewBox="0 0 256 257"');
+      expect(html).toContain('viewBox="0 0 24 24"');
+      expect(html).toContain('name="decision" value="deny"');
+    }
+  });
+});
+
+describe("read-only OAuth consent scope enforcement", () => {
+  it.each([[["mcp:read", "offline_access"]], [["mcp:read", "mcp:read"]], [[""]], [[]]])(
+    "rejects forged, duplicate and empty scopes: %j",
+    (values) => {
+      expect(() => validatedReadOnlyScopes(values)).toThrow();
+    },
+  );
+
+  it("allows read-only and explicitly consented write scopes without duplicates", () => {
     expect(validatedReadOnlyScopes(["mcp:read"])).toEqual(["mcp:read"]);
+    expect(validatedReadOnlyScopes(["mcp:write", "mcp:read"])).toEqual(["mcp:read", "mcp:write"]);
   });
 });
