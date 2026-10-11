@@ -63,6 +63,11 @@ describe("Phase 4 official SDK integration", () => {
         "clickup_tool_catalog",
         "connect_clickup_account",
         "disconnect_clickup_account",
+        "create_scoped_task",
+        "update_scoped_task",
+        "comment_on_scoped_task",
+        "get_scoped_list",
+        "get_scoped_task_comments",
         "find_scoped_tasks",
         "get_attention_report",
         "get_clickup_connection_status",
@@ -71,7 +76,7 @@ describe("Phase 4 official SDK integration", () => {
       ]);
       for (const tool of tools) {
         expect(tool.annotations?.readOnlyHint).toBe(
-          !["connect_clickup_account", "disconnect_clickup_account"].includes(tool.name),
+          !["connect_clickup_account", "disconnect_clickup_account", "create_scoped_task", "update_scoped_task", "comment_on_scoped_task"].includes(tool.name),
         );
         expect(tool.annotations?.destructiveHint).toBe(tool.name === "disconnect_clickup_account");
       }

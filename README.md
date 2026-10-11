@@ -1,3 +1,5 @@
+> **Owner update (11 October 2026):** No duplicate action journal, rollback subsystem or server-side per-tool approvals. ClickUp handles task history; AI clients handle their own tool prompts. The cloud-only per-user ClickUp OAuth implementation and subsequent native tools remain unmerged; consult `docs/PROJECT_STATE.md`. Historical milestone plans below are not current authorization to build a duplicate system.
+
 # NeonSales ClickUp MCP — phased development
 
 **Project status:** Phase 3 OAuth identity code is on **draft stacked PR #4** (2026-10-10 SAST). It is **not deployed**: Cloudflare KV, real GitHub OAuth App credentials, live four-user sign-in, ChatGPT/Claude connectors and ClickUp remain unconfigured/unverified. The Phase 2 SDK still provides only synthetic `service_info`. Public `/mcp` fails closed without valid OAuth deployment bindings. The older local v0.1 archive has not been imported.

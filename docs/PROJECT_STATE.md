@@ -1,3 +1,9 @@
+# Owner update — 11 October 2026 SAST: ClickUp-native actions ONLY
+
+Owner explicitly rejected an external action journal, a duplicate rollback system and a separate MCP tool-permission interface. **ClickUp records task history, the AI client controls tool allow/deny prompts, and the MCP merely validates OAuth identity and upstream ClickUp permissions.** The previous Phase 6 audit/rollback proposal is cancelled and deleted on the new feature branch. This branch adds core scoped task create/update/comment and reads, with explicit OAuth `mcp:write` scope. **No deployment, merge or real task mutation has occurred.**
+
+---
+
 # Phase 5 checkpoint — per-user ClickUp OAuth and GitHub-hosted CI/CD (11 October 2026 SAST)
 
 **Owner directive:** Every staff member uses their own ClickUp OAuth. There is **no shared ClickUp API token** and **no laptop-bound service or deployment requirement**. GitHub Actions is the build/test/manual deployment runner; Cloudflare Workers is the actual HTTPS MCP host. Accepted in `docs/DECISIONS.md` D-022/D-023.
@@ -8,7 +14,7 @@
 
 **Verification caveat:** A temporary GitHub-hosted formatter and test runner passed 119 OAuth/SDK tests on an earlier code revision. Follow-up security vault tests added 3 cases; initial CI exposed an expected-503 test harness bug, since fixed. **Final exact-HEAD Strict CI remains the authoritative gate**; do not claim green before its actual result. No secrets were added to GitHub.
 
-**Agent action accountability:** ClickUp's native user attribution and signed webhooks remain the first source. Design for a minimal append-only AI action journal and guarded compensating rollback is in [PHASE6_AUDIT_ROLLBACK_CONTRACT.md](PHASE6_AUDIT_ROLLBACK_CONTRACT.md). **Not implemented; no rollback/write tool should be advertised yet**.
+**Agent action accountability:** ClickUp's native user attribution and signed webhooks remain the first source. Superseded: a separate journal or rollback feature will not be built. ClickUp-native task history remains authoritative.
 
 **Next:** Green final exact-HEAD CI, focused security review of per-user OAuth callback and vault, then owner-managed GitHub/Cloudflare secrets and sandbox account acceptance. Production remains closed.
 
