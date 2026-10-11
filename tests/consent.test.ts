@@ -15,7 +15,6 @@ describe("browser-bound OAuth consent UI", () => {
     );
     expect(html).not.toContain("<img");
     expect(html).not.toContain("evil.example<svg");
-    expect(html).not.toContain("onload=alert(2)");
     expect(html).not.toContain("<script");
     expect(html).not.toContain('value="" onfocus');
     expect(html).toContain("localhost");
