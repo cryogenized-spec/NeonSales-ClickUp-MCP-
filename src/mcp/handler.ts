@@ -2,10 +2,9 @@ import { createMcpHandler } from "@modelcontextprotocol/server";
 import { createServer } from "./create-server.js";
 
 /**
- * Genuine official MCP v2 handler for isolated protocol tests.
- *
- * Do NOT mount this handler on a public Worker route until OAuth
- * validation and per-user authorization have been implemented.
+ * Official MCP v2 handler. The public Worker mounts it only behind
+ * the OAuth provider and per-request staff/scope checks.
+ * Standalone SDK tests invoke it without the public authentication layer.
  */
 export function createProtocolHandler() {
   return createMcpHandler(() => createServer());
