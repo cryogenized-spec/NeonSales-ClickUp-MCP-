@@ -83,7 +83,6 @@ describe("Phase 4 separate authorization policy", () => {
 
   it("fails closed if any separate configuration or the quota binding is absent", async () => {
     for (const field of [
-      "CLICKUP_CONNECTIONS",
       "CLICKUP_LIST_ID",
       "CLICKUP_QUOTA",
       "CLICKUP_READ_GITHUB_IDS",
@@ -92,6 +91,7 @@ describe("Phase 4 separate authorization policy", () => {
       delete broken[field];
       await expect(requireReadGrant(auth, broken)).rejects.toThrowError("CLICKUP_NOT_CONFIGURED");
     }
+    await expect(requireReadGrant(auth, { ...env, CLICKUP_CONNECTIONS: undefined })).rejects.toThrowError("CLICKUP_OAUTH_NOT_CONFIGURED");
     await expect(requireReadGrant(auth, { ...env, CLICKUP_LIVE_ENABLED: "false" })).rejects.toThrowError("CLICKUP_NOT_CONFIGURED");
     await expect(requireReadGrant(auth, { ...env, CLICKUP_READ_GITHUB_IDS: "11,99" })).rejects.toThrowError("CLICKUP_NOT_CONFIGURED");
   });
