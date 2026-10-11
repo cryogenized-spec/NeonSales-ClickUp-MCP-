@@ -1,3 +1,19 @@
+# Phase 5 checkpoint — per-user ClickUp OAuth and GitHub-hosted CI/CD (11 October 2026 SAST)
+
+**Owner directive:** Every staff member uses their own ClickUp OAuth. There is **no shared ClickUp API token** and **no laptop-bound service or deployment requirement**. GitHub Actions is the build/test/manual deployment runner; Cloudflare Workers is the actual HTTPS MCP host. Accepted in `docs/DECISIONS.md` D-022/D-023.
+
+**Branch:** `feature/phase5-per-user-clickup-oauth-ci-20261011` on draft [PR #20](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/pull/20), stacked on draft PR #18 and #17. No merge, production deployment, stage redeploy, user credentials, live ClickUp calls or task writes.
+
+**Changes:** OAuth-backed `connect_clickup_account`, `get_clickup_connection_status`, `disconnect_clickup_account`, one-time HMAC-signed OAuth state, identity + Workspace check, required one-to-one GitHub-ID/ClickUp-user-ID owner map, AES-GCM-encrypted per-subject Durable Object, strictly per-user ClickUp task token authorization and token-scoped quota. Cloud-only manual main-branch/staging-environment deploy workflow with GitHub environment secrets for Wrangler. Key instructions: [PHASE5_USER_OAUTH_AND_CLOUD_CI.md](PHASE5_USER_OAUTH_AND_CLOUD_CI.md).
+
+**Verification caveat:** A temporary GitHub-hosted formatter and test runner passed 119 OAuth/SDK tests on an earlier code revision. Follow-up security vault tests added 3 cases; initial CI exposed an expected-503 test harness bug, since fixed. **Final exact-HEAD Strict CI remains the authoritative gate**; do not claim green before its actual result. No secrets were added to GitHub.
+
+**Agent action accountability:** ClickUp's native user attribution and signed webhooks remain the first source. Design for a minimal append-only AI action journal and guarded compensating rollback is in [PHASE6_AUDIT_ROLLBACK_CONTRACT.md](PHASE6_AUDIT_ROLLBACK_CONTRACT.md). **Not implemented; no rollback/write tool should be advertised yet**.
+
+**Next:** Green final exact-HEAD CI, focused security review of per-user OAuth callback and vault, then owner-managed GitHub/Cloudflare secrets and sandbox account acceptance. Production remains closed.
+
+---
+
 # Schema catalogue checkpoint — 11 October 2026 SAST
 
 **Scope:** Draft [PR #18](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/pull/18), `feature/phase4-complete-model-tool-schemas-20261011`, stacked on Phase 4 POC draft PR #17. No merge/deploy or new live ClickUp operation.
