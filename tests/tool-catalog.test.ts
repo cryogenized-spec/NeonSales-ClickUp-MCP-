@@ -87,7 +87,6 @@ describe("Official ClickUp MCP capability catalogue (model-facing only)", () => 
         "get_clickup_connection_status",
         "get_scoped_list",
         "get_scoped_task",
-        "get_scoped_task_comments",
         "service_info",
       ]);
       const answer = await client.callTool({
