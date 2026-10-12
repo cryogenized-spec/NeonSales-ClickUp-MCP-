@@ -36,13 +36,13 @@ const fakeApi = () =>
   });
 
 describe("Phase 7 individual OAuth and native catalogue - adversarial tests", () => {
-  it("registers 47 distinct REST backed capability names; binary attachment is not disguised as working", () => {
-    expect(OPERATIONAL_CATALOG_NAMES).toHaveLength(47);
+  it("registers all 48 REST backed capability names including a bounded binary attachment implementation", () => {
+    expect(OPERATIONAL_CATALOG_NAMES).toHaveLength(48);
     expect(new Set(OPERATIONAL_CATALOG_NAMES).size).toBe(47);
     expect(
       OPERATIONAL_CATALOG_NAMES.every((n) => CLICKUP_MODEL_TOOL_CATALOG.some((s) => s.name === n)),
     ).toBe(true);
-    expect(OPERATIONAL_CATALOG_NAMES).not.toContain("clickup_attach_file_to_task");
+    expect(OPERATIONAL_CATALOG_NAMES).toContain("clickup_attach_file_to_task");
   });
 
   it("creates a task in a verified Workspace List using solely the connected employee OAuth token", async () => {
@@ -192,4 +192,45 @@ describe("Phase 7 individual OAuth and native catalogue - adversarial tests", ()
     ).rejects.toThrow("CLICKUP_RATE_LIMITED");
     expect(f).toHaveBeenCalledTimes(1);
   });
+  it("sends actual provided file bytes as multipart to ClickUp, never fetches a file URL", async () => {
+    let sent: FormData | null = null;
+    const f=vi.fn(async (request: RequestInfo | URL, init?: RequestInit) => {
+      const u=new URL(String(request));
+      if (init?.method === "POST") {
+        expect(u.href).toBe("https://api.clickup.com/api/v2/task/abc123/attachment");
+        expect((init.headers as Record<string,string>)["Authorization"]).toBe("person-707");
+        expect((init.headers as Record<string,string>)["Content-Type"]).toBeUndefined();
+        sent=init.body as FormData;
+        return reply({id:"attachment-1"});
+      }
+      return reply(fixture(u.pathname));
+    });
+    const output=await runCatalogOperation(
+      "clickup_attach_file_to_task",
+      {task_id:"abc123",file_name:"note.txt",file_base64:btoa("hello"),media_type:"text/plain"},
+      makeGrant(), f as typeof fetch,
+    );
+    expect(output).toMatchObject({id:"attachment-1"});
+    expect(sent).not.toBeNull();
+    const blob=sent!.get("attachment[0]") as File;
+    expect(blob.name).toBe("note.txt");
+    expect(await blob.text()).toBe("hello");
+    expect(f).toHaveBeenCalledTimes(4);
+  });
+
+  it("refuses oversized, malformed or path-style attachment input before any upload", async () => {
+    const outbound=fakeApi();
+    for (const [file_name,file_base64] of [
+      ["../bad.txt",btoa("hello")],
+      ["good.txt","not valid==="],
+      ["good.txt","Z".repeat(700100)],
+    ]) {
+      await expect(runCatalogOperation(
+        "clickup_attach_file_to_task",
+        {task_id:"abc123",file_name,file_base64},makeGrant(),outbound as typeof fetch,
+      )).rejects.toThrow("CLICKUP_INVALID_ARGUMENT");
+    }
+    expect(outbound.mock.calls.every(([,opts]) => opts?.method !== "POST")).toBe(true);
+  });
+
 });
