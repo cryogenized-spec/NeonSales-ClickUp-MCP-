@@ -1,3 +1,15 @@
+# Integration checkpoint — 12 October 2026 SAST
+
+**Status: merged and CI-green on main.** Merged [Phase 7 PR #24](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/pull/24), its Codex P1/P2 fixes, and Dependabot pinned GitHub Actions updates #9/#10. Final integration commit `46c834c714c08aa1b13e2f026351292c0fcc9315` passed [Strict CI #38225656102](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/actions/runs/38225656102). Phase 7's reviewed prior head passed 155/155 Vitest tests (15 suites), lint, format, strict TypeScript, Worker build, local HTTPS/OAuth security smoke, policy checks and npm audit; these are **mocked/local tests, not real ClickUp runtime acceptance**.
+
+**Operational tool coverage:** 48 ClickUp catalogue names now use REST-backed adapters, including the 500 KiB base64 task-attachment operation; each request requires the connected employee's individual OAuth identity and corresponding ClickUp permissions. The original eight Phase 7 Codex findings were patched before merging. A follow-up review was requested but no separate final reviewer approval is asserted here.
+
+**Owner's accepted architecture:** ClickUp is the single task/activity record; Claude/ChatGPT handle their own per-tool prompts. **No separate action journal, rollback database, watchdog, additional tool-approval UI or staff-laptop hosting.** GitHub Actions runs CI/deployment; Cloudflare Workers hosts the remote HTTPS MCP.
+
+**Remaining handoff:** Tonight's GitHub/Cloudflare CLI and configuration/deployment verification comes next (see [PHASE7_STAGING_ACCEPTANCE.md](PHASE7_STAGING_ACCEPTANCE.md)). After staging is updated, independently verify live per-employee ClickUp OAuth, real API route/response compatibility, native ClickUp attribution, Claude and ChatGPT tool discovery and reads/writes, and the official MCP conformance runner. Do not claim production readiness from CI alone. Existing older phase checkpoints below are historical.
+
+---
+
 # Codex P1/P2 remediation — 11 October 2026 SAST
 
 **Current draft:** [PR #23](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/pull/23) stacked on draft PR #22. Source: Codex's five findings on #22 (two P1, three P2). Not merged, deployed or tested against live ClickUp.

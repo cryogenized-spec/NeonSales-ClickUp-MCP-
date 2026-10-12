@@ -1,3 +1,5 @@
+> **12 October 2026 update:** This is a historical POC checklist with its original dates and prior observations retained for reference. The main branch now contains OAuth and 48 ClickUp catalogue REST adapters with green CI. The owner reports a previous Claude custom-connector handshake against the staging Cloudflare Worker; the real ClickUp task/Doc/Chat operations, native attribution and both subscription clients' acceptance are NOT yet verified. See [PHASE7_STAGING_ACCEPTANCE.md](PHASE7_STAGING_ACCEPTANCE.md) for the current acceptance runbook.
+
 # POC acceptance checklist — Sunday 11 October 2026 target
 
 **Target demonstration:** ~13:00 SAST Sunday 2026-10-11, aspirational only, not a guarantee. **This is an evidence checklist, not a claim of readiness.**

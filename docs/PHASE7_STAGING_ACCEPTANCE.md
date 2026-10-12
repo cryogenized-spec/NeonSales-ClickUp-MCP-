@@ -1,6 +1,6 @@
 # Phase 7 — Cloudflare staging and real ClickUp acceptance
 
-**Status (12 October 2026, SAST):** PR [#24](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/pull/24) implements API-bound dispatchers for all **48 ClickUp capability catalogue names**. These tools have been built and tested against synthetic upstream fixtures and the existing local Worker smoke checks; **real ClickUp API response shapes, permissions, rate limits and native activity attribution are not yet verified**. This is a development branch, not a production deployment. It does not create any agent-action journal or additional tool-approval UI.
+**Status (12 October 2026, SAST):** [PR #24](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/pull/24) and its security fixes have been merged, followed by GitHub Actions updates #9/#10. **Final main CI succeeded**, with 155/155 synthetic Vitest tests and local workerd security checks. Real ClickUp API response shapes, permissions, rate limits, activity attribution and the newly built tools' live behavior **remain unverified**; the owner previously confirmed that Claude recognized the earlier Cloudflare-hosted custom MCP. Merged code is not equivalent to a deployed or acceptance-tested Worker. No journal, duplicate permissions UI or rollback subsystem was added.
 
 ## Existing decisions
 
@@ -18,9 +18,9 @@ The attachment adapter accepts explicit filename, base64 content and optional MI
 
 Composite bulk operations can partially succeed. The backend does **not** retry ambiguous POST/PUT operations after dropped connections or server 5xx. It returns an explicit outcome-unknown error and leaves the user to check ClickUp before deciding whether to retry.
 
-## Tonight's laptop-side acceptance checklist
+## Deployment/CLI checkpoint, followed by separate live client acceptance
 
-1. In GitHub, review PR #24's exact-HEAD strict CI and independent Codex findings. Merge only the reviewed changes onto `main` and let GitHub Actions CI run on that merge commit.
+1. **Completed:** PR #24, the preceding OAuth/security stack and GitHub Actions updates #9/#10 are merged onto `main`. The final merged-main CI run passed; do not repeat historical merge work.
 2. In Cloudflare, inspect the existing **staging** Worker, its KV and Durable Object bindings, and the deployment secrets. Do not overwrite a working production Worker. The MCP's Cloudflare Worker URL is the server endpoint; GitHub is source control and deployment, **not** the protocol runtime.
 3. Use [Deploy NeonSales MCP staging](../.github/workflows/deploy-staging.yml) via GitHub Actions `workflow_dispatch` targeting reviewed `main`. Ensure the Cloudflare account and staging environment configuration is correct. No laptop-hosted Wrangler service is required.
 4. Connect from Claude first, using its previously working custom connector entry. After reconnection, check `service_info`, then `tools/list`: confirm all 48 `clickup_*` capability tools are present **plus** the existing connection, diagnostic and scoped tools.
