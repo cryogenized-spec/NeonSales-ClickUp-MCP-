@@ -209,17 +209,22 @@ export function createServer(deps?: ReadDependencies): McpServer {
     },
     async (args) => {
       try {
+        const page = catalogPage({
+          group: args.group,
+          page: args.page,
+          maxResults: args.max_results,
+          includeSchema: args.include_schema,
+        });
         return toolSuccess({
-          source: "official-clickup-mcp-capability-list",
-          status: "schema_only",
-          explanation:
-            "This catalogue documents future integrations. It neither authorizes nor executes ClickUp requests.",
-          ...catalogPage({
-            group: args.group,
-            page: args.page,
-            maxResults: args.max_results,
-            includeSchema: args.include_schema,
-          }),
+          source: "clickup-capability-catalog",
+          status: dependencies.schemaPreview === true ? "schema_only" : "mixed",
+          explanation: "Entries marked operational have ClickUp REST backends; schema_only requires implementation. This catalogue does not itself invoke ClickUp.",
+          ...page,
+          entries: page.entries.map((entry) => ({
+            ...entry,
+            status: dependencies.schemaPreview === true ? "schema_only" :
+              OPERATIONAL_CATALOG_NAMES.includes(String(entry["name"])) ? "operational" : "schema_only",
+          })),
         });
       } catch {
         return toolError(new ReadFailure("CLICKUP_INVALID_ARGUMENT"));
