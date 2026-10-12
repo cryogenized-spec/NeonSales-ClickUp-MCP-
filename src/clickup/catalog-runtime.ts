@@ -157,13 +157,17 @@ async function folderInWorkspace(
   await inWorkspace(grant, f, obj(folder["space"])?.["id"]);
   return folder;
 }
-const taskBody = (a: Json) => ({
+const taskBody = (a: Json, update = false) => ({
   ...(typeof a["name"] === "string" ? { name: txt(a["name"], 180) } : {}),
   ...(typeof a["description"] === "string" ? { description: txt(a["description"]) } : {}),
   ...(typeof a["status"] === "string" ? { status: txt(a["status"], 80) } : {}),
   ...(a["priority"] !== undefined ? { priority: a["priority"] } : {}),
   ...(a["due_date_ms"] !== undefined ? { due_date: a["due_date_ms"] } : {}),
-  ...(Array.isArray(a["assignee_ids"]) ? { assignees: a["assignee_ids"].map(id) } : {}),
+  ...(Array.isArray(a["assignee_ids"])
+    ? { assignees: update
+      ? {add:a["assignee_ids"].map(id).map(Number),rem:[]}
+      : a["assignee_ids"].map(id).map(Number) }
+    : {}),
 });
 async function members(grant: ReadGrant, f: typeof fetch): Promise<Json[]> {
   const d = await send(grant, f, "GET", v2("team"));
@@ -179,7 +183,7 @@ async function members(grant: ReadGrant, f: typeof fetch): Promise<Json[]> {
 const short = (d: Json, limit = 50): Json =>
   clip({
     ...d,
-    ...(Array.isArray(d["tasks"]) ? { tasks: d["tasks"].slice(0, limit) } : {}),
+    ...Object.fromEntries(["tasks","comments","replies","channels","messages","time_entries","entries","docs"].filter(k=>Array.isArray(d[k])).map(k=>[k,(d[k] as unknown[]).slice(0,limit)])),
   }) as Json;
 
 /** REST adapters use individual OAuth. Base64 attachment uploads are capped
@@ -367,7 +371,7 @@ export async function runCatalogOperation(
     case "clickup_update_task":
       await task("task_id");
       return short(
-        await call("PUT", v2("task/" + val(a, "task_id")), taskBody(buildArgs(a, "changes"))),
+        await call("PUT", v2("task/" + val(a, "task_id")), taskBody(buildArgs(a, "changes"), true)),
       );
     case "clickup_set_custom_field": {
       await task("task_id");
@@ -433,7 +437,7 @@ export async function runCatalogOperation(
             index: i,
             success: true,
             response: clip(
-              await call("PUT", v2("task/" + id(x["task_id"])), taskBody(obj(x["changes"]) ?? {})),
+              await call("PUT", v2("task/" + id(x["task_id"])), taskBody(obj(x["changes"]) ?? {}, true)),
             ),
           });
         } catch (e) {
@@ -475,7 +479,7 @@ export async function runCatalogOperation(
       });
     case "clickup_add_tag_to_task":
       await task("task_id");
-      return call("POST", v2("task/" + val(a, "task_id") + "/tag/" + val(a, "tag")));
+      return call("POST", v2("task/" + val(a, "task_id") + "/tag/" + encodeURIComponent(txt(a["tag"], 160))));
     case "clickup_remove_tag_from_task":
       await task("task_id");
       return call("DELETE", v2("task/" + val(a, "task_id") + "/tag/" + val(a, "tag")));
@@ -491,14 +495,14 @@ export async function runCatalogOperation(
     case "clickup_remove_dependency": {
       await task("blocking_task_id");
       await task("waiting_task_id");
-      return call(
-        name.includes("remove") ? "DELETE" : "POST",
-        v2("task/" + val(a, "waiting_task_id") + "/dependency"),
-        { depends_on: a["blocking_task_id"] },
-      );
+      if (name === "clickup_remove_dependency")
+        return call("DELETE",v2("task/" + val(a, "waiting_task_id") + "/dependency?depends_on=" + val(a, "blocking_task_id")));
+      return call("POST",v2("task/" + val(a, "waiting_task_id") + "/dependency"),{depends_on:a["blocking_task_id"]});
     }
     case "clickup_move_task_to_list": {
-      await task("task_id");
+      const moving = await task("task_id");
+      if (String(obj(moving["list"])?.["id"]) !== String(a["source_list_id"]))
+        throw new ReadFailure("CLICKUP_SCOPE_OR_SCHEMA_REJECTED");
       await list("source_list_id");
       await list("destination_list_id");
       return call(
