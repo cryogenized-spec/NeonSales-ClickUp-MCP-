@@ -1,3 +1,4 @@
+import { OPERATIONAL_CATALOG_NAMES } from "../src/clickup/catalog-runtime.js";
 import { describe, expect, it, vi } from "vitest";
 import { Client, StreamableHTTPClientTransport } from "@modelcontextprotocol/client";
 import { createProtocolHandler } from "../src/mcp/handler.js";
@@ -77,18 +78,7 @@ describe("Official ClickUp MCP capability catalogue (model-facing only)", () => 
     const { client, handler } = await clientHarness(false, outbound as typeof fetch);
     try {
       const tools = (await client.listTools()).tools;
-      expect(tools.map((tool) => tool.name).sort()).toEqual([
-        "clickup_tool_catalog",
-        "connect_clickup_account",
-        "create_scoped_task",
-        "disconnect_clickup_account",
-        "find_scoped_tasks",
-        "get_attention_report",
-        "get_clickup_connection_status",
-        "get_scoped_list",
-        "get_scoped_task",
-        "service_info",
-      ]);
+      expect(tools.map((tool) => tool.name).sort()).toEqual([...["clickup_tool_catalog","connect_clickup_account","create_scoped_task","disconnect_clickup_account","find_scoped_tasks","get_attention_report","get_clickup_connection_status","get_scoped_list","get_scoped_task","service_info"], ...OPERATIONAL_CATALOG_NAMES].sort());
       const answer = await client.callTool({
         name: "clickup_tool_catalog",
         arguments: { group: "relationships", include_schema: true },
