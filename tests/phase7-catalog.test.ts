@@ -28,7 +28,7 @@ const fixture = (path: string) => {
   return { id: "new123", name: "Test" };
 };
 const fakeApi = () =>
-  vi.fn(async (req: RequestInfo | URL, init?: RequestInit) => {
+  vi.fn(async (req: RequestInfo | URL) => {
     const u = new URL(String(req));
     if (u.host !== "api.clickup.com") throw Error("wrong host");
     const p = u.pathname;
