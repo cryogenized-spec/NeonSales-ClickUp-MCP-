@@ -100,7 +100,8 @@ describe("Official ClickUp MCP capability catalogue (model-facing only)", () => 
         arguments: { group: "relationships", include_schema: true },
       });
       expect(answer.isError).not.toBe(true);
-      expect(answer.structuredContent).toMatchObject({ status: "schema_only", count: 4 });
+      expect(answer.structuredContent).toMatchObject({ status: "mixed", count: 4 });
+      expect(JSON.stringify(answer.structuredContent)).toContain('"status":"operational"');
       expect(JSON.stringify(answer.structuredContent)).toContain("clickup_add_task_link");
       expect(outbound).not.toHaveBeenCalled();
     } finally {
