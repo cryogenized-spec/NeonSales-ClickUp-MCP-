@@ -193,7 +193,7 @@ async function uploadAttachment(
   mime: string,
 ): Promise<Json> {
   if (
-    !/^[^/\\\\\u0000-\u001f]{1,120}$/.test(filename) ||
+    !/^[a-zA-Z0-9._ ()-]{1,120}$/.test(filename) ||
     filename === "." ||
     filename === ".." ||
     base64.length > 700000 ||
