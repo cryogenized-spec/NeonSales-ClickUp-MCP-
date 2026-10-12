@@ -12,6 +12,7 @@ import {
   clickUpConnectionStatus,
   disconnectClickUp,
 } from "../clickup/per-user-oauth.js";
+import { OPERATIONAL_CATALOG_NAMES, runCatalogOperation } from "../clickup/catalog-runtime.js";
 import { createAttentionReport } from "../reports/attention.js";
 import {
   CLICKUP_MODEL_TOOL_CATALOG,
@@ -265,6 +266,41 @@ export function createServer(deps?: ReadDependencies): McpServer {
             },
           ],
         }),
+      );
+    }
+  }
+
+  // Expose actual API-backed tools in production, not schema-only stubs.
+  // Only the AI client controls per-tool approvals. Mutations use mcp:write,
+  // the staff member's individual ClickUp OAuth token and ClickUp native history.
+  if (dependencies.schemaPreview !== true) {
+    for (const spec of CLICKUP_MODEL_TOOL_CATALOG) {
+      if (!OPERATIONAL_CATALOG_NAMES.includes(spec.name)) continue;
+      const write = spec.effect !== "read";
+      server.registerTool(
+        spec.name,
+        {
+          description:
+            "[REAL CLICKUP API] " + spec.title + ": " + spec.purpose +
+            " The connected AI client owns its tool confirmation and trust settings. " +
+            "The MCP does not add any approval dialog, audit journal or rollback engine.",
+          inputSchema: fromJsonSchema<Record<string, unknown>>(spec.inputSchema),
+          ...(write ? { scopeChallenge: requireScopes("mcp:read", "mcp:write") } : {}),
+          annotations: {
+            readOnlyHint: !write,
+            destructiveHint: spec.effect === "destructive" || spec.name === "clickup_update_task" ||
+              spec.name === "clickup_update_bulk_tasks" || spec.name === "clickup_update_document_page",
+            idempotentHint: !write,
+          },
+        },
+        async (args, extra) => {
+          try {
+            const grant = await scopedGrant(extra.http?.authInfo, write);
+            return toolSuccess(await runCatalogOperation(spec.name, args, grant, dependencies.fetcher ?? fetch));
+          } catch (error) {
+            return toolError(error);
+          }
+        },
       );
     }
   }
