@@ -38,7 +38,7 @@ const fakeApi = () =>
 describe("Phase 7 individual OAuth and native catalogue - adversarial tests", () => {
   it("registers all 48 REST backed capability names including a bounded binary attachment implementation", () => {
     expect(OPERATIONAL_CATALOG_NAMES).toHaveLength(48);
-    expect(new Set(OPERATIONAL_CATALOG_NAMES).size).toBe(47);
+    expect(new Set(OPERATIONAL_CATALOG_NAMES).size).toBe(48);
     expect(
       OPERATIONAL_CATALOG_NAMES.every((n) => CLICKUP_MODEL_TOOL_CATALOG.some((s) => s.name === n)),
     ).toBe(true);
