@@ -202,10 +202,9 @@ const F = {
     ),
     10,
   ),
-  file_reference: str(
-    "Validated user-uploaded file reference; not a URL or local file system path.",
-    200,
-  ),
+  file_name: str("Filename including extension. No directory paths, maximum 120 characters.", 120),
+  file_base64: str("Base64-encoded file bytes from a user-provided upload; maximum 500 KiB decoded. No URLs or file paths.", 700_000),
+  media_type: str("MIME content type, e.g. application/pdf or image/png.", 120),
   current_user: flag("Must use the authenticated ClickUp user; never impersonate another."),
 } satisfies Record<string, Field>;
 
@@ -346,9 +345,10 @@ export const CLICKUP_MODEL_TOOL_CATALOG: readonly ModelToolDefinition[] = [
     "Attach File to Task",
     "attachments",
     "write",
-    "Upload a vetted user-provided file to an approved task; requires actual binary upload support, malware/size checks and write approval.",
-    "Attach a customer-approved inspection report.",
-    ["task_id", "file_reference"],
+    "Upload actual base64-encoded file bytes provided by the user to a ClickUp task through multipart/form-data. Limited to 500 KiB per call; no remote URL fetching.",
+    "Attach a small user-provided PDF report as base64 bytes.",
+    ["task_id", "file_name", "file_base64"],
+    ["media_type"],
   ),
 
   // COMMENTS (3)
