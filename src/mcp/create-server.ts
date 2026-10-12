@@ -12,6 +12,7 @@ import {
   clickUpConnectionStatus,
   disconnectClickUp,
 } from "../clickup/per-user-oauth.js";
+import { OPERATIONAL_CATALOG_NAMES, runCatalogOperation } from "../clickup/catalog-runtime.js";
 import { createAttentionReport } from "../reports/attention.js";
 import {
   CLICKUP_MODEL_TOOL_CATALOG,
@@ -208,17 +209,27 @@ export function createServer(deps?: ReadDependencies): McpServer {
     },
     async (args) => {
       try {
+        const page = catalogPage({
+          group: args.group,
+          page: args.page,
+          maxResults: args.max_results,
+          includeSchema: args.include_schema,
+        });
         return toolSuccess({
-          source: "official-clickup-mcp-capability-list",
-          status: "schema_only",
+          source: "clickup-capability-catalog",
+          status: dependencies.schemaPreview === true ? "schema_only" : "mixed",
           explanation:
-            "This catalogue documents future integrations. It neither authorizes nor executes ClickUp requests.",
-          ...catalogPage({
-            group: args.group,
-            page: args.page,
-            maxResults: args.max_results,
-            includeSchema: args.include_schema,
-          }),
+            "Entries marked operational have ClickUp REST backends; schema_only requires implementation. This catalogue does not itself invoke ClickUp.",
+          ...page,
+          entries: page.entries.map((entry) => ({
+            ...entry,
+            status:
+              dependencies.schemaPreview === true
+                ? "schema_only"
+                : OPERATIONAL_CATALOG_NAMES.includes(String(entry["name"]))
+                  ? "operational"
+                  : "schema_only",
+          })),
         });
       } catch {
         return toolError(new ReadFailure("CLICKUP_INVALID_ARGUMENT"));
@@ -265,6 +276,64 @@ export function createServer(deps?: ReadDependencies): McpServer {
             },
           ],
         }),
+      );
+    }
+  }
+
+  // Expose actual API-backed tools in production, not schema-only stubs.
+  // Only the AI client controls per-tool approvals. Mutations use mcp:write,
+  // the staff member's individual ClickUp OAuth token and ClickUp native history.
+  if (dependencies.schemaPreview !== true) {
+    const additiveWrites = new Set([
+      "clickup_create_task",
+      "clickup_attach_file_to_task",
+      "clickup_create_bulk_tasks",
+      "clickup_create_task_comment",
+      "clickup_add_tag_to_task",
+      "clickup_add_task_link",
+      "clickup_add_dependency",
+      "clickup_add_task_to_list",
+      "clickup_add_time_entry",
+      "clickup_create_list",
+      "clickup_create_list_in_folder",
+      "clickup_create_folder",
+      "clickup_send_chat_message",
+      "clickup_create_document",
+      "clickup_create_document_page",
+    ]);
+    for (const spec of CLICKUP_MODEL_TOOL_CATALOG) {
+      if (!OPERATIONAL_CATALOG_NAMES.includes(spec.name)) continue;
+      const write = spec.effect !== "read";
+      server.registerTool(
+        spec.name,
+        {
+          description:
+            "[REAL CLICKUP API] " +
+            spec.title +
+            ": " +
+            spec.purpose +
+            " The connected AI client owns its tool confirmation and trust settings. " +
+            "The MCP does not add any approval dialog, audit journal or rollback engine.",
+          inputSchema: fromJsonSchema<Record<string, unknown>>(spec.inputSchema),
+          ...(write ? { scopeChallenge: requireScopes("mcp:read", "mcp:write") } : {}),
+          annotations: {
+            readOnlyHint: !write,
+            destructiveHint: write && !additiveWrites.has(spec.name),
+            idempotentHint: !write,
+          },
+        },
+        async (args, extra) => {
+          try {
+            const grant = write
+              ? await requireWriteGrant(extra.http?.authInfo, dependencies.bindings)
+              : await requireReadGrant(extra.http?.authInfo, dependencies.bindings);
+            return toolSuccess(
+              await runCatalogOperation(spec.name, args, grant, dependencies.fetcher ?? fetch),
+            );
+          } catch (error) {
+            return toolError(error);
+          }
+        },
       );
     }
   }
