@@ -64,7 +64,23 @@ describe("Phase 4 official SDK integration", () => {
     try {
       await client.connect(transport);
       const tools = (await client.listTools()).tools;
-      expect(tools.map((tool) => tool.name).sort()).toEqual([...["clickup_tool_catalog","connect_clickup_account","create_scoped_task","disconnect_clickup_account","find_scoped_tasks","get_attention_report","get_clickup_connection_status","get_scoped_list","get_scoped_task","service_info"], ...OPERATIONAL_CATALOG_NAMES].sort());
+      expect(tools.map((tool) => tool.name).sort()).toEqual(
+        [
+          ...[
+            "clickup_tool_catalog",
+            "connect_clickup_account",
+            "create_scoped_task",
+            "disconnect_clickup_account",
+            "find_scoped_tasks",
+            "get_attention_report",
+            "get_clickup_connection_status",
+            "get_scoped_list",
+            "get_scoped_task",
+            "service_info",
+          ],
+          ...OPERATIONAL_CATALOG_NAMES,
+        ].sort(),
+      );
       for (const tool of tools.filter((t) => !OPERATIONAL_CATALOG_NAMES.includes(t.name))) {
         expect(tool.annotations?.readOnlyHint).toBe(
           !["connect_clickup_account", "disconnect_clickup_account", "create_scoped_task"].includes(

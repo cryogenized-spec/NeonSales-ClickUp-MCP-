@@ -281,22 +281,30 @@ export function createServer(deps?: ReadDependencies): McpServer {
         spec.name,
         {
           description:
-            "[REAL CLICKUP API] " + spec.title + ": " + spec.purpose +
+            "[REAL CLICKUP API] " +
+            spec.title +
+            ": " +
+            spec.purpose +
             " The connected AI client owns its tool confirmation and trust settings. " +
             "The MCP does not add any approval dialog, audit journal or rollback engine.",
           inputSchema: fromJsonSchema<Record<string, unknown>>(spec.inputSchema),
           ...(write ? { scopeChallenge: requireScopes("mcp:read", "mcp:write") } : {}),
           annotations: {
             readOnlyHint: !write,
-            destructiveHint: spec.effect === "destructive" || spec.name === "clickup_update_task" ||
-              spec.name === "clickup_update_bulk_tasks" || spec.name === "clickup_update_document_page",
+            destructiveHint:
+              spec.effect === "destructive" ||
+              spec.name === "clickup_update_task" ||
+              spec.name === "clickup_update_bulk_tasks" ||
+              spec.name === "clickup_update_document_page",
             idempotentHint: !write,
           },
         },
         async (args, extra) => {
           try {
             const grant = await scopedGrant(extra.http?.authInfo, write);
-            return toolSuccess(await runCatalogOperation(spec.name, args, grant, dependencies.fetcher ?? fetch));
+            return toolSuccess(
+              await runCatalogOperation(spec.name, args, grant, dependencies.fetcher ?? fetch),
+            );
           } catch (error) {
             return toolError(error);
           }
