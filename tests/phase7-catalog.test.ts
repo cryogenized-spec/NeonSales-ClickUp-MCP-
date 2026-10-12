@@ -301,39 +301,42 @@ describe("Phase 7 individual OAuth and native catalogue - adversarial tests", ()
     const fetcher = vi.fn(async (req: RequestInfo | URL) => {
       const p = new URL(String(req)).pathname;
       seen.push(p);
-      if (p === "/api/v2/task/abc123/comment")
-        return reply({ comments: [{ id: "safe-c1" }] });
+      if (p === "/api/v2/task/abc123/comment") return reply({ comments: [{ id: "safe-c1" }] });
       if (p === "/api/v2/comment/safe-c1/reply")
         return reply({ replies: [{ id: "reply1", text: "same workspace" }] });
       return reply(fixture(p));
     });
-    await expect(runCatalogOperation(
-      "clickup_get_threaded_replies",
-      { task_id: "abc123", comment_id: "foreign-c2" },
-      makeGrant(), fetcher as typeof fetch,
-    )).rejects.toThrow("CLICKUP_SCOPE_OR_SCHEMA_REJECTED");
+    await expect(
+      runCatalogOperation(
+        "clickup_get_threaded_replies",
+        { task_id: "abc123", comment_id: "foreign-c2" },
+        makeGrant(),
+        fetcher as typeof fetch,
+      ),
+    ).rejects.toThrow("CLICKUP_SCOPE_OR_SCHEMA_REJECTED");
     expect(seen).not.toContain("/api/v2/comment/foreign-c2/reply");
     const allowed = await runCatalogOperation(
       "clickup_get_threaded_replies",
       { task_id: "abc123", comment_id: "safe-c1" },
-      makeGrant(), fetcher as typeof fetch,
+      makeGrant(),
+      fetcher as typeof fetch,
     );
     expect(allowed).toMatchObject({ replies: [{ id: "reply1" }] });
   });
 
   it("treats ambiguous 204 and empty-200 task creations as unknown writes", async () => {
-    for (const response of [
-      new Response(null, { status: 204 }),
-      reply({}),
-    ]) {
+    for (const response of [new Response(null, { status: 204 }), reply({})]) {
       const f = vi.fn(async (req: RequestInfo | URL, init?: RequestInit) =>
         init?.method === "POST" ? response : reply(fixture(new URL(String(req)).pathname)),
       );
-      await expect(runCatalogOperation(
-        "clickup_create_task",
-        { list_id: "12345", new_task: { name: "Possible duplicate" } },
-        makeGrant(), f as typeof fetch,
-      )).rejects.toThrow("CLICKUP_WRITE_OUTCOME_UNKNOWN");
+      await expect(
+        runCatalogOperation(
+          "clickup_create_task",
+          { list_id: "12345", new_task: { name: "Possible duplicate" } },
+          makeGrant(),
+          f as typeof fetch,
+        ),
+      ).rejects.toThrow("CLICKUP_WRITE_OUTCOME_UNKNOWN");
       expect(f.mock.calls.filter(([, opts]) => opts?.method === "POST")).toHaveLength(1);
     }
   });
@@ -346,9 +349,14 @@ describe("Phase 7 individual OAuth and native catalogue - adversarial tests", ()
         if (malformed === "docs" && p === "/api/v3/workspaces/555/docs") return reply({});
         return reply(p.includes("/docs") ? { docs: [] } : { tasks: [] });
       });
-      await expect(runCatalogOperation(
-        "clickup_search_workspace", { query: "Stocktake" }, makeGrant(), f as typeof fetch,
-      )).rejects.toThrow("CLICKUP_BAD_RESPONSE");
+      await expect(
+        runCatalogOperation(
+          "clickup_search_workspace",
+          { query: "Stocktake" },
+          makeGrant(),
+          f as typeof fetch,
+        ),
+      ).rejects.toThrow("CLICKUP_BAD_RESPONSE");
     }
   });
 
@@ -356,7 +364,9 @@ describe("Phase 7 individual OAuth and native catalogue - adversarial tests", ()
     const f = fakeApi();
     await runCatalogOperation(
       "clickup_remove_tag_from_task",
-      { task_id: "abc123", tag: "Needs Attention" }, makeGrant(), f as typeof fetch,
+      { task_id: "abc123", tag: "Needs Attention" },
+      makeGrant(),
+      f as typeof fetch,
     );
     const deletes = f.mock.calls.filter(([, init]) => init?.method === "DELETE");
     expect(deletes).toHaveLength(1);
@@ -373,7 +383,9 @@ describe("Phase 7 individual OAuth and native catalogue - adversarial tests", ()
     });
     const result = await runCatalogOperation(
       "clickup_get_task_comments",
-      { task_id: "abc123", max_results: 10 }, makeGrant(), f as typeof fetch,
+      { task_id: "abc123", max_results: 10 },
+      makeGrant(),
+      f as typeof fetch,
     );
     expect(result["comments"]).toHaveLength(10);
     expect(result).toMatchObject({ incomplete: true, first_page_only: true });
@@ -397,13 +409,25 @@ describe("Phase 7 individual OAuth and native catalogue - adversarial tests", ()
       if (init?.method === "POST")
         return new Response(JSON.stringify({}), {
           status: 429,
-          headers: { "Content-Type": "application/json", "X-RateLimit-Reset": String(Math.floor(Date.now() / 1000) + 45) },
+          headers: {
+            "Content-Type": "application/json",
+            "X-RateLimit-Reset": String(Math.floor(Date.now() / 1000) + 45),
+          },
         });
       return reply(fixture(new URL(String(req)).pathname));
     });
-    await expect(runCatalogOperation("clickup_attach_file_to_task", {
-      task_id: "abc123", file_name: "test.txt", file_base64: btoa("hello"),
-    }, grant, f as typeof fetch)).rejects.toThrow("CLICKUP_RATE_LIMITED");
+    await expect(
+      runCatalogOperation(
+        "clickup_attach_file_to_task",
+        {
+          task_id: "abc123",
+          file_name: "test.txt",
+          file_base64: btoa("hello"),
+        },
+        grant,
+        f as typeof fetch,
+      ),
+    ).rejects.toThrow("CLICKUP_RATE_LIMITED");
     expect(events).toContain("/cooldown");
   });
 
@@ -412,8 +436,7 @@ describe("Phase 7 individual OAuth and native catalogue - adversarial tests", ()
       const p = new URL(String(req)).pathname;
       if (p === "/api/v2/team/555/task") return reply({ tasks: [] });
       if (p === "/api/v3/workspaces/555/docs") return reply({ docs: [] });
-      if (p === "/api/v2/team/555/space")
-        return reply({ spaces: [{ id: "777", name: "Sales" }] });
+      if (p === "/api/v2/team/555/space") return reply({ spaces: [{ id: "777", name: "Sales" }] });
       if (p === "/api/v2/space/777/folder")
         return reply({ folders: [{ id: "f1", name: "Stocktake Folder" }] });
       if (p === "/api/v2/space/777/list")
@@ -423,11 +446,13 @@ describe("Phase 7 individual OAuth and native catalogue - adversarial tests", ()
       throw Error("unexpected mocked path " + p);
     });
     const output = await runCatalogOperation(
-      "clickup_search_workspace", { query: "Stocktake" }, makeGrant(), f as typeof fetch,
+      "clickup_search_workspace",
+      { query: "Stocktake" },
+      makeGrant(),
+      f as typeof fetch,
     );
     expect(output["lists"]).toHaveLength(2);
     expect(output["folders"]).toHaveLength(1);
     expect(output["incomplete"]).toBe(false);
   });
-
 });

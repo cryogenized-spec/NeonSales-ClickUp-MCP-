@@ -87,8 +87,11 @@ async function send(
           : "CLICKUP_WRITE_OUTCOME_UNKNOWN",
       );
     if (res.status === 204 || res.status === 205) {
-      if (method === "DELETE") return { success: true, source: "clickup-api", response_empty: true };
-      throw new ReadFailure(method === "GET" ? "CLICKUP_BAD_RESPONSE" : "CLICKUP_WRITE_OUTCOME_UNKNOWN");
+      if (method === "DELETE")
+        return { success: true, source: "clickup-api", response_empty: true };
+      throw new ReadFailure(
+        method === "GET" ? "CLICKUP_BAD_RESPONSE" : "CLICKUP_WRITE_OUTCOME_UNKNOWN",
+      );
     }
     const t = res.headers.get("content-type") ?? "";
     const length = Number(res.headers.get("content-length") ?? "0");
@@ -194,7 +197,16 @@ async function members(grant: ReadGrant, f: typeof fetch): Promise<Json[]> {
     .map((x) => obj(x["user"]) ?? x);
 }
 const short = (d: Json, limit = 50): Json => {
-  const keys = ["tasks", "comments", "replies", "channels", "messages", "time_entries", "entries", "docs"];
+  const keys = [
+    "tasks",
+    "comments",
+    "replies",
+    "channels",
+    "messages",
+    "time_entries",
+    "entries",
+    "docs",
+  ];
   const arrays = keys.filter((k) => Array.isArray(d[k]));
   const truncated = arrays.some((k) => (d[k] as unknown[]).length > limit);
   // ClickUp's first comments page can contain 25; reaching it suggests older
@@ -382,8 +394,11 @@ export async function runCatalogOperation(
         lists: clip(foundLists.filter(match).slice(0, N)),
         folders: clip(foundFolders.filter(match).slice(0, N)),
         incomplete:
-          tasks.length >= 100 || d.length >= 50 || hierarchySpaces.length > 5 ||
-          foundLists.length > N || foundFolders.length > N,
+          tasks.length >= 100 ||
+          d.length >= 50 ||
+          hierarchySpaces.length > 5 ||
+          foundLists.length > N ||
+          foundFolders.length > N,
       };
     }
     case "clickup_search_tasks_by_type":
@@ -535,8 +550,8 @@ export async function runCatalogOperation(
       await task("task_id");
       const comments = await call("GET", v2("task/" + val(a, "task_id") + "/comment"));
       if (!Array.isArray(comments["comments"])) throw new ReadFailure("CLICKUP_BAD_RESPONSE");
-      const parentFound = comments["comments"].some((comment: unknown) =>
-        String(obj(comment)?.["id"]) === String(a["comment_id"]),
+      const parentFound = comments["comments"].some(
+        (comment: unknown) => String(obj(comment)?.["id"]) === String(a["comment_id"]),
       );
       // Only comments verifiably belonging to the validated task are eligible.
       // Older comments outside the first upstream page fail closed.
@@ -557,7 +572,10 @@ export async function runCatalogOperation(
       );
     case "clickup_remove_tag_from_task":
       await task("task_id");
-      return call("DELETE", v2("task/" + val(a, "task_id") + "/tag/" + encodeURIComponent(txt(a["tag"], 160))));
+      return call(
+        "DELETE",
+        v2("task/" + val(a, "task_id") + "/tag/" + encodeURIComponent(txt(a["tag"], 160))),
+      );
     case "clickup_add_task_link":
     case "clickup_remove_task_link":
       await task("task_id");
