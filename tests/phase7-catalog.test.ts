@@ -247,7 +247,7 @@ describe("Phase 7 individual OAuth and native catalogue - adversarial tests", ()
     expect(outbound.mock.calls.every(([, opts]) => opts?.method !== "POST")).toBe(true);
   });
   it("encodes multiword ClickUp tag names without accepting path injection", async () => {
-    const f = vi.fn(async (req: RequestInfo | URL, init?: RequestInit) =>
+    const f = vi.fn(async (req: RequestInfo | URL, _init?: RequestInit) =>
       reply(fixture(new URL(String(req)).pathname)),
     );
     await runCatalogOperation(
@@ -275,7 +275,7 @@ describe("Phase 7 individual OAuth and native catalogue - adversarial tests", ()
   });
 
   it("uses query parameters for deletion of dependencies rather than a DELETE JSON body", async () => {
-    const f = vi.fn(async (req: RequestInfo | URL, init?: RequestInit) => {
+    const f = vi.fn(async (req: RequestInfo | URL, _init?: RequestInit) => {
       const path = new URL(String(req)).pathname;
       if (path === "/api/v2/task/block123") return reply({ id: "block123", list: { id: "12345" } });
       if (path === "/api/v2/task/wait123") return reply({ id: "wait123", list: { id: "12345" } });
