@@ -372,7 +372,7 @@ export const CLICKUP_MODEL_TOOL_CATALOG: readonly ModelToolDefinition[] = [
     "read",
     "Read replies beneath a known parent comment; use after retrieving the parent comment ID.",
     "Show the replies to the latest approval question.",
-    ["comment_id"],
+    ["comment_id", "task_id"],
     ["max_results"],
   ),
   tool(

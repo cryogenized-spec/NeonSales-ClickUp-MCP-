@@ -86,7 +86,10 @@ async function send(
           ? "CLICKUP_UPSTREAM_UNAVAILABLE"
           : "CLICKUP_WRITE_OUTCOME_UNKNOWN",
       );
-    if (res.status === 204 || res.status === 205) return { success: true };
+    if (res.status === 204 || res.status === 205) {
+      if (method === "DELETE") return { success: true, source: "clickup-api", response_empty: true };
+      throw new ReadFailure(method === "GET" ? "CLICKUP_BAD_RESPONSE" : "CLICKUP_WRITE_OUTCOME_UNKNOWN");
+    }
     const t = res.headers.get("content-type") ?? "";
     const length = Number(res.headers.get("content-length") ?? "0");
     if (!t.includes("application/json") || length > 1000000)
@@ -104,6 +107,14 @@ async function send(
       throw new ReadFailure(
         method === "GET" ? "CLICKUP_BAD_RESPONSE" : "CLICKUP_WRITE_OUTCOME_UNKNOWN",
       );
+    if (method !== "GET" && method !== "DELETE" && Object.keys(data).length === 0)
+      throw new ReadFailure("CLICKUP_WRITE_OUTCOME_UNKNOWN");
+    if (
+      method === "POST" &&
+      /\/list\/[^/]+\/task$/.test(path) &&
+      (typeof data["id"] !== "string" || !/^[a-zA-Z0-9_-]{1,80}$/.test(data["id"]))
+    )
+      throw new ReadFailure("CLICKUP_WRITE_OUTCOME_UNKNOWN");
     return data;
   } catch (e) {
     if (e instanceof ReadFailure) throw e;
@@ -182,15 +193,20 @@ async function members(grant: ReadGrant, f: typeof fetch): Promise<Json[]> {
     .map((x: unknown) => obj(x) ?? {})
     .map((x) => obj(x["user"]) ?? x);
 }
-const short = (d: Json, limit = 50): Json =>
-  clip({
+const short = (d: Json, limit = 50): Json => {
+  const keys = ["tasks", "comments", "replies", "channels", "messages", "time_entries", "entries", "docs"];
+  const arrays = keys.filter((k) => Array.isArray(d[k]));
+  const truncated = arrays.some((k) => (d[k] as unknown[]).length > limit);
+  // ClickUp's first comments page can contain 25; reaching it suggests older
+  // pages may exist even if no item was discarded by the display cap.
+  const possibleMorePages = Array.isArray(d["comments"]) && d["comments"].length >= 25;
+  return clip({
     ...d,
-    ...Object.fromEntries(
-      ["tasks", "comments", "replies", "channels", "messages", "time_entries", "entries", "docs"]
-        .filter((k) => Array.isArray(d[k]))
-        .map((k) => [k, (d[k] as unknown[]).slice(0, limit)]),
-    ),
+    ...Object.fromEntries(arrays.map((k) => [k, (d[k] as unknown[]).slice(0, limit)])),
+    incomplete: truncated || possibleMorePages || d["incomplete"] === true,
+    first_page_only: true,
   }) as Json;
+};
 
 /** REST adapters use individual OAuth. Base64 attachment uploads are capped
  * at 500 KiB because MCP tool args are text; no remote file URLs are fetched. */
@@ -236,7 +252,15 @@ async function uploadAttachment(
       headers: { Authorization: grant.apiToken, Accept: "application/json" },
       body: form,
     });
-    if (res.status === 429) throw new ReadFailure("CLICKUP_RATE_LIMITED");
+    if (res.status === 429) {
+      const reset = res.headers.get("X-RateLimit-Reset");
+      if (reset && /^\d{1,12}$/.test(reset)) {
+        const unix = Number(reset);
+        if (unix > Date.now() / 1000 && unix < Date.now() / 1000 + 3600)
+          await quotaCall(grant, "cooldown", unix * 1000);
+      }
+      throw new ReadFailure("CLICKUP_RATE_LIMITED");
+    }
     if (res.status === 401 || res.status === 403) throw new ReadFailure("CLICKUP_UPSTREAM_DENIED");
     if (!res.ok)
       throw new ReadFailure(
@@ -325,14 +349,41 @@ export async function runCatalogOperation(
     case "clickup_search_workspace": {
       const q = txt(a["query"], 160).toLowerCase();
       const results = await call("GET", v2("team/" + W + "/task?page=0&subtasks=true"));
-      const tasks = Array.isArray(results["tasks"]) ? results["tasks"] : [];
+      if (!Array.isArray(results["tasks"])) throw new ReadFailure("CLICKUP_BAD_RESPONSE");
+      const tasks = results["tasks"];
       const docs = await call("GET", v3("workspaces/" + W + "/docs?limit=50"));
-      const d = Array.isArray(docs["docs"]) ? docs["docs"] : [];
+      if (!Array.isArray(docs["docs"])) throw new ReadFailure("CLICKUP_BAD_RESPONSE");
+      const d = docs["docs"];
+      const hierarchySpaces = await spaces(g, f);
+      const foundLists: unknown[] = [];
+      const foundFolders: unknown[] = [];
+      // Bound hierarchy enumeration; explicitly disclose if the workspace is larger.
+      for (const space of hierarchySpaces.slice(0, 5)) {
+        const sid = id(space["id"]);
+        const folderData = await call("GET", v2("space/" + sid + "/folder?archived=false"));
+        const listData = await call("GET", v2("space/" + sid + "/list?archived=false"));
+        if (!Array.isArray(folderData["folders"]) || !Array.isArray(listData["lists"]))
+          throw new ReadFailure("CLICKUP_BAD_RESPONSE");
+        foundFolders.push(...folderData["folders"]);
+        foundLists.push(...listData["lists"]);
+        for (const folder of folderData["folders"].slice(0, 10)) {
+          const fid = obj(folder)?.["id"];
+          if (fid === undefined) throw new ReadFailure("CLICKUP_BAD_RESPONSE");
+          const childLists = await call("GET", v2("folder/" + id(fid) + "/list?archived=false"));
+          if (!Array.isArray(childLists["lists"])) throw new ReadFailure("CLICKUP_BAD_RESPONSE");
+          foundLists.push(...childLists["lists"]);
+        }
+      }
+      const match = (v: unknown) => JSON.stringify(v).toLowerCase().includes(q);
       return {
         source: "clickup-api",
-        tasks: clip(tasks.filter((x) => JSON.stringify(x).toLowerCase().includes(q)).slice(0, N)),
-        docs: clip(d.filter((x) => JSON.stringify(x).toLowerCase().includes(q)).slice(0, N)),
-        incomplete: tasks.length >= 100,
+        tasks: clip(tasks.filter(match).slice(0, N)),
+        docs: clip(d.filter(match).slice(0, N)),
+        lists: clip(foundLists.filter(match).slice(0, N)),
+        folders: clip(foundFolders.filter(match).slice(0, N)),
+        incomplete:
+          tasks.length >= 100 || d.length >= 50 || hierarchySpaces.length > 5 ||
+          foundLists.length > N || foundFolders.length > N,
       };
     }
     case "clickup_search_tasks_by_type":
@@ -343,7 +394,8 @@ export async function runCatalogOperation(
         "GET",
         v2("list/" + id(target) + "/task?page=0&subtasks=true&include_closed=true"),
       );
-      const tasks = Array.isArray(result["tasks"]) ? result["tasks"] : [];
+      if (!Array.isArray(result["tasks"])) throw new ReadFailure("CLICKUP_BAD_RESPONSE");
+      const tasks = result["tasks"];
       const found = tasks.filter((x) => {
         const t = obj(x);
         if (!t) return false;
@@ -479,8 +531,18 @@ export async function runCatalogOperation(
     case "clickup_get_task_comments":
       await task("task_id");
       return short(await call("GET", v2("task/" + val(a, "task_id") + "/comment")), N);
-    case "clickup_get_threaded_replies":
+    case "clickup_get_threaded_replies": {
+      await task("task_id");
+      const comments = await call("GET", v2("task/" + val(a, "task_id") + "/comment"));
+      if (!Array.isArray(comments["comments"])) throw new ReadFailure("CLICKUP_BAD_RESPONSE");
+      const parentFound = comments["comments"].some((comment: unknown) =>
+        String(obj(comment)?.["id"]) === String(a["comment_id"]),
+      );
+      // Only comments verifiably belonging to the validated task are eligible.
+      // Older comments outside the first upstream page fail closed.
+      if (!parentFound) throw new ReadFailure("CLICKUP_SCOPE_OR_SCHEMA_REJECTED");
       return short(await call("GET", v2("comment/" + val(a, "comment_id") + "/reply")), N);
+    }
     case "clickup_create_task_comment":
       await task("task_id");
       return call("POST", v2("task/" + val(a, "task_id") + "/comment"), {
@@ -495,7 +557,7 @@ export async function runCatalogOperation(
       );
     case "clickup_remove_tag_from_task":
       await task("task_id");
-      return call("DELETE", v2("task/" + val(a, "task_id") + "/tag/" + val(a, "tag")));
+      return call("DELETE", v2("task/" + val(a, "task_id") + "/tag/" + encodeURIComponent(txt(a["tag"], 160))));
     case "clickup_add_task_link":
     case "clickup_remove_task_link":
       await task("task_id");

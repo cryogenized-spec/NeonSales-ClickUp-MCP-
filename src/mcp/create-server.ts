@@ -284,6 +284,13 @@ export function createServer(deps?: ReadDependencies): McpServer {
   // Only the AI client controls per-tool approvals. Mutations use mcp:write,
   // the staff member's individual ClickUp OAuth token and ClickUp native history.
   if (dependencies.schemaPreview !== true) {
+    const additiveWrites = new Set([
+      "clickup_create_task", "clickup_attach_file_to_task", "clickup_create_bulk_tasks",
+      "clickup_create_task_comment", "clickup_add_tag_to_task", "clickup_add_task_link",
+      "clickup_add_dependency", "clickup_add_task_to_list", "clickup_add_time_entry",
+      "clickup_create_list", "clickup_create_list_in_folder", "clickup_create_folder",
+      "clickup_send_chat_message", "clickup_create_document", "clickup_create_document_page",
+    ]);
     for (const spec of CLICKUP_MODEL_TOOL_CATALOG) {
       if (!OPERATIONAL_CATALOG_NAMES.includes(spec.name)) continue;
       const write = spec.effect !== "read";
@@ -301,11 +308,7 @@ export function createServer(deps?: ReadDependencies): McpServer {
           ...(write ? { scopeChallenge: requireScopes("mcp:read", "mcp:write") } : {}),
           annotations: {
             readOnlyHint: !write,
-            destructiveHint:
-              spec.effect === "destructive" ||
-              spec.name === "clickup_update_task" ||
-              spec.name === "clickup_update_bulk_tasks" ||
-              spec.name === "clickup_update_document_page",
+            destructiveHint: write && !additiveWrites.has(spec.name),
             idempotentHint: !write,
           },
         },
