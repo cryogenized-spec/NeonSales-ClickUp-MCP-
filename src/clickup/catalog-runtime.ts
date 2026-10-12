@@ -27,9 +27,10 @@ const count = (a: Json) => {
 };
 const clip = (v: unknown): unknown => {
   if (Array.isArray(v)) return v.slice(0, 50).map(clip);
-  if (obj(v))
+  const item = obj(v);
+  if (item)
     return Object.fromEntries(
-      Object.entries(v)
+      Object.entries(item)
         .filter(([k]) => !/token|secret|authorization|password/i.test(k))
         .map(([k, x]) => [k, clip(x)]),
     );
