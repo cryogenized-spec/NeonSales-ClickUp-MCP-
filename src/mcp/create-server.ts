@@ -301,7 +301,9 @@ export function createServer(deps?: ReadDependencies): McpServer {
         },
         async (args, extra) => {
           try {
-            const grant = await scopedGrant(extra.http?.authInfo, write);
+            const grant = write
+              ? await requireWriteGrant(extra.http?.authInfo, dependencies.bindings)
+              : await requireReadGrant(extra.http?.authInfo, dependencies.bindings);
             return toolSuccess(
               await runCatalogOperation(spec.name, args, grant, dependencies.fetcher ?? fetch),
             );
