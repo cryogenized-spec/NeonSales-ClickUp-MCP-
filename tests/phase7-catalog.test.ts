@@ -28,7 +28,7 @@ const fixture = (path: string) => {
   return { id: "new123", name: "Test" };
 };
 const fakeApi = () =>
-  vi.fn(async (req: RequestInfo | URL) => {
+  vi.fn(async (req: RequestInfo | URL, _init?: RequestInit) => {
     const u = new URL(String(req));
     if (u.host !== "api.clickup.com") throw Error("wrong host");
     const p = u.pathname;
@@ -62,7 +62,7 @@ describe("Phase 7 individual OAuth and native catalogue - adversarial tests", ()
       "/api/v2/list/12345/task",
     ]);
     expect(
-      calls.every(([, i]) => (i?.headers as Record<string, string>).Authorization === "person-707"),
+      calls.every(([, i]) => (i?.headers as Record<string, string>)["Authorization"] === "person-707"),
     ).toBe(true);
     expect(calls[2]?.[1]?.method).toBe("POST");
     expect(JSON.parse(String(calls[2]?.[1]?.body))).toMatchObject({ name: "Sales request" });
@@ -85,7 +85,7 @@ describe("Phase 7 individual OAuth and native catalogue - adversarial tests", ()
   it("keeps credentials separate across employees in parallel, never a shared API token", async () => {
     const seen: string[] = [];
     const f = vi.fn(async (req: RequestInfo | URL, opts?: RequestInit) => {
-      seen.push((opts?.headers as Record<string, string>).Authorization);
+      seen.push((opts?.headers as Record<string, string>)["Authorization"] ?? "");
       return reply({ channels: [] });
     });
     await Promise.all([
@@ -161,7 +161,7 @@ describe("Phase 7 individual OAuth and native catalogue - adversarial tests", ()
   });
 
   it("uses a real v3 ClickUp Chat API message endpoint with the employee token", async () => {
-    const f = vi.fn(async () => reply({ id: "message-1" }));
+    const f = vi.fn(async (_req: RequestInfo | URL, _init?: RequestInit) => reply({ id: "message-1" }));
     const result = await runCatalogOperation(
       "clickup_send_chat_message",
       { channel_id: "chan-123", text: "Test dispatch status" },
