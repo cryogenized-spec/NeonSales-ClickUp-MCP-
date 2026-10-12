@@ -247,35 +247,53 @@ describe("Phase 7 individual OAuth and native catalogue - adversarial tests", ()
     expect(outbound.mock.calls.every(([, opts]) => opts?.method !== "POST")).toBe(true);
   });
   it("encodes multiword ClickUp tag names without accepting path injection", async () => {
-    const f=vi.fn(async (req:RequestInfo|URL, init?:RequestInit) => reply(fixture(new URL(String(req)).pathname)));
-    await runCatalogOperation("clickup_add_tag_to_task",{task_id:"abc123",tag:"Needs Attention"},makeGrant(),f as typeof fetch);
-    const writes=f.mock.calls.filter(([,init])=>init?.method==="POST");
+    const f = vi.fn(async (req: RequestInfo | URL, init?: RequestInit) =>
+      reply(fixture(new URL(String(req)).pathname)),
+    );
+    await runCatalogOperation(
+      "clickup_add_tag_to_task",
+      { task_id: "abc123", tag: "Needs Attention" },
+      makeGrant(),
+      f as typeof fetch,
+    );
+    const writes = f.mock.calls.filter(([, init]) => init?.method === "POST");
     expect(writes).toHaveLength(1);
     expect(String(writes[0]?.[0])).toContain("/tag/Needs%20Attention");
   });
 
   it("rejects a move when the task's current home List does not equal source_list_id", async () => {
-    const f=fakeApi();
-    await expect(runCatalogOperation(
-      "clickup_move_task_to_list",
-      {task_id:"abc123",source_list_id:"99999",destination_list_id:"12345"},makeGrant(),f as typeof fetch,
-    )).rejects.toThrow("CLICKUP_SCOPE_OR_SCHEMA_REJECTED");
-    expect(f.mock.calls.every(([,init])=>init?.method!=="PUT")).toBe(true);
+    const f = fakeApi();
+    await expect(
+      runCatalogOperation(
+        "clickup_move_task_to_list",
+        { task_id: "abc123", source_list_id: "99999", destination_list_id: "12345" },
+        makeGrant(),
+        f as typeof fetch,
+      ),
+    ).rejects.toThrow("CLICKUP_SCOPE_OR_SCHEMA_REJECTED");
+    expect(f.mock.calls.every(([, init]) => init?.method !== "PUT")).toBe(true);
   });
 
   it("uses query parameters for deletion of dependencies rather than a DELETE JSON body", async () => {
-    const f=vi.fn(async (req: RequestInfo|URL, init?:RequestInit) => {
-      const path=new URL(String(req)).pathname;
-      if(path==="/api/v2/task/block123") return reply({id:"block123",list:{id:"12345"}});
-      if(path==="/api/v2/task/wait123") return reply({id:"wait123",list:{id:"12345"}});
+    const f = vi.fn(async (req: RequestInfo | URL, init?: RequestInit) => {
+      const path = new URL(String(req)).pathname;
+      if (path === "/api/v2/task/block123") return reply({ id: "block123", list: { id: "12345" } });
+      if (path === "/api/v2/task/wait123") return reply({ id: "wait123", list: { id: "12345" } });
       return reply(fixture(path));
     });
-    await runCatalogOperation("clickup_remove_dependency",{
-      blocking_task_id:"block123",waiting_task_id:"wait123",
-    },makeGrant(),f as typeof fetch);
-    const deletion=f.mock.calls.find(([,init])=>init?.method==="DELETE");
-    expect(String(deletion?.[0])).toBe("https://api.clickup.com/api/v2/task/wait123/dependency?depends_on=block123");
+    await runCatalogOperation(
+      "clickup_remove_dependency",
+      {
+        blocking_task_id: "block123",
+        waiting_task_id: "wait123",
+      },
+      makeGrant(),
+      f as typeof fetch,
+    );
+    const deletion = f.mock.calls.find(([, init]) => init?.method === "DELETE");
+    expect(String(deletion?.[0])).toBe(
+      "https://api.clickup.com/api/v2/task/wait123/dependency?depends_on=block123",
+    );
     expect(deletion?.[1]?.body).toBeUndefined();
   });
-
 });
