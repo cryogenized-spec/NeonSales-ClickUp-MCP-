@@ -203,7 +203,10 @@ const F = {
     10,
   ),
   file_name: str("Filename including extension. No directory paths, maximum 120 characters.", 120),
-  file_base64: str("Base64-encoded file bytes from a user-provided upload; maximum 500 KiB decoded. No URLs or file paths.", 700_000),
+  file_base64: str(
+    "Base64-encoded file bytes from a user-provided upload; maximum 500 KiB decoded. No URLs or file paths.",
+    700_000,
+  ),
   media_type: str("MIME content type, e.g. application/pdf or image/png.", 120),
   current_user: flag("Must use the authenticated ClickUp user; never impersonate another."),
 } satisfies Record<string, Field>;

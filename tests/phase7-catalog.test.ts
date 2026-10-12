@@ -62,7 +62,9 @@ describe("Phase 7 individual OAuth and native catalogue - adversarial tests", ()
       "/api/v2/list/12345/task",
     ]);
     expect(
-      calls.every(([, i]) => (i?.headers as Record<string, string>)["Authorization"] === "person-707"),
+      calls.every(
+        ([, i]) => (i?.headers as Record<string, string>)["Authorization"] === "person-707",
+      ),
     ).toBe(true);
     expect(calls[2]?.[1]?.method).toBe("POST");
     expect(JSON.parse(String(calls[2]?.[1]?.body))).toMatchObject({ name: "Sales request" });
@@ -161,7 +163,9 @@ describe("Phase 7 individual OAuth and native catalogue - adversarial tests", ()
   });
 
   it("uses a real v3 ClickUp Chat API message endpoint with the employee token", async () => {
-    const f = vi.fn(async (_req: RequestInfo | URL, _init?: RequestInit) => reply({ id: "message-1" }));
+    const f = vi.fn(async (_req: RequestInfo | URL, _init?: RequestInit) =>
+      reply({ id: "message-1" }),
+    );
     const result = await runCatalogOperation(
       "clickup_send_chat_message",
       { channel_id: "chan-123", text: "Test dispatch status" },
@@ -194,43 +198,52 @@ describe("Phase 7 individual OAuth and native catalogue - adversarial tests", ()
   });
   it("sends actual provided file bytes as multipart to ClickUp, never fetches a file URL", async () => {
     let sent: FormData | null = null;
-    const f=vi.fn(async (request: RequestInfo | URL, init?: RequestInit) => {
-      const u=new URL(String(request));
+    const f = vi.fn(async (request: RequestInfo | URL, init?: RequestInit) => {
+      const u = new URL(String(request));
       if (init?.method === "POST") {
         expect(u.href).toBe("https://api.clickup.com/api/v2/task/abc123/attachment");
-        expect((init.headers as Record<string,string>)["Authorization"]).toBe("person-707");
-        expect((init.headers as Record<string,string>)["Content-Type"]).toBeUndefined();
-        sent=init.body as FormData;
-        return reply({id:"attachment-1"});
+        expect((init.headers as Record<string, string>)["Authorization"]).toBe("person-707");
+        expect((init.headers as Record<string, string>)["Content-Type"]).toBeUndefined();
+        sent = init.body as FormData;
+        return reply({ id: "attachment-1" });
       }
       return reply(fixture(u.pathname));
     });
-    const output=await runCatalogOperation(
+    const output = await runCatalogOperation(
       "clickup_attach_file_to_task",
-      {task_id:"abc123",file_name:"note.txt",file_base64:btoa("hello"),media_type:"text/plain"},
-      makeGrant(), f as typeof fetch,
+      {
+        task_id: "abc123",
+        file_name: "note.txt",
+        file_base64: btoa("hello"),
+        media_type: "text/plain",
+      },
+      makeGrant(),
+      f as typeof fetch,
     );
-    expect(output).toMatchObject({id:"attachment-1"});
+    expect(output).toMatchObject({ id: "attachment-1" });
     expect(sent).not.toBeNull();
-    const blob=sent!.get("attachment[0]") as File;
+    const blob = sent!.get("attachment[0]") as File;
     expect(blob.name).toBe("note.txt");
     expect(await blob.text()).toBe("hello");
     expect(f).toHaveBeenCalledTimes(4);
   });
 
   it("refuses oversized, malformed or path-style attachment input before any upload", async () => {
-    const outbound=fakeApi();
-    for (const [file_name,file_base64] of [
-      ["../bad.txt",btoa("hello")],
-      ["good.txt","not valid==="],
-      ["good.txt","Z".repeat(700100)],
+    const outbound = fakeApi();
+    for (const [file_name, file_base64] of [
+      ["../bad.txt", btoa("hello")],
+      ["good.txt", "not valid==="],
+      ["good.txt", "Z".repeat(700100)],
     ]) {
-      await expect(runCatalogOperation(
-        "clickup_attach_file_to_task",
-        {task_id:"abc123",file_name,file_base64},makeGrant(),outbound as typeof fetch,
-      )).rejects.toThrow("CLICKUP_INVALID_ARGUMENT");
+      await expect(
+        runCatalogOperation(
+          "clickup_attach_file_to_task",
+          { task_id: "abc123", file_name, file_base64 },
+          makeGrant(),
+          outbound as typeof fetch,
+        ),
+      ).rejects.toThrow("CLICKUP_INVALID_ARGUMENT");
     }
-    expect(outbound.mock.calls.every(([,opts]) => opts?.method !== "POST")).toBe(true);
+    expect(outbound.mock.calls.every(([, opts]) => opts?.method !== "POST")).toBe(true);
   });
-
 });

@@ -218,12 +218,17 @@ export function createServer(deps?: ReadDependencies): McpServer {
         return toolSuccess({
           source: "clickup-capability-catalog",
           status: dependencies.schemaPreview === true ? "schema_only" : "mixed",
-          explanation: "Entries marked operational have ClickUp REST backends; schema_only requires implementation. This catalogue does not itself invoke ClickUp.",
+          explanation:
+            "Entries marked operational have ClickUp REST backends; schema_only requires implementation. This catalogue does not itself invoke ClickUp.",
           ...page,
           entries: page.entries.map((entry) => ({
             ...entry,
-            status: dependencies.schemaPreview === true ? "schema_only" :
-              OPERATIONAL_CATALOG_NAMES.includes(String(entry["name"])) ? "operational" : "schema_only",
+            status:
+              dependencies.schemaPreview === true
+                ? "schema_only"
+                : OPERATIONAL_CATALOG_NAMES.includes(String(entry["name"]))
+                  ? "operational"
+                  : "schema_only",
           })),
         });
       } catch {

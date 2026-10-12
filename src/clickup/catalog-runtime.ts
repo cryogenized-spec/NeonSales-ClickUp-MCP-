@@ -184,41 +184,66 @@ const short = (d: Json, limit = 50): Json =>
 
 /** REST adapters use individual OAuth. Base64 attachment uploads are capped
  * at 500 KiB because MCP tool args are text; no remote file URLs are fetched. */
-async function uploadAttachment(grant: ReadGrant, fetcher: typeof fetch, taskId: string, filename: string, base64: string, mime: string): Promise<Json> {
-  if (!/^[^/\\\\\u0000-\u001f]{1,120}$/.test(filename) || filename==="." || filename===".." ||
-      base64.length > 700000 || base64.length < 4 || !/^[A-Za-z0-9+/]+={0,2}$/.test(base64) ||
-      !/^[a-zA-Z0-9.+-]+\/[a-zA-Z0-9.+-]+$/.test(mime)) {
+async function uploadAttachment(
+  grant: ReadGrant,
+  fetcher: typeof fetch,
+  taskId: string,
+  filename: string,
+  base64: string,
+  mime: string,
+): Promise<Json> {
+  if (
+    !/^[^/\\\\\u0000-\u001f]{1,120}$/.test(filename) ||
+    filename === "." ||
+    filename === ".." ||
+    base64.length > 700000 ||
+    base64.length < 4 ||
+    !/^[A-Za-z0-9+/]+={0,2}$/.test(base64) ||
+    !/^[a-zA-Z0-9.+-]+\/[a-zA-Z0-9.+-]+$/.test(mime)
+  ) {
     throw new ReadFailure("CLICKUP_INVALID_ARGUMENT");
   }
-  let binary:string;
-  try { binary=atob(base64); } catch { throw new ReadFailure("CLICKUP_INVALID_ARGUMENT"); }
-  if (binary.length > 512000 || binary.length === 0) throw new ReadFailure("CLICKUP_INVALID_ARGUMENT");
-  const data=new Uint8Array(binary.length);
-  for(let i=0;i<binary.length;i++) data[i]=binary.charCodeAt(i);
-  const form=new FormData();
-  form.append("attachment[0]",new Blob([data],{type:mime}),filename);
-  await quotaCall(grant,"reserve");
-  const abort=new AbortController();
-  const timeout=setTimeout(()=>abort.abort(),10000);
-  try{
-    const res=await fetcher("https://api.clickup.com/api/v2/task/"+id(taskId)+"/attachment",{
-      method:"POST",redirect:"manual",signal:abort.signal,
-      headers:{Authorization:grant.apiToken,Accept:"application/json"},
-      body:form,
+  let binary: string;
+  try {
+    binary = atob(base64);
+  } catch {
+    throw new ReadFailure("CLICKUP_INVALID_ARGUMENT");
+  }
+  if (binary.length > 512000 || binary.length === 0)
+    throw new ReadFailure("CLICKUP_INVALID_ARGUMENT");
+  const data = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) data[i] = binary.charCodeAt(i);
+  const form = new FormData();
+  form.append("attachment[0]", new Blob([data], { type: mime }), filename);
+  await quotaCall(grant, "reserve");
+  const abort = new AbortController();
+  const timeout = setTimeout(() => abort.abort(), 10000);
+  try {
+    const res = await fetcher("https://api.clickup.com/api/v2/task/" + id(taskId) + "/attachment", {
+      method: "POST",
+      redirect: "manual",
+      signal: abort.signal,
+      headers: { Authorization: grant.apiToken, Accept: "application/json" },
+      body: form,
     });
-    if(res.status===429) throw new ReadFailure("CLICKUP_RATE_LIMITED");
-    if(res.status===401||res.status===403) throw new ReadFailure("CLICKUP_UPSTREAM_DENIED");
-    if(!res.ok)throw new ReadFailure(res.status>=500?"CLICKUP_WRITE_OUTCOME_UNKNOWN":"CLICKUP_UPSTREAM_UNAVAILABLE");
-    const content=await res.text();
-    if(content.length>1000000) throw new ReadFailure("CLICKUP_WRITE_OUTCOME_UNKNOWN");
-    const parsed:unknown=JSON.parse(content);
-    const object=obj(parsed);
-    if(!object)throw new ReadFailure("CLICKUP_WRITE_OUTCOME_UNKNOWN");
+    if (res.status === 429) throw new ReadFailure("CLICKUP_RATE_LIMITED");
+    if (res.status === 401 || res.status === 403) throw new ReadFailure("CLICKUP_UPSTREAM_DENIED");
+    if (!res.ok)
+      throw new ReadFailure(
+        res.status >= 500 ? "CLICKUP_WRITE_OUTCOME_UNKNOWN" : "CLICKUP_UPSTREAM_UNAVAILABLE",
+      );
+    const content = await res.text();
+    if (content.length > 1000000) throw new ReadFailure("CLICKUP_WRITE_OUTCOME_UNKNOWN");
+    const parsed: unknown = JSON.parse(content);
+    const object = obj(parsed);
+    if (!object) throw new ReadFailure("CLICKUP_WRITE_OUTCOME_UNKNOWN");
     return clip(object) as Json;
-  }catch(e){
-    if(e instanceof ReadFailure)throw e;
+  } catch (e) {
+    if (e instanceof ReadFailure) throw e;
     throw new ReadFailure("CLICKUP_WRITE_OUTCOME_UNKNOWN");
-  }finally{clearTimeout(timeout);}
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 export const OPERATIONAL_CATALOG_NAMES: readonly string[] = [
@@ -427,10 +452,17 @@ export async function runCatalogOperation(
       };
     }
     case "clickup_attach_file_to_task": {
-    await task("task_id");
-    return uploadAttachment(g,f,String(a["task_id"]),txt(a["file_name"],120),txt(a["file_base64"],700000),typeof a["media_type"]==="string"?a["media_type"]:"application/octet-stream");
-  }
-  case "clickup_get_task_comments":
+      await task("task_id");
+      return uploadAttachment(
+        g,
+        f,
+        String(a["task_id"]),
+        txt(a["file_name"], 120),
+        txt(a["file_base64"], 700000),
+        typeof a["media_type"] === "string" ? a["media_type"] : "application/octet-stream",
+      );
+    }
+    case "clickup_get_task_comments":
       await task("task_id");
       return short(await call("GET", v2("task/" + val(a, "task_id") + "/comment")), N);
     case "clickup_get_threaded_replies":
