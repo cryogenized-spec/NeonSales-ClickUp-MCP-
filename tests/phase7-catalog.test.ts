@@ -23,6 +23,7 @@ const reply = (body: unknown, status = 200) =>
 const fixture = (path: string) => {
   if (path === "/api/v2/list/12345") return { id: "12345", space: { id: "777" } };
   if (path === "/api/v2/list/99999") return { id: "99999", space: { id: "888" } };
+  if (path === "/api/v2/list/12346") return { id: "12346", space: { id: "777" } };
   if (path === "/api/v2/team/555/space") return { spaces: [{ id: "777", name: "NeonSales" }] };
   if (path === "/api/v2/task/abc123") return { id: "abc123", list: { id: "12345" }, name: "Order" };
   return { id: "new123", name: "Test" };
@@ -81,7 +82,50 @@ describe("Phase 7 individual OAuth and native catalogue - adversarial tests", ()
       ),
     ).rejects.toThrow("CLICKUP_SCOPE_OR_SCHEMA_REJECTED");
     expect(api.mock.calls.every(([, i]) => i?.method === "GET")).toBe(true);
-    expect(api).toHaveBeenCalledTimes(2);
+    // The configured List grant denies mismatched IDs BEFORE a network call.
+    expect(api).not.toHaveBeenCalled();
+  });
+
+  it("denies a different List even when it belongs to the same ClickUp Workspace", async () => {
+    const api = fakeApi();
+    await expect(
+      runCatalogOperation("clickup_create_task", {
+        list_id: "12346",
+        new_task: { name: "Not this List" },
+      }, makeGrant(), api as typeof fetch),
+    ).rejects.toThrow("CLICKUP_SCOPE_OR_SCHEMA_REJECTED");
+    expect(api).not.toHaveBeenCalled();
+    await expect(
+      runCatalogOperation("clickup_get_list", { list_id: "12346" },
+        makeGrant(), api as typeof fetch),
+    ).rejects.toThrow("CLICKUP_SCOPE_OR_SCHEMA_REJECTED");
+    expect(api).not.toHaveBeenCalled();
+  });
+
+  it("validates ALL bulk task drafts before writing, even if the second draft is invalid", async () => {
+    const api = fakeApi();
+    await expect(
+      runCatalogOperation(
+        "clickup_create_bulk_tasks",
+        { list_id: "12345", tasks: [{ name: "Valid first" }, { name: "   " }] },
+        makeGrant(),
+        api as typeof fetch,
+      ),
+    ).rejects.toThrow("CLICKUP_INVALID_ARGUMENT");
+    expect(api.mock.calls.every(([, init]) => init?.method !== "POST")).toBe(true);
+  });
+
+  it("validates ALL bulk task updates before mutating the first task", async () => {
+    const api = fakeApi();
+    await expect(
+      runCatalogOperation("clickup_update_bulk_tasks", {
+        task_updates: [
+          { task_id: "abc123", changes: { name: "Valid first" } },
+          { task_id: "../../invalid", changes: { name: "Invalid second" } },
+        ],
+      }, makeGrant(), api as typeof fetch),
+    ).rejects.toThrow("CLICKUP_INVALID_ARGUMENT");
+    expect(api).not.toHaveBeenCalled();
   });
 
   it("keeps credentials separate across employees in parallel, never a shared API token", async () => {
