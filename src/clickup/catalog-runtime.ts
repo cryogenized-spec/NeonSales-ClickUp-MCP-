@@ -296,34 +296,14 @@ async function uploadAttachment(
 }
 
 export const OPERATIONAL_CATALOG_NAMES: readonly string[] = [
+  // Explicit operational allowlist: descriptions alone never grant task-ID mutation rights.
   "clickup_search_workspace",
   "clickup_search_tasks_by_type",
   "clickup_search_tasks_by_tag",
   "clickup_create_task",
   "clickup_get_task",
-  "clickup_update_task",
-  "clickup_set_custom_field",
-  "clickup_delete_task",
-  "clickup_attach_file_to_task",
   "clickup_create_bulk_tasks",
-  "clickup_update_bulk_tasks",
-  "clickup_get_task_comments",
-  "clickup_get_threaded_replies",
-  "clickup_create_task_comment",
-  "clickup_add_tag_to_task",
-  "clickup_remove_tag_from_task",
-  "clickup_add_task_link",
-  "clickup_remove_task_link",
-  "clickup_add_dependency",
-  "clickup_remove_dependency",
-  "clickup_move_task_to_list",
-  "clickup_add_task_to_list",
-  "clickup_get_task_time_entries",
   "clickup_get_time_entries_for_tasks",
-  "clickup_start_time_tracking",
-  "clickup_stop_time_tracking",
-  "clickup_add_time_entry",
-  "clickup_get_current_time_entry",
   "clickup_get_workspace_hierarchy",
   "clickup_create_list",
   "clickup_create_list_in_folder",
@@ -342,7 +322,6 @@ export const OPERATIONAL_CATALOG_NAMES: readonly string[] = [
   "clickup_get_document_pages",
   "clickup_create_document_page",
   "clickup_update_document_page",
-  "clickup_get_task_time_in_status",
   "clickup_get_list_time_in_status",
 ];
 export async function runCatalogOperation(
@@ -351,6 +330,8 @@ export async function runCatalogOperation(
   g: ReadGrant,
   f: typeof fetch,
 ): Promise<Json> {
+  // Fail closed even for direct calls, independent of MCP tools/list registration.
+  if (!OPERATIONAL_CATALOG_NAMES.includes(name)) throw new ReadFailure("CLICKUP_TOOL_NOT_IMPLEMENTED");
   const W = id(g.workspaceId),
     N = count(a);
   const call = (method: Method, path: string, body?: Json) => send(g, f, method, path, body);
@@ -363,9 +344,22 @@ export async function runCatalogOperation(
   switch (name) {
     case "clickup_search_workspace": {
       const q = txt(a["query"], 160).toLowerCase();
-      const results = await call("GET", v2("team/" + W + "/task?page=0&subtasks=true"));
+      // Never search all Workspace tasks: the user may have more upstream rights
+      // than this MCP's configured home-List grant permits.
+      await listInWorkspace(g, f, g.listId);
+      const results = await call(
+        "GET",
+        v2("list/" + id(g.listId) + "/task?page=0&subtasks=true&include_closed=true"),
+      );
       if (!Array.isArray(results["tasks"])) throw new ReadFailure("CLICKUP_BAD_RESPONSE");
       const tasks = results["tasks"];
+      // A ClickUp task can appear in additional Lists. Only expose its home-List
+      // data under this one-List grant, and fail closed on incomplete metadata.
+      for (const candidate of tasks) {
+        const t = obj(candidate);
+        if (!t || String(obj(t["list"])?.["id"]) !== g.listId)
+          throw new ReadFailure("CLICKUP_SCOPE_OR_SCHEMA_REJECTED");
+      }
       const docs = await call("GET", v3("workspaces/" + W + "/docs?limit=50"));
       if (!Array.isArray(docs["docs"])) throw new ReadFailure("CLICKUP_BAD_RESPONSE");
       const d = docs["docs"];
@@ -414,6 +408,11 @@ export async function runCatalogOperation(
       );
       if (!Array.isArray(result["tasks"])) throw new ReadFailure("CLICKUP_BAD_RESPONSE");
       const tasks = result["tasks"];
+      for (const candidate of tasks) {
+        const t = obj(candidate);
+        if (!t || String(obj(t["list"])?.["id"]) !== g.listId)
+          throw new ReadFailure("CLICKUP_SCOPE_OR_SCHEMA_REJECTED");
+      }
       const found = tasks.filter((x) => {
         const t = obj(x);
         if (!t) return false;
