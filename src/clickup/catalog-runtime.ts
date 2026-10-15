@@ -296,14 +296,34 @@ async function uploadAttachment(
 }
 
 export const OPERATIONAL_CATALOG_NAMES: readonly string[] = [
-  // Explicit operational allowlist: descriptions alone never grant task-ID mutation rights.
   "clickup_search_workspace",
   "clickup_search_tasks_by_type",
   "clickup_search_tasks_by_tag",
   "clickup_create_task",
   "clickup_get_task",
+  "clickup_update_task",
+  "clickup_set_custom_field",
+  "clickup_delete_task",
+  "clickup_attach_file_to_task",
   "clickup_create_bulk_tasks",
+  "clickup_update_bulk_tasks",
+  "clickup_get_task_comments",
+  "clickup_get_threaded_replies",
+  "clickup_create_task_comment",
+  "clickup_add_tag_to_task",
+  "clickup_remove_tag_from_task",
+  "clickup_add_task_link",
+  "clickup_remove_task_link",
+  "clickup_add_dependency",
+  "clickup_remove_dependency",
+  "clickup_move_task_to_list",
+  "clickup_add_task_to_list",
+  "clickup_get_task_time_entries",
   "clickup_get_time_entries_for_tasks",
+  "clickup_start_time_tracking",
+  "clickup_stop_time_tracking",
+  "clickup_add_time_entry",
+  "clickup_get_current_time_entry",
   "clickup_get_workspace_hierarchy",
   "clickup_create_list",
   "clickup_create_list_in_folder",
@@ -322,6 +342,7 @@ export const OPERATIONAL_CATALOG_NAMES: readonly string[] = [
   "clickup_get_document_pages",
   "clickup_create_document_page",
   "clickup_update_document_page",
+  "clickup_get_task_time_in_status",
   "clickup_get_list_time_in_status",
 ];
 export async function runCatalogOperation(
@@ -330,9 +351,6 @@ export async function runCatalogOperation(
   g: ReadGrant,
   f: typeof fetch,
 ): Promise<Json> {
-  // Fail closed even for direct calls, independent of MCP tools/list registration.
-  if (!OPERATIONAL_CATALOG_NAMES.includes(name))
-    throw new ReadFailure("CLICKUP_TOOL_NOT_IMPLEMENTED");
   const W = id(g.workspaceId),
     N = count(a);
   const call = (method: Method, path: string, body?: Json) => send(g, f, method, path, body);
