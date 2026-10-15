@@ -147,6 +147,9 @@ async function inWorkspace(grant: ReadGrant, f: typeof fetch, spaceId: unknown):
     throw new ReadFailure("CLICKUP_SCOPE_OR_SCHEMA_REJECTED");
 }
 async function listInWorkspace(grant: ReadGrant, f: typeof fetch, listId: unknown): Promise<Json> {
+  // The individual ClickUp token may access additional Lists. That does NOT expand
+  // this MCP's explicitly configured home-List grant.
+  if (String(listId) !== grant.listId) throw new ReadFailure("CLICKUP_SCOPE_OR_SCHEMA_REJECTED");
   const list = await send(grant, f, "GET", v2("list/" + id(listId)));
   if (String(list["id"]) !== String(listId))
     throw new ReadFailure("CLICKUP_SCOPE_OR_SCHEMA_REJECTED");
@@ -471,10 +474,19 @@ export async function runCatalogOperation(
       const tasks = a["tasks"];
       if (!Array.isArray(tasks) || tasks.length < 1 || tasks.length > 10)
         throw new ReadFailure("CLICKUP_INVALID_ARGUMENT");
-      const outcome: unknown[] = [];
-      for (let i = 0; i < tasks.length; i++) {
-        const payload = taskBody(obj(tasks[i]) ?? {});
+      // Validate the ENTIRE batch before sending the first non-idempotent POST.
+      // Otherwise a bad later draft creates a task and returns a bare error,
+      // encouraging an accidental retry that duplicates the first task.
+      const validated = tasks.map((draft) => {
+        const item = obj(draft);
+        if (!item) throw new ReadFailure("CLICKUP_INVALID_ARGUMENT");
+        const payload = taskBody(item);
         if (!payload.name) throw new ReadFailure("CLICKUP_INVALID_ARGUMENT");
+        return payload;
+      });
+      const outcome: unknown[] = [];
+      for (let i = 0; i < validated.length; i++) {
+        const payload = validated[i]!;
         try {
           outcome.push({
             index: i,
@@ -500,20 +512,28 @@ export async function runCatalogOperation(
       const updates = a["task_updates"];
       if (!Array.isArray(updates) || updates.length < 1 || updates.length > 10)
         throw new ReadFailure("CLICKUP_INVALID_ARGUMENT");
-      const outcome: unknown[] = [];
-      for (let i = 0; i < updates.length; i++) {
-        const x = obj(updates[i]);
+      const validated = updates.map((draft) => {
+        const x = obj(draft);
         if (!x) throw new ReadFailure("CLICKUP_INVALID_ARGUMENT");
+        id(x["task_id"]);
+        const changes = obj(x["changes"]);
+        if (!changes || Object.keys(changes).length === 0)
+          throw new ReadFailure("CLICKUP_INVALID_ARGUMENT");
+        return { taskId: x["task_id"], changes: taskBody(changes, true) };
+      });
+      const outcome: unknown[] = [];
+      for (let i = 0; i < validated.length; i++) {
+        const x = validated[i]!;
         try {
-          await taskInWorkspace(g, f, x["task_id"]);
+          await taskInWorkspace(g, f, x.taskId);
           outcome.push({
             index: i,
             success: true,
             response: clip(
               await call(
                 "PUT",
-                v2("task/" + id(x["task_id"])),
-                taskBody(obj(x["changes"]) ?? {}, true),
+                v2("task/" + id(x.taskId)),
+                x.changes,
               ),
             ),
           });
