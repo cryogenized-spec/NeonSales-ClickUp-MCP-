@@ -331,7 +331,8 @@ export async function runCatalogOperation(
   f: typeof fetch,
 ): Promise<Json> {
   // Fail closed even for direct calls, independent of MCP tools/list registration.
-  if (!OPERATIONAL_CATALOG_NAMES.includes(name)) throw new ReadFailure("CLICKUP_TOOL_NOT_IMPLEMENTED");
+  if (!OPERATIONAL_CATALOG_NAMES.includes(name))
+    throw new ReadFailure("CLICKUP_TOOL_NOT_IMPLEMENTED");
   const W = id(g.workspaceId),
     N = count(a);
   const call = (method: Method, path: string, body?: Json) => send(g, f, method, path, body);
