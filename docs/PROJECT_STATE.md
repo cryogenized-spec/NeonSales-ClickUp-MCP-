@@ -1,8 +1,10 @@
-# Security hardening handoff — 15 October 2026 SAST (PR #25 pending)
+# Owner correction — 15 October 2026 SAST (PR #25 pending)
 
-**Not merged, not deployed, not accepted against live ClickUp.** After Codex reviewed commit `382428f2c84bb566dfc98372330ba6c4407ddb25`, it found P1 Workspace-wide task search bypass, P1 task-ID write time-of-check/time-of-use race, and P2 unusable cross-List move/add operations under a single-List grant. The PR branch now routes task searches through the approved List, rejects foreign/unknown task home Lists, explicitly advertises only **26** of 48 historical adapters and rejects the **22 deferred task-ID-sensitive operations** before any HTTP. This preserves safe List-bound task creation and separately Workspace-scoped metadata/Chat/Docs operations. No per-tool duplicate approvals, journal or rollback. Exact-head CI and independent re-review must pass before owner-controlled merge; do not claim runtime success from CI. Deployment credentials and secrets must be configured by the owner through protected GitHub staging environment and Cloudflare Worker secrets, never through chat or Git history.
+**Owner directive:** Do not remove or disable the 22 task-related operations. Restore and retain all **48** operational ClickUp catalogue tool registrations, along with the associated regression tests. The previously proposed 26-tool allowlist and fail-closed dispatcher guard have been reverted on the PR branch. Keep the scoped-List search fix, single-List check and full-batch input validation in PR #25.
 
-**Next action:** finish exact-head CI and Codex security review, merge PR #25 only if green and findings resolved, then configure protected staging resources/secrets and manually run the existing staging workflow. Conduct real OAuth and read/write acceptance on a disposable List before wider rollout.
+**Security status:** The task-ID preflight-to-mutation race remains unresolved. No verified atomic List-bound upstream precondition has been established. The current owner instruction is to preserve feature coverage, **not** an assertion that the race has been fixed or that the owner has approved staging or production exposure of the risk. Do not merge or deploy until independent review and a separately recorded release decision. The exact-head CI and any follow-up review must be repeated after reverting the tool removals.
+
+**Next operational handoff:** The owner can inspect existing Cloudflare staging resources and configure GitHub/Worker secrets through CLI, without deploying or enabling live ClickUp writes. Do not transmit credentials in chat.
 
 ---
 
