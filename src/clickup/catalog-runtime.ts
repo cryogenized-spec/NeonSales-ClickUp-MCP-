@@ -529,13 +529,7 @@ export async function runCatalogOperation(
           outcome.push({
             index: i,
             success: true,
-            response: clip(
-              await call(
-                "PUT",
-                v2("task/" + id(x.taskId)),
-                x.changes,
-              ),
-            ),
+            response: clip(await call("PUT", v2("task/" + id(x.taskId)), x.changes)),
           });
         } catch (e) {
           outcome.push({

@@ -89,15 +89,24 @@ describe("Phase 7 individual OAuth and native catalogue - adversarial tests", ()
   it("denies a different List even when it belongs to the same ClickUp Workspace", async () => {
     const api = fakeApi();
     await expect(
-      runCatalogOperation("clickup_create_task", {
-        list_id: "12346",
-        new_task: { name: "Not this List" },
-      }, makeGrant(), api as typeof fetch),
+      runCatalogOperation(
+        "clickup_create_task",
+        {
+          list_id: "12346",
+          new_task: { name: "Not this List" },
+        },
+        makeGrant(),
+        api as typeof fetch,
+      ),
     ).rejects.toThrow("CLICKUP_SCOPE_OR_SCHEMA_REJECTED");
     expect(api).not.toHaveBeenCalled();
     await expect(
-      runCatalogOperation("clickup_get_list", { list_id: "12346" },
-        makeGrant(), api as typeof fetch),
+      runCatalogOperation(
+        "clickup_get_list",
+        { list_id: "12346" },
+        makeGrant(),
+        api as typeof fetch,
+      ),
     ).rejects.toThrow("CLICKUP_SCOPE_OR_SCHEMA_REJECTED");
     expect(api).not.toHaveBeenCalled();
   });
@@ -118,12 +127,17 @@ describe("Phase 7 individual OAuth and native catalogue - adversarial tests", ()
   it("validates ALL bulk task updates before mutating the first task", async () => {
     const api = fakeApi();
     await expect(
-      runCatalogOperation("clickup_update_bulk_tasks", {
-        task_updates: [
-          { task_id: "abc123", changes: { name: "Valid first" } },
-          { task_id: "../../invalid", changes: { name: "Invalid second" } },
-        ],
-      }, makeGrant(), api as typeof fetch),
+      runCatalogOperation(
+        "clickup_update_bulk_tasks",
+        {
+          task_updates: [
+            { task_id: "abc123", changes: { name: "Valid first" } },
+            { task_id: "../../invalid", changes: { name: "Invalid second" } },
+          ],
+        },
+        makeGrant(),
+        api as typeof fetch,
+      ),
     ).rejects.toThrow("CLICKUP_INVALID_ARGUMENT");
     expect(api).not.toHaveBeenCalled();
   });
