@@ -1,3 +1,11 @@
+# Security hardening handoff — 15 October 2026 SAST (PR #25 pending)
+
+**Not merged, not deployed, not accepted against live ClickUp.** After Codex reviewed commit `382428f2c84bb566dfc98372330ba6c4407ddb25`, it found P1 Workspace-wide task search bypass, P1 task-ID write time-of-check/time-of-use race, and P2 unusable cross-List move/add operations under a single-List grant. The PR branch now routes task searches through the approved List, rejects foreign/unknown task home Lists, explicitly advertises only **26** of 48 historical adapters and rejects the **22 deferred task-ID-sensitive operations** before any HTTP. This preserves safe List-bound task creation and separately Workspace-scoped metadata/Chat/Docs operations. No per-tool duplicate approvals, journal or rollback. Exact-head CI and independent re-review must pass before owner-controlled merge; do not claim runtime success from CI. Deployment credentials and secrets must be configured by the owner through protected GitHub staging environment and Cloudflare Worker secrets, never through chat or Git history.
+
+**Next action:** finish exact-head CI and Codex security review, merge PR #25 only if green and findings resolved, then configure protected staging resources/secrets and manually run the existing staging workflow. Conduct real OAuth and read/write acceptance on a disposable List before wider rollout.
+
+---
+
 # Integration checkpoint — 12 October 2026 SAST
 
 **Status: merged and CI-green on main.** Merged [Phase 7 PR #24](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/pull/24), its Codex P1/P2 fixes, and Dependabot pinned GitHub Actions updates #9/#10. Final integration commit `46c834c714c08aa1b13e2f026351292c0fcc9315` passed [Strict CI #38225656102](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/actions/runs/38225656102). Phase 7's reviewed prior head passed 155/155 Vitest tests (15 suites), lint, format, strict TypeScript, Worker build, local HTTPS/OAuth security smoke, policy checks and npm audit; these are **mocked/local tests, not real ClickUp runtime acceptance**.
