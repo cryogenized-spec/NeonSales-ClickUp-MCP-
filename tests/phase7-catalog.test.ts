@@ -37,13 +37,16 @@ const fakeApi = () =>
   });
 
 describe("Phase 7 individual OAuth and native catalogue - adversarial tests", () => {
-  it("registers all 48 REST backed capability names including a bounded binary attachment implementation", () => {
-    expect(OPERATIONAL_CATALOG_NAMES).toHaveLength(48);
-    expect(new Set(OPERATIONAL_CATALOG_NAMES).size).toBe(48);
+  it("advertises only the reviewed 26 operational entries, not task-ID mutations", () => {
+    expect(CLICKUP_MODEL_TOOL_CATALOG).toHaveLength(48);
+    expect(OPERATIONAL_CATALOG_NAMES).toHaveLength(26);
+    expect(new Set(OPERATIONAL_CATALOG_NAMES).size).toBe(26);
     expect(
       OPERATIONAL_CATALOG_NAMES.every((n) => CLICKUP_MODEL_TOOL_CATALOG.some((s) => s.name === n)),
     ).toBe(true);
-    expect(OPERATIONAL_CATALOG_NAMES).toContain("clickup_attach_file_to_task");
+    expect(OPERATIONAL_CATALOG_NAMES).toContain("clickup_create_task");
+    expect(OPERATIONAL_CATALOG_NAMES).not.toContain("clickup_update_task");
+    expect(OPERATIONAL_CATALOG_NAMES).not.toContain("clickup_move_task_to_list");
   });
 
   it("creates a task in a verified Workspace List using solely the connected employee OAuth token", async () => {
@@ -122,24 +125,6 @@ describe("Phase 7 individual OAuth and native catalogue - adversarial tests", ()
       ),
     ).rejects.toThrow("CLICKUP_INVALID_ARGUMENT");
     expect(api.mock.calls.every(([, init]) => init?.method !== "POST")).toBe(true);
-  });
-
-  it("validates ALL bulk task updates before mutating the first task", async () => {
-    const api = fakeApi();
-    await expect(
-      runCatalogOperation(
-        "clickup_update_bulk_tasks",
-        {
-          task_updates: [
-            { task_id: "abc123", changes: { name: "Valid first" } },
-            { task_id: "../../invalid", changes: { name: "Invalid second" } },
-          ],
-        },
-        makeGrant(),
-        api as typeof fetch,
-      ),
-    ).rejects.toThrow("CLICKUP_INVALID_ARGUMENT");
-    expect(api).not.toHaveBeenCalled();
   });
 
   it("keeps credentials separate across employees in parallel, never a shared API token", async () => {
@@ -254,134 +239,6 @@ describe("Phase 7 individual OAuth and native catalogue - adversarial tests", ()
     ).rejects.toThrow("CLICKUP_RATE_LIMITED");
     expect(f).toHaveBeenCalledTimes(1);
   });
-  it("sends actual provided file bytes as multipart to ClickUp, never fetches a file URL", async () => {
-    let sent: FormData | null = null;
-    const f = vi.fn(async (request: RequestInfo | URL, init?: RequestInit) => {
-      const u = new URL(String(request));
-      if (init?.method === "POST") {
-        expect(u.href).toBe("https://api.clickup.com/api/v2/task/abc123/attachment");
-        expect((init.headers as Record<string, string>)["Authorization"]).toBe("person-707");
-        expect((init.headers as Record<string, string>)["Content-Type"]).toBeUndefined();
-        sent = init.body as FormData;
-        return reply({ id: "attachment-1" });
-      }
-      return reply(fixture(u.pathname));
-    });
-    const output = await runCatalogOperation(
-      "clickup_attach_file_to_task",
-      {
-        task_id: "abc123",
-        file_name: "note.txt",
-        file_base64: btoa("hello"),
-        media_type: "text/plain",
-      },
-      makeGrant(),
-      f as typeof fetch,
-    );
-    expect(output).toMatchObject({ id: "attachment-1" });
-    expect(sent).not.toBeNull();
-    const blob = sent!.get("attachment[0]") as File;
-    expect(blob.name).toBe("note.txt");
-    expect(await blob.text()).toBe("hello");
-    expect(f).toHaveBeenCalledTimes(4);
-  });
-
-  it("refuses oversized, malformed or path-style attachment input before any upload", async () => {
-    const outbound = fakeApi();
-    for (const [file_name, file_base64] of [
-      ["../bad.txt", btoa("hello")],
-      ["good.txt", "not valid==="],
-      ["good.txt", "Z".repeat(700100)],
-    ]) {
-      await expect(
-        runCatalogOperation(
-          "clickup_attach_file_to_task",
-          { task_id: "abc123", file_name, file_base64 },
-          makeGrant(),
-          outbound as typeof fetch,
-        ),
-      ).rejects.toThrow("CLICKUP_INVALID_ARGUMENT");
-    }
-    expect(outbound.mock.calls.every(([, opts]) => opts?.method !== "POST")).toBe(true);
-  });
-  it("encodes multiword ClickUp tag names without accepting path injection", async () => {
-    const f = vi.fn(async (req: RequestInfo | URL, _init?: RequestInit) =>
-      reply(fixture(new URL(String(req)).pathname)),
-    );
-    await runCatalogOperation(
-      "clickup_add_tag_to_task",
-      { task_id: "abc123", tag: "Needs Attention" },
-      makeGrant(),
-      f as typeof fetch,
-    );
-    const writes = f.mock.calls.filter(([, init]) => init?.method === "POST");
-    expect(writes).toHaveLength(1);
-    expect(String(writes[0]?.[0])).toContain("/tag/Needs%20Attention");
-  });
-
-  it("rejects a move when the task's current home List does not equal source_list_id", async () => {
-    const f = fakeApi();
-    await expect(
-      runCatalogOperation(
-        "clickup_move_task_to_list",
-        { task_id: "abc123", source_list_id: "99999", destination_list_id: "12345" },
-        makeGrant(),
-        f as typeof fetch,
-      ),
-    ).rejects.toThrow("CLICKUP_SCOPE_OR_SCHEMA_REJECTED");
-    expect(f.mock.calls.every(([, init]) => init?.method !== "PUT")).toBe(true);
-  });
-
-  it("uses query parameters for deletion of dependencies rather than a DELETE JSON body", async () => {
-    const f = vi.fn(async (req: RequestInfo | URL, _init?: RequestInit) => {
-      const path = new URL(String(req)).pathname;
-      if (path === "/api/v2/task/block123") return reply({ id: "block123", list: { id: "12345" } });
-      if (path === "/api/v2/task/wait123") return reply({ id: "wait123", list: { id: "12345" } });
-      return reply(fixture(path));
-    });
-    await runCatalogOperation(
-      "clickup_remove_dependency",
-      {
-        blocking_task_id: "block123",
-        waiting_task_id: "wait123",
-      },
-      makeGrant(),
-      f as typeof fetch,
-    );
-    const deletion = f.mock.calls.find(([, init]) => init?.method === "DELETE");
-    expect(String(deletion?.[0])).toBe(
-      "https://api.clickup.com/api/v2/task/wait123/dependency?depends_on=block123",
-    );
-    expect(deletion?.[1]?.body).toBeUndefined();
-  });
-  it("rejects threaded replies from unverified or foreign parent comments", async () => {
-    const seen: string[] = [];
-    const fetcher = vi.fn(async (req: RequestInfo | URL) => {
-      const p = new URL(String(req)).pathname;
-      seen.push(p);
-      if (p === "/api/v2/task/abc123/comment") return reply({ comments: [{ id: "safe-c1" }] });
-      if (p === "/api/v2/comment/safe-c1/reply")
-        return reply({ replies: [{ id: "reply1", text: "same workspace" }] });
-      return reply(fixture(p));
-    });
-    await expect(
-      runCatalogOperation(
-        "clickup_get_threaded_replies",
-        { task_id: "abc123", comment_id: "foreign-c2" },
-        makeGrant(),
-        fetcher as typeof fetch,
-      ),
-    ).rejects.toThrow("CLICKUP_SCOPE_OR_SCHEMA_REJECTED");
-    expect(seen).not.toContain("/api/v2/comment/foreign-c2/reply");
-    const allowed = await runCatalogOperation(
-      "clickup_get_threaded_replies",
-      { task_id: "abc123", comment_id: "safe-c1" },
-      makeGrant(),
-      fetcher as typeof fetch,
-    );
-    expect(allowed).toMatchObject({ replies: [{ id: "reply1" }] });
-  });
-
   it("treats ambiguous 204 and empty-200 task creations as unknown writes", async () => {
     for (const response of [new Response(null, { status: 204 }), reply({})]) {
       const f = vi.fn(async (req: RequestInfo | URL, init?: RequestInit) =>
@@ -399,13 +256,17 @@ describe("Phase 7 individual OAuth and native catalogue - adversarial tests", ()
     }
   });
 
-  it("rejects missing tasks/docs search response arrays instead of claiming zero matches", async () => {
+  it("rejects malformed List task and Workspace Docs responses", async () => {
     for (const malformed of ["tasks", "docs"]) {
       const f = vi.fn(async (req: RequestInfo | URL) => {
         const p = new URL(String(req)).pathname;
-        if (malformed === "tasks" && p === "/api/v2/team/555/task") return reply({});
-        if (malformed === "docs" && p === "/api/v3/workspaces/555/docs") return reply({});
-        return reply(p.includes("/docs") ? { docs: [] } : { tasks: [] });
+        if (p === "/api/v2/list/12345") return reply(fixture(p));
+        if (p === "/api/v2/team/555/space") return reply(fixture(p));
+        if (p === "/api/v2/list/12345/task")
+          return reply(malformed === "tasks" ? {} : { tasks: [] });
+        if (p === "/api/v3/workspaces/555/docs")
+          return reply(malformed === "docs" ? {} : { docs: [] });
+        return reply({ folders: [], lists: [] });
       });
       await expect(
         runCatalogOperation(
@@ -418,81 +279,70 @@ describe("Phase 7 individual OAuth and native catalogue - adversarial tests", ()
     }
   });
 
-  it("removes tags with spaces through a single URL-encoded native delete", async () => {
-    const f = fakeApi();
-    await runCatalogOperation(
-      "clickup_remove_tag_from_task",
-      { task_id: "abc123", tag: "Needs Attention" },
-      makeGrant(),
-      f as typeof fetch,
-    );
-    const deletes = f.mock.calls.filter(([, init]) => init?.method === "DELETE");
-    expect(deletes).toHaveLength(1);
-    expect(String(deletes[0]?.[0])).toContain("/tag/Needs%20Attention");
-  });
-
-  it("discloses truncation and possible additional comment pages", async () => {
+  it("never searches the full Workspace task collection and rejects foreign home-List tasks", async () => {
+    const urls: string[] = [];
     const f = vi.fn(async (req: RequestInfo | URL) => {
-      const p = new URL(String(req)).pathname;
-      if (p === "/api/v2/task/abc123/comment") {
-        return reply({ comments: Array.from({ length: 25 }, (_, i) => ({ id: "c" + i })) });
-      }
-      return reply(fixture(p));
-    });
-    const result = await runCatalogOperation(
-      "clickup_get_task_comments",
-      { task_id: "abc123", max_results: 10 },
-      makeGrant(),
-      f as typeof fetch,
-    );
-    expect(result["comments"]).toHaveLength(10);
-    expect(result).toMatchObject({ incomplete: true, first_page_only: true });
-  });
-
-  it("propagates attachment 429 cooldown to the per-user quota", async () => {
-    const events: string[] = [];
-    const grant: ReadGrant = {
-      ...makeGrant(),
-      quota: {
-        idFromName: (n: string) => n,
-        get: () => ({
-          fetch: async (request: Request) => {
-            events.push(new URL(request.url).pathname);
-            return reply({ allowed: true });
-          },
-        }),
-      },
-    };
-    const f = vi.fn(async (req: RequestInfo | URL, init?: RequestInit) => {
-      if (init?.method === "POST")
-        return new Response(JSON.stringify({}), {
-          status: 429,
-          headers: {
-            "Content-Type": "application/json",
-            "X-RateLimit-Reset": String(Math.floor(Date.now() / 1000) + 45),
-          },
-        });
-      return reply(fixture(new URL(String(req)).pathname));
+      const u = new URL(String(req));
+      urls.push(u.pathname);
+      if (u.pathname === "/api/v2/list/12345/task")
+        return reply({ tasks: [{ id: "wrong", name: "Sensitive", list: { id: "12346" } }] });
+      if (u.pathname === "/api/v2/list/12345") return reply(fixture(u.pathname));
+      if (u.pathname === "/api/v2/team/555/space") return reply(fixture(u.pathname));
+      throw Error("unexpected request");
     });
     await expect(
       runCatalogOperation(
-        "clickup_attach_file_to_task",
-        {
-          task_id: "abc123",
-          file_name: "test.txt",
-          file_base64: btoa("hello"),
-        },
-        grant,
+        "clickup_search_workspace",
+        { query: "Sensitive" },
+        makeGrant(),
         f as typeof fetch,
       ),
-    ).rejects.toThrow("CLICKUP_RATE_LIMITED");
-    expect(events).toContain("/cooldown");
+    ).rejects.toThrow("CLICKUP_SCOPE_OR_SCHEMA_REJECTED");
+    expect(urls).not.toContain("/api/v2/team/555/task");
+    expect(urls).not.toContain("/api/v3/workspaces/555/docs");
+  });
+
+  it("fails closed for every deferred task-ID operation before any network call", async () => {
+    const deferred = [
+      "clickup_update_task",
+      "clickup_set_custom_field",
+      "clickup_delete_task",
+      "clickup_attach_file_to_task",
+      "clickup_update_bulk_tasks",
+      "clickup_get_task_comments",
+      "clickup_get_threaded_replies",
+      "clickup_create_task_comment",
+      "clickup_add_tag_to_task",
+      "clickup_remove_tag_from_task",
+      "clickup_add_task_link",
+      "clickup_remove_task_link",
+      "clickup_add_dependency",
+      "clickup_remove_dependency",
+      "clickup_move_task_to_list",
+      "clickup_add_task_to_list",
+      "clickup_get_task_time_entries",
+      "clickup_start_time_tracking",
+      "clickup_stop_time_tracking",
+      "clickup_add_time_entry",
+      "clickup_get_current_time_entry",
+      "clickup_get_task_time_in_status",
+    ];
+    const outbound = fakeApi();
+    expect(deferred).toHaveLength(22);
+    for (const name of deferred) {
+      expect(OPERATIONAL_CATALOG_NAMES).not.toContain(name);
+      await expect(
+        runCatalogOperation(name, {}, makeGrant(), outbound as typeof fetch),
+      ).rejects.toThrow("CLICKUP_TOOL_NOT_IMPLEMENTED");
+    }
+    expect(outbound).not.toHaveBeenCalled();
   });
 
   it("returns matching Workspace Folders and Lists, including folder children", async () => {
     const f = vi.fn(async (req: RequestInfo | URL) => {
       const p = new URL(String(req)).pathname;
-      if (p === "/api/v2/team/555/task") return reply({ tasks: [] });
+      if (p === "/api/v2/list/12345") return reply(fixture(p));
+      if (p === "/api/v2/list/12345/task") return reply({ tasks: [] });
       if (p === "/api/v3/workspaces/555/docs") return reply({ docs: [] });
       if (p === "/api/v2/team/555/space") return reply({ spaces: [{ id: "777", name: "Sales" }] });
       if (p === "/api/v2/space/777/folder")
