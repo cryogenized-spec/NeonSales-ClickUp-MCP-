@@ -76,25 +76,28 @@ describe("Phase 4 separate authorization policy", () => {
   it("requires explicit Workspace opt-in and verified exclusive OAuth consent", async () => {
     const full = await requireReadGrant(auth, { ...env, CLICKUP_RESOURCE_SCOPE: "workspace" });
     expect(full.resourceScope).toBe("workspace");
-    await expect(requireReadGrant(auth, { ...env, CLICKUP_RESOURCE_SCOPE: "other" }))
-      .rejects.toThrowError("CLICKUP_NOT_CONFIGURED");
+    await expect(
+      requireReadGrant(auth, { ...env, CLICKUP_RESOURCE_SCOPE: "other" }),
+    ).rejects.toThrowError("CLICKUP_NOT_CONFIGURED");
     const missingEvidence = {
       ...env,
       CLICKUP_RESOURCE_SCOPE: "workspace",
       CLICKUP_CONNECTIONS: {
         idFromName: () => "stub",
         get: () => ({
-          fetch: async () => Response.json({
-            connected: true,
-            clickupUserId: "456",
-            workspaceId: "555",
-            accessToken: "old-token-without-verification",
-          }),
+          fetch: async () =>
+            Response.json({
+              connected: true,
+              clickupUserId: "456",
+              workspaceId: "555",
+              accessToken: "old-token-without-verification",
+            }),
         }),
       },
     };
-    await expect(requireReadGrant(auth, missingEvidence))
-      .rejects.toThrowError("CLICKUP_WORKSPACE_RECONSENT_REQUIRED");
+    await expect(requireReadGrant(auth, missingEvidence)).rejects.toThrowError(
+      "CLICKUP_WORKSPACE_RECONSENT_REQUIRED",
+    );
   });
 
   it.each([
