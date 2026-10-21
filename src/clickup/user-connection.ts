@@ -55,6 +55,11 @@ export class ClickUpUserConnection {
     state.storage.sql.exec(
       "CREATE TABLE IF NOT EXISTS connection (id INTEGER PRIMARY KEY CHECK(id = 1), subject TEXT NOT NULL, clickup_user_id TEXT NOT NULL, workspace_id TEXT NOT NULL, cipher TEXT NOT NULL, iv TEXT NOT NULL, connected_at_ms INTEGER NOT NULL)",
     );
+    // Old connections lack verified single-Workspace OAuth evidence and must
+    // reconnect to activate the optional Workspace-wide operational policy.
+    state.storage.sql.exec(
+      "CREATE TABLE IF NOT EXISTS connection_authorization (id INTEGER PRIMARY KEY CHECK(id = 1), subject TEXT NOT NULL, workspace_exclusive INTEGER NOT NULL CHECK(workspace_exclusive IN (0,1)))",
+    );
   }
 
   async fetch(request: Request): Promise<Response> {
@@ -126,6 +131,7 @@ export class ClickUpUserConnection {
     }
     if (route === "/disconnect") {
       this.state.storage.sql.exec("DELETE FROM connection WHERE subject = ?", principal);
+      this.state.storage.sql.exec("DELETE FROM connection_authorization WHERE subject = ?", principal);
       this.state.storage.sql.exec("DELETE FROM pending WHERE subject = ?", principal);
       return Response.json({ disconnected: true }, { headers: metadataHeaders() });
     }
@@ -133,12 +139,14 @@ export class ClickUpUserConnection {
       const accessToken = body["accessToken"];
       const clickupId = body["clickupUserId"];
       const workspaceId = body["workspaceId"];
+      const workspaceExclusive = body["workspaceExclusive"];
       if (
         typeof accessToken !== "string" ||
         accessToken.length < 8 ||
         accessToken.length > 4096 ||
         !numeric(clickupId) ||
-        !numeric(workspaceId)
+        !numeric(workspaceId) ||
+        typeof workspaceExclusive !== "boolean"
       ) {
         return new Response(null, { status: 400 });
       }
@@ -153,21 +161,34 @@ export class ClickUpUserConnection {
             encoded,
           ),
         );
-        this.state.storage.sql.exec(
-          "INSERT OR REPLACE INTO connection(id,subject,clickup_user_id,workspace_id,cipher,iv,connected_at_ms) VALUES(1,?,?,?,?,?,?)",
-          principal,
-          clickupId,
-          workspaceId,
-          b64(ciphertext),
-          b64(iv),
-          now,
-        );
+        this.state.storage.transactionSync(() => {
+          this.state.storage.sql.exec(
+            "INSERT OR REPLACE INTO connection(id,subject,clickup_user_id,workspace_id,cipher,iv,connected_at_ms) VALUES(1,?,?,?,?,?,?)",
+            principal,
+            clickupId,
+            workspaceId,
+            b64(ciphertext),
+            b64(iv),
+            now,
+          );
+          this.state.storage.sql.exec(
+            "INSERT OR REPLACE INTO connection_authorization(id,subject,workspace_exclusive) VALUES(1,?,?)",
+            principal,
+            workspaceExclusive ? 1 : 0,
+          );
+        });
         return Response.json({ stored: true }, { headers: metadataHeaders() });
       } catch {
         return new Response(null, { status: 503 });
       }
     }
     if (route === "/credential") {
+      const verified = this.state.storage.sql
+        .exec<{ workspace_exclusive: number }>(
+          "SELECT workspace_exclusive FROM connection_authorization WHERE id = 1 AND subject = ?",
+          principal,
+        )
+        .toArray()[0];
       if (!stored || stored.subject !== principal) {
         return Response.json({ connected: false }, { headers: metadataHeaders() });
       }
@@ -188,6 +209,7 @@ export class ClickUpUserConnection {
             clickupUserId: stored.clickup_user_id,
             workspaceId: stored.workspace_id,
             accessToken: new TextDecoder().decode(raw),
+            workspaceExclusive: verified?.workspace_exclusive === 1,
           },
           { headers: metadataHeaders() },
         );
