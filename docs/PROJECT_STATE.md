@@ -1,3 +1,15 @@
+# Security review checkpoint — 21 October 2026 SAST (PR #25 remains blocked)
+
+**Reviewed PR head:** `17eb8df63552781a8559f9a210cbfb8a03e7352f` (prior to this documentation-only update). On that SHA GitHub Strict CI had succeeded, but the latest Codex review retained a P1 task-ID check-then-use race and a P2 cross-List tool semantics issue. The already-implemented home-List search restriction, complete bulk input prevalidation, and preservation of all 48 catalogue adapters remain intact.
+
+**New evidence artifact:** [PR #25 security gate, threat scenario, live acceptance matrix and release options](PR25_SECURITY_GATE_2026-10-21.md), committed first as `f2a266a0572b3f7418448e6b0d0cca90e1158010`. This documents unresolved risk and **does not** claim a code remedy, a successful live ClickUp race test, any security waiver, or owner release approval.
+
+**Release status:** NO MERGE / NO DEPLOY as security-cleared. No staging/production changes or ClickUp writes made. The new documentation commits must be checked against fresh exact-head CI before any specialist re-review or release assessment.
+
+**Next action:** Verify ClickUp permission inheritance and perform controlled cross-List race tests on disposable tasks with independent OAuth accounts; retain all 48 tools and obtain an explicit resource-scope policy decision if single-List isolation cannot be enforced upstream.
+
+---
+
 # Owner correction — 15 October 2026 SAST (PR #25 pending)
 
 **Owner directive:** Do not remove or disable the 22 task-related operations. Restore and retain all **48** operational ClickUp catalogue tool registrations, along with the associated regression tests. The previously proposed 26-tool allowlist and fail-closed dispatcher guard have been reverted on the PR branch. Keep the scoped-List search fix, single-List check and full-batch input validation in PR #25.
