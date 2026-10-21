@@ -32,10 +32,9 @@ function fakeSqlite() {
         pending = undefined;
       }
     } else if (sql.startsWith("SELECT workspace_exclusive FROM connection_authorization")) {
-      values =
-        authorization?.subject === params[0]
-          ? [{ workspace_exclusive: authorization.exclusive }]
-          : [];
+      if (authorization && authorization.subject === params[0]) {
+        values = [{ workspace_exclusive: authorization.exclusive }];
+      }
     } else if (sql.startsWith("INSERT OR REPLACE INTO connection_authorization")) {
       authorization = { subject: String(params[0]), exclusive: Number(params[1]) };
     } else if (sql.startsWith("DELETE FROM connection_authorization")) {
