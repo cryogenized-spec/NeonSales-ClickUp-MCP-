@@ -6,7 +6,7 @@
 import assert from "node:assert/strict";
 import { spawn, spawnSync } from "node:child_process";
 import { once } from "node:events";
-import { mkdtemp, writeFile, rm } from "node:fs/promises";
+import { mkdtemp, readFile, writeFile, rm } from "node:fs/promises";
 import https from "node:https";
 import net from "node:net";
 import os from "node:os";
@@ -20,6 +20,7 @@ const timeLimit = 75_000;
 let child;
 let output = "";
 let configCreated = false;
+let trustedLocalCertificate;
 
 async function openPort() {
   const server = net.createServer();
@@ -32,6 +33,7 @@ async function openPort() {
 }
 
 async function request(port, endpoint, { method = "GET", headers = {} } = {}) {
+  assert(trustedLocalCertificate, "Local TLS trust must be initialized before requests");
   return new Promise((resolve, reject) => {
     const req = https.request(
       {
@@ -40,8 +42,8 @@ async function request(port, endpoint, { method = "GET", headers = {} } = {}) {
         path: endpoint,
         method,
         headers,
-        // Only for the generated localhost-only certificate; no external host is contacted.
-        rejectUnauthorized: false,
+        // Trust only the fresh, generated localhost certificate. TLS verification stays enabled.
+        ca: trustedLocalCertificate,
         timeout: 2500,
       },
       (res) => {
@@ -125,6 +127,7 @@ try {
     "-addext", "subjectAltName=IP:127.0.0.1",
   ], { stdio: "pipe" });
   assert.equal(openssl.status, 0, "local OpenSSL certificate generation failed");
+  trustedLocalCertificate = await readFile(cert);
 
   const absentPort = await openPort();
   const withoutBinding = await runWorker(absentPort, cert, key, false);
