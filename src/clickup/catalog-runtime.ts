@@ -149,7 +149,8 @@ async function inWorkspace(grant: ReadGrant, f: typeof fetch, spaceId: unknown):
 async function listInWorkspace(grant: ReadGrant, f: typeof fetch, listId: unknown): Promise<Json> {
   // The individual ClickUp token may access additional Lists. That does NOT expand
   // this MCP's explicitly configured home-List grant.
-  if (String(listId) !== grant.listId) throw new ReadFailure("CLICKUP_SCOPE_OR_SCHEMA_REJECTED");
+  if (grant.resourceScope !== "workspace" && String(listId) !== grant.listId)
+    throw new ReadFailure("CLICKUP_SCOPE_OR_SCHEMA_REJECTED");
   const list = await send(grant, f, "GET", v2("list/" + id(listId)));
   if (String(list["id"]) !== String(listId))
     throw new ReadFailure("CLICKUP_SCOPE_OR_SCHEMA_REJECTED");
@@ -353,6 +354,7 @@ export async function runCatalogOperation(
 ): Promise<Json> {
   const W = id(g.workspaceId),
     N = count(a);
+  const workspaceScope = g.resourceScope === "workspace";
   const call = (method: Method, path: string, body?: Json) => send(g, f, method, path, body);
   const task = async (k: string) => taskInWorkspace(g, f, a[k]);
   const list = async (k: string) => listInWorkspace(g, f, a[k]);
@@ -365,10 +367,12 @@ export async function runCatalogOperation(
       const q = txt(a["query"], 160).toLowerCase();
       // Never search all Workspace tasks: the user may have more upstream rights
       // than this MCP's configured home-List grant permits.
-      await listInWorkspace(g, f, g.listId);
+      if (!workspaceScope) await listInWorkspace(g, f, g.listId);
       const results = await call(
         "GET",
-        v2("list/" + id(g.listId) + "/task?page=0&subtasks=true&include_closed=true"),
+        workspaceScope
+          ? v2("team/" + W + "/task?page=0&subtasks=true&include_closed=true")
+          : v2("list/" + id(g.listId) + "/task?page=0&subtasks=true&include_closed=true"),
       );
       if (!Array.isArray(results["tasks"])) throw new ReadFailure("CLICKUP_BAD_RESPONSE");
       const tasks = results["tasks"];
@@ -376,7 +380,7 @@ export async function runCatalogOperation(
       // data under this one-List grant, and fail closed on incomplete metadata.
       for (const candidate of tasks) {
         const t = obj(candidate);
-        if (!t || String(obj(t["list"])?.["id"]) !== g.listId)
+        if (!t || (!workspaceScope && String(obj(t["list"])?.["id"]) !== g.listId))
           throw new ReadFailure("CLICKUP_SCOPE_OR_SCHEMA_REJECTED");
       }
       const docs = await call("GET", v3("workspaces/" + W + "/docs?limit=50"));
@@ -420,10 +424,12 @@ export async function runCatalogOperation(
     case "clickup_search_tasks_by_type":
     case "clickup_search_tasks_by_tag": {
       const target = a["list_id"] ?? g.listId;
-      await listInWorkspace(g, f, target);
+      if (!workspaceScope || a["list_id"] !== undefined) await listInWorkspace(g, f, target);
       const result = await call(
         "GET",
-        v2("list/" + id(target) + "/task?page=0&subtasks=true&include_closed=true"),
+        workspaceScope && a["list_id"] === undefined
+          ? v2("team/" + W + "/task?page=0&subtasks=true&include_closed=true")
+          : v2("list/" + id(target) + "/task?page=0&subtasks=true&include_closed=true"),
       );
       if (!Array.isArray(result["tasks"])) throw new ReadFailure("CLICKUP_BAD_RESPONSE");
       const tasks = result["tasks"];
