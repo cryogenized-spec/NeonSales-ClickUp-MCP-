@@ -12,7 +12,10 @@ const login = (id: string) => ({ scopes: ["mcp:read"], extra: { subject: "github
 
 function fakeBindings() {
   const pending = new Map<string, { hash: string; subject: string; expires: number }>();
-  const connected = new Map<string, { userId: string; workspaceId: string; token: string; workspaceExclusive: boolean }>();
+  const connected = new Map<
+    string,
+    { userId: string; workspaceId: string; token: string; workspaceExclusive: boolean }
+  >();
   const calls: string[] = [];
   const connections = {
     idFromName: (name: string) => name,
@@ -311,5 +314,4 @@ describe("independent ClickUp OAuth identity against current MCP principal", () 
       false,
     );
   });
-
 });
