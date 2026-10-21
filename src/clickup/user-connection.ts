@@ -131,7 +131,10 @@ export class ClickUpUserConnection {
     }
     if (route === "/disconnect") {
       this.state.storage.sql.exec("DELETE FROM connection WHERE subject = ?", principal);
-      this.state.storage.sql.exec("DELETE FROM connection_authorization WHERE subject = ?", principal);
+      this.state.storage.sql.exec(
+        "DELETE FROM connection_authorization WHERE subject = ?",
+        principal,
+      );
       this.state.storage.sql.exec("DELETE FROM pending WHERE subject = ?", principal);
       return Response.json({ disconnected: true }, { headers: metadataHeaders() });
     }
