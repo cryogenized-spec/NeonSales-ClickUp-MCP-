@@ -224,7 +224,13 @@ export async function disconnectClickUp(auth: unknown, env: unknown): Promise<Js
 export async function personalClickUpCredential(
   auth: unknown,
   env: unknown,
-): Promise<{ subject: string; token: string; clickupUserId: string; workspaceId: string; workspaceExclusive: boolean }> {
+): Promise<{
+  subject: string;
+  token: string;
+  clickupUserId: string;
+  workspaceId: string;
+  workspaceExclusive: boolean;
+}> {
   const subject = verifiedSubject(auth, env);
   const settings = config(env);
   const record = await internalCall(staffStub(settings.binding, subject), "credential", {
