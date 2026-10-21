@@ -611,5 +611,4 @@ describe("Phase 7 individual OAuth and native catalogue - adversarial tests", ()
     expect(requests).toContain("/api/v2/team/555/task");
     expect(requests).not.toContain("/api/v2/list/12345/task");
   });
-
 });
