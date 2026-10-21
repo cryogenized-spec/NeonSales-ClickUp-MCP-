@@ -346,12 +346,45 @@ export const OPERATIONAL_CATALOG_NAMES: readonly string[] = [
   "clickup_get_task_time_in_status",
   "clickup_get_list_time_in_status",
 ];
+// Task-ID follow-up endpoints cannot atomically honour a single home-List
+// grant if an external ClickUp actor moves the task between preflight and use.
+// Preserve all 48 registrations, but execute this subset only after the owner
+// explicitly enables Workspace authority and exclusive one-Workspace OAuth.
+const WORKSPACE_SCOPE_OPERATIONS = new Set([
+  "clickup_get_task",
+  "clickup_update_task",
+  "clickup_set_custom_field",
+  "clickup_delete_task",
+  "clickup_attach_file_to_task",
+  "clickup_update_bulk_tasks",
+  "clickup_get_task_comments",
+  "clickup_get_threaded_replies",
+  "clickup_create_task_comment",
+  "clickup_add_tag_to_task",
+  "clickup_remove_tag_from_task",
+  "clickup_add_task_link",
+  "clickup_remove_task_link",
+  "clickup_add_dependency",
+  "clickup_remove_dependency",
+  "clickup_move_task_to_list",
+  "clickup_add_task_to_list",
+  "clickup_get_task_time_entries",
+  "clickup_start_time_tracking",
+  "clickup_stop_time_tracking",
+  "clickup_add_time_entry",
+  "clickup_get_current_time_entry",
+  "clickup_get_task_time_in_status",
+  "clickup_get_list_time_in_status",
+]);
+
 export async function runCatalogOperation(
   name: string,
   a: Json,
   g: ReadGrant,
   f: typeof fetch,
 ): Promise<Json> {
+  if (g.resourceScope !== "workspace" && WORKSPACE_SCOPE_OPERATIONS.has(name))
+    throw new ReadFailure("CLICKUP_WORKSPACE_SCOPE_REQUIRED");
   const W = id(g.workspaceId),
     N = count(a);
   const workspaceScope = g.resourceScope === "workspace";
