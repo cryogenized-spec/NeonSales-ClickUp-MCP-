@@ -12,12 +12,14 @@ const makeGrant = (
   clickupUserId,
   workspaceId: "555",
   listId: "12345",
+  resourceScope: "workspace",
   apiToken,
   quota: {
     idFromName: (name: string) => name,
     get: () => ({ fetch: async () => Response.json({ allowed: true }) }),
   },
 });
+const makeListGrant = (): ReadGrant => ({ ...makeGrant(), resourceScope: "list" });
 const reply = (body: unknown, status = 200) =>
   Response.json(body, { status, headers: { "Content-Type": "application/json" } });
 const fixture = (path: string) => {
@@ -77,7 +79,7 @@ describe("Phase 7 individual OAuth and native catalogue - adversarial tests", ()
       runCatalogOperation(
         "clickup_create_task",
         { list_id: "99999", new_task: { name: "Bad target" } },
-        makeGrant(),
+        makeListGrant(),
         api as typeof fetch,
       ),
     ).rejects.toThrow("CLICKUP_SCOPE_OR_SCHEMA_REJECTED");
@@ -95,7 +97,7 @@ describe("Phase 7 individual OAuth and native catalogue - adversarial tests", ()
           list_id: "12346",
           new_task: { name: "Not this List" },
         },
-        makeGrant(),
+        makeListGrant(),
         api as typeof fetch,
       ),
     ).rejects.toThrow("CLICKUP_SCOPE_OR_SCHEMA_REJECTED");
@@ -104,7 +106,7 @@ describe("Phase 7 individual OAuth and native catalogue - adversarial tests", ()
       runCatalogOperation(
         "clickup_get_list",
         { list_id: "12346" },
-        makeGrant(),
+        makeListGrant(),
         api as typeof fetch,
       ),
     ).rejects.toThrow("CLICKUP_SCOPE_OR_SCHEMA_REJECTED");
@@ -415,7 +417,7 @@ describe("Phase 7 individual OAuth and native catalogue - adversarial tests", ()
         runCatalogOperation(
           "clickup_search_workspace",
           { query: "Stocktake" },
-          makeGrant(),
+          makeListGrant(),
           f as typeof fetch,
         ),
       ).rejects.toThrow("CLICKUP_BAD_RESPONSE");
@@ -437,7 +439,7 @@ describe("Phase 7 individual OAuth and native catalogue - adversarial tests", ()
       runCatalogOperation(
         "clickup_search_workspace",
         { query: "Sensitive" },
-        makeGrant(),
+        makeListGrant(),
         f as typeof fetch,
       ),
     ).rejects.toThrow("CLICKUP_SCOPE_OR_SCHEMA_REJECTED");
@@ -534,11 +536,71 @@ describe("Phase 7 individual OAuth and native catalogue - adversarial tests", ()
     const output = await runCatalogOperation(
       "clickup_search_workspace",
       { query: "Stocktake" },
-      makeGrant(),
+      makeListGrant(),
       f as typeof fetch,
     );
     expect(output["lists"]).toHaveLength(2);
     expect(output["folders"]).toHaveLength(1);
     expect(output["incomplete"]).toBe(false);
   });
+  it("keeps all 48 names while denying unsafe task-ID operations for a List-only grant", async () => {
+    const f = fakeApi();
+    for (const name of [
+      "clickup_get_task",
+      "clickup_update_task",
+      "clickup_update_bulk_tasks",
+      "clickup_get_list_time_in_status",
+      "clickup_stop_time_tracking",
+      "clickup_move_task_to_list",
+    ]) {
+      await expect(runCatalogOperation(name, { task_id: "abc123" }, makeListGrant(), f as typeof fetch))
+        .rejects.toThrow("CLICKUP_WORKSPACE_SCOPE_REQUIRED");
+    }
+    expect(f).not.toHaveBeenCalled();
+    expect(OPERATIONAL_CATALOG_NAMES).toHaveLength(48);
+  });
+
+  it("supports cross-List moves within the explicitly authorised Workspace", async () => {
+    const f = fakeApi();
+    await runCatalogOperation(
+      "clickup_move_task_to_list",
+      { task_id: "abc123", source_list_id: "12345", destination_list_id: "12346" },
+      makeGrant(),
+      f as typeof fetch,
+    );
+    const moved = f.mock.calls.filter(([, init]) => init?.method === "PUT");
+    expect(moved).toHaveLength(1);
+    expect(String(moved[0]?.[0])).toContain("/workspaces/555/tasks/abc123/home_list/12346");
+  });
+
+  it("blocks cross-Workspace destinations without issuing a mutation", async () => {
+    const f = fakeApi();
+    await expect(runCatalogOperation(
+      "clickup_move_task_to_list",
+      { task_id: "abc123", source_list_id: "12345", destination_list_id: "99999" },
+      makeGrant(),
+      f as typeof fetch,
+    )).rejects.toThrow("CLICKUP_SCOPE_OR_SCHEMA_REJECTED");
+    expect(f.mock.calls.every(([, init]) => init?.method !== "PUT")).toBe(true);
+  });
+
+  it("routes Workspace-wide search to ClickUp's Workspace endpoint only with expanded consent", async () => {
+    const requests: string[] = [];
+    const f = vi.fn(async (req: RequestInfo | URL) => {
+      const url = new URL(String(req));
+      requests.push(url.pathname);
+      if (url.pathname === "/api/v2/team/555/task")
+        return reply({ tasks: [{ id: "inb", name: "Stocktake B", list: { id: "12346" } }] });
+      if (url.pathname === "/api/v3/workspaces/555/docs") return reply({ docs: [] });
+      if (url.pathname === "/api/v2/team/555/space") return reply({ spaces: [{ id: "777", name: "Sales" }] });
+      if (url.pathname === "/api/v2/space/777/folder") return reply({ folders: [] });
+      if (url.pathname === "/api/v2/space/777/list") return reply({ lists: [] });
+      throw Error("unexpected endpoint");
+    });
+    const result = await runCatalogOperation("clickup_search_workspace", { query: "Stocktake" }, makeGrant(), f as typeof fetch);
+    expect(result["tasks"]).toHaveLength(1);
+    expect(requests).toContain("/api/v2/team/555/task");
+    expect(requests).not.toContain("/api/v2/list/12345/task");
+  });
+
 });
