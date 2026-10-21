@@ -1,3 +1,17 @@
+# 21 October 2026 SAST — PR #25 Workspace-bound security candidate
+
+**Owner request:** Resolve the task-move check/use race without dropping any of the 48 tool registrations. The ClickUp API does not document atomic List-bound task-ID writes. Consequently, a strict single-List policy and unrestricted task-ID mutations cannot both be enforced by this MCP alone.
+
+**Candidate code (unmerged):** Introduced server-only opt-in `CLICKUP_RESOURCE_SCOPE=workspace` policy; legacy List mode explicitly denies race-prone task-ID catalogue operations before external API calls, while preserving all 48 tool registrations. Workspace mode validates Lists against the connected Workspace and permits intra-Workspace cross-List operations; task search uses Workspace endpoint only in this mode. The per-user ClickUp OAuth callback now requires exactly one authorised Workspace to store an expanded-privilege credential, and the encrypted per-user Durable Object records that consent evidence transactionally. Existing credentials lack proof and require re-consent.
+
+**Release decision:** D-025 is **PROPOSED**, not ACCEPTED. No expanded policy activated, Cloudflare deployment, ClickUp write, or owner-approved broader access. Live ClickUp verification of token access after external cross-Workspace task moves remains mandatory. See [the design/acceptance plan](PR25_WORKSPACE_SCOPE_PLAN.md) and [original review](PR25_SECURITY_GATE_2026-10-21.md).
+
+**Evidence:** Strict CI and CodeQL are rerunning on the documentation-inclusive PR head. Earlier code-head CI failed formatting and then a test-typecheck issue; both were corrected, but those failures are not release passes. No final exact-head green status claimed until verified. Codex specialist review of the final SHA is also pending.
+
+**Next action:** Obtain exact-HEAD green CI and independent Codex review; then present the broader Workspace boundary for explicit owner acceptance before any staging activation or live mutation.
+
+---
+
 # Security review checkpoint — 21 October 2026 SAST (PR #25 remains blocked)
 
 **Reviewed PR head:** `17eb8df63552781a8559f9a210cbfb8a03e7352f` (prior to this documentation-only update). On that SHA GitHub Strict CI had succeeded, but the latest Codex review retained a P1 task-ID check-then-use race and a P2 cross-List tool semantics issue. The already-implemented home-List search restriction, complete bulk input prevalidation, and preservation of all 48 catalogue adapters remain intact.
