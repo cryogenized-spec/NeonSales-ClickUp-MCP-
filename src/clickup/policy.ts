@@ -5,6 +5,8 @@ export interface ReadGrant {
   readonly subject: string;
   readonly clickupUserId: string;
   readonly listId: string;
+  /** Explicit owner-controlled catalogue authority; unset is legacy single-List. */
+  readonly resourceScope?: "list" | "workspace";
   readonly workspaceId: string;
   readonly apiToken: string;
   readonly quota: {
@@ -49,9 +51,11 @@ export async function requireReadGrant(auth: unknown, bindings: unknown): Promis
     throw new ReadFailure("CLICKUP_NOT_CONFIGURED");
   }
   const listId = env["CLICKUP_LIST_ID"];
+  const resourceScope = env["CLICKUP_RESOURCE_SCOPE"] ?? "list";
   const readIds = env["CLICKUP_READ_GITHUB_IDS"];
   const quota = record(env["CLICKUP_QUOTA"]);
   if (
+    (resourceScope !== "list" && resourceScope !== "workspace") ||
     typeof listId !== "string" ||
     !/^[1-9]\d{0,17}$/.test(listId) ||
     typeof readIds !== "string" ||
@@ -72,10 +76,16 @@ export async function requireReadGrant(auth: unknown, bindings: unknown): Promis
   if (!approved.has(subject.slice(7))) throw new ReadFailure("CLICKUP_ACCESS_DENIED");
   const user = await personalClickUpCredential(auth, bindings);
   if (user.subject !== subject) throw new ReadFailure("CLICKUP_ACCESS_DENIED");
+  // Workspace-wide catalogue operations are safe only with an OAuth credential
+  // proven at consent to cover precisely this one Workspace; legacy cached
+  // tokens carry no such proof and must reconnect rather than be grandfathered.
+  if (resourceScope === "workspace" && user.workspaceExclusive !== true)
+    throw new ReadFailure("CLICKUP_WORKSPACE_RECONSENT_REQUIRED");
   return {
     subject,
     clickupUserId: user.clickupUserId,
     listId,
+    resourceScope,
     workspaceId: user.workspaceId,
     apiToken: user.token,
     quota: quota as unknown as ReadGrant["quota"],
