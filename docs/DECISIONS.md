@@ -35,6 +35,8 @@
 
 | D-024 | 2026-10-11 | ACCEPTED (owner direction) | **No separate action journal, rollback subsystem, activity dashboard or duplicate client tool-approval settings.** ClickUp handles native task history; Claude/ChatGPT handle per-tool prompts. | Avoid duplicated state and extra failure modes. Keep only necessary OAuth identity, resource authorization and quota protections. |
 
+| D-025 | 2026-10-21 | PROPOSED — NOT ACTIVATED | Make NeonSales Workspace (not a single List) the authority for the 48-operation catalogue **only after explicit owner acceptance**. Require one-Workspace ClickUp OAuth consent per staff member and preserve legacy List mode with fail-closed task-ID tools. | Resolves the incompatible cross-List requirements without claiming a nonexistent atomic List precondition; live ClickUp scope/permission and cross-Workspace move tests remain release gates. See [PR25_WORKSPACE_SCOPE_PLAN.md](PR25_WORKSPACE_SCOPE_PLAN.md). |
+
 ## Record an accepted decision
 
 Add a new row (or change PROPOSED → ACCEPTED) with the owner's actual review decision, date/time in SAST if known, trade-offs, and affected files. For changed decisions, mark original SUPERSEDED and link the replacement. Don't fabricate approval.

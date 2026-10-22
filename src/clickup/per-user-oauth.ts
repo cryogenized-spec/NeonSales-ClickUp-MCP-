@@ -224,7 +224,13 @@ export async function disconnectClickUp(auth: unknown, env: unknown): Promise<Js
 export async function personalClickUpCredential(
   auth: unknown,
   env: unknown,
-): Promise<{ subject: string; token: string; clickupUserId: string; workspaceId: string }> {
+): Promise<{
+  subject: string;
+  token: string;
+  clickupUserId: string;
+  workspaceId: string;
+  workspaceExclusive: boolean;
+}> {
   const subject = verifiedSubject(auth, env);
   const settings = config(env);
   const record = await internalCall(staffStub(settings.binding, subject), "credential", {
@@ -246,6 +252,7 @@ export async function personalClickUpCredential(
     token: record["accessToken"],
     clickupUserId: String(record["clickupUserId"]),
     workspaceId: settings.workspaceId,
+    workspaceExclusive: record["workspaceExclusive"] === true,
   };
 }
 
@@ -346,6 +353,15 @@ export async function finishClickUpOAuth(
       providerRequest(fetcher, "team", token),
     ]);
     const clickupId = decimal(obj(profile["user"])?.["id"]);
+    const resourceScope = obj(env)?.["CLICKUP_RESOURCE_SCOPE"] ?? "list";
+    if (resourceScope !== "list" && resourceScope !== "workspace") return fail();
+    const exclusivelyAuthorized =
+      Array.isArray(teams["teams"]) &&
+      teams["teams"].length === 1 &&
+      decimal(obj(teams["teams"][0])?.["id"]) === settings.workspaceId;
+    // An exclusive OAuth Workspace grant is the authoritative boundary.
+    // Local List preflights cannot atomically prevent an external task move.
+    if (resourceScope === "workspace" && !exclusivelyAuthorized) return fail();
     // Fail BEFORE /store. Otherwise a different consenting ClickUp account
     // can silently replace a previously valid staff token in the vault.
     const expectedUserId = expectedClickUpUserId(env, subject);
@@ -362,6 +378,7 @@ export async function finishClickUpOAuth(
       accessToken: token,
       clickupUserId: clickupId,
       workspaceId: settings.workspaceId,
+      workspaceExclusive: exclusivelyAuthorized,
     });
     if (stored["stored"] !== true) return fail();
     return new Response(

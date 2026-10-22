@@ -25,6 +25,7 @@ const env = {
             clickupUserId: "456",
             workspaceId: "555",
             accessToken: "nonworking-personal-oauth-token-fixture",
+            workspaceExclusive: true,
           });
         if (path === "/status")
           return Response.json({ connected: true, clickupUserId: "456", workspaceId: "555" });
@@ -70,6 +71,33 @@ describe("Phase 4 separate authorization policy", () => {
     const grant = await requireReadGrant(auth, env);
     expect(grant.subject).toBe("github:11");
     expect(grant.listId).toBe("12345");
+  });
+
+  it("requires explicit Workspace opt-in and verified exclusive OAuth consent", async () => {
+    const full = await requireReadGrant(auth, { ...env, CLICKUP_RESOURCE_SCOPE: "workspace" });
+    expect(full.resourceScope).toBe("workspace");
+    await expect(
+      requireReadGrant(auth, { ...env, CLICKUP_RESOURCE_SCOPE: "other" }),
+    ).rejects.toThrowError("CLICKUP_NOT_CONFIGURED");
+    const missingEvidence = {
+      ...env,
+      CLICKUP_RESOURCE_SCOPE: "workspace",
+      CLICKUP_CONNECTIONS: {
+        idFromName: () => "stub",
+        get: () => ({
+          fetch: async () =>
+            Response.json({
+              connected: true,
+              clickupUserId: "456",
+              workspaceId: "555",
+              accessToken: "old-token-without-verification",
+            }),
+        }),
+      },
+    };
+    await expect(requireReadGrant(auth, missingEvidence)).rejects.toThrowError(
+      "CLICKUP_WORKSPACE_RECONSENT_REQUIRED",
+    );
   });
 
   it.each([

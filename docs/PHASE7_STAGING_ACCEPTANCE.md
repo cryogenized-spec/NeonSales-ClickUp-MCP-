@@ -2,6 +2,8 @@
 
 **Status (12 October 2026, SAST):** [PR #24](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/pull/24) and its security fixes have been merged, followed by GitHub Actions updates #9/#10. **Final main CI succeeded**, with 155/155 synthetic Vitest tests and local workerd security checks. Real ClickUp API response shapes, permissions, rate limits, activity attribution and the newly built tools' live behavior **remain unverified**; the owner previously confirmed that Claude recognized the earlier Cloudflare-hosted custom MCP. Merged code is not equivalent to a deployed or acceptance-tested Worker. No journal, duplicate permissions UI or rollback subsystem was added.
 
+> **15 October 2026, PR #25 pending:** The owner directed that **all 48 catalogue adapters remain registered**. Do not disable 22 operations as a response to the task-move time-of-check/time-of-use race. The new List-scoped task search and bulk-input prevalidation changes remain proposed; the task-ID read/write race has no documented atomic remedy in this code. **PR #25 must not be merged or staged as security-cleared on CI evidence alone.** Evaluate the residual risk and obtain explicit release authorisation separately; do not mistake 48 registered tools for verified live behaviour.
+
 ## Existing decisions
 
 - The backend delegates every ClickUp operation through the **authenticated human user's own ClickUp OAuth token**, never a shared ClickUp personal API key.

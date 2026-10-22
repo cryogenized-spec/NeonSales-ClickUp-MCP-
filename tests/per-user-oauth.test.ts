@@ -12,7 +12,10 @@ const login = (id: string) => ({ scopes: ["mcp:read"], extra: { subject: "github
 
 function fakeBindings() {
   const pending = new Map<string, { hash: string; subject: string; expires: number }>();
-  const connected = new Map<string, { userId: string; workspaceId: string; token: string }>();
+  const connected = new Map<
+    string,
+    { userId: string; workspaceId: string; token: string; workspaceExclusive: boolean }
+  >();
   const calls: string[] = [];
   const connections = {
     idFromName: (name: string) => name,
@@ -44,6 +47,7 @@ function fakeBindings() {
             token: String(body["accessToken"]),
             userId: String(body["clickupUserId"]),
             workspaceId: String(body["workspaceId"]),
+            workspaceExclusive: body["workspaceExclusive"] === true,
           });
           return Response.json({ stored: true });
         }
@@ -56,6 +60,7 @@ function fakeBindings() {
                   accessToken: current.token,
                   clickupUserId: current.userId,
                   workspaceId: current.workspaceId,
+                  workspaceExclusive: current.workspaceExclusive,
                 }
               : { connected: false },
           );
@@ -240,5 +245,73 @@ describe("independent ClickUp OAuth identity against current MCP principal", () 
       "test-user-token-no-value",
     );
     expect(fixture.calls.filter((entry) => entry.endsWith("/store"))).toHaveLength(1);
+  });
+  it("rejects multiple authorised Workspaces when expanded scope is enabled", async () => {
+    const fixture = fakeBindings();
+    const env = { ...fixture.env, CLICKUP_RESOURCE_SCOPE: "workspace" };
+    const started = await beginClickUpOAuth(login("11"), env);
+    const callback = new URL("https://stage.example/clickup/callback");
+    callback.searchParams.set(
+      "state",
+      new URL(started.authorization_url).searchParams.get("state")!,
+    );
+    callback.searchParams.set("code", "workspace_multiple");
+    const multipleTeams = vi.fn(async (target: RequestInfo | URL) => {
+      const targetUrl = String(target);
+      if (targetUrl.endsWith("/oauth/token"))
+        return Response.json({ access_token: "synthetic-workspace-token" });
+      if (targetUrl.endsWith("/user")) return Response.json({ user: { id: 707 } });
+      return Response.json({ teams: [{ id: 999 }, { id: 888 }] });
+    });
+    const result = await finishClickUpOAuth(
+      new Request(callback),
+      env,
+      multipleTeams as typeof fetch,
+    );
+    expect(result.status).toBe(400);
+    expect(fixture.connected.size).toBe(0);
+    expect(fixture.calls.filter((x) => x.endsWith("/store"))).toHaveLength(0);
+
+    const second = await beginClickUpOAuth(login("11"), env);
+    const singleCallback = new URL("https://stage.example/clickup/callback");
+    singleCallback.searchParams.set(
+      "state",
+      new URL(second.authorization_url).searchParams.get("state")!,
+    );
+    singleCallback.searchParams.set("code", "workspace_single");
+    const ok = await finishClickUpOAuth(
+      new Request(singleCallback),
+      env,
+      fixture.upstream as typeof fetch,
+    );
+    expect(ok.status).toBe(200);
+    expect((await personalClickUpCredential(login("11"), env)).workspaceExclusive).toBe(true);
+  });
+
+  it("allows legacy List consent but records whether another Workspace was granted", async () => {
+    const fixture = fakeBindings();
+    const started = await beginClickUpOAuth(login("11"), fixture.env);
+    const callback = new URL("https://stage.example/clickup/callback");
+    callback.searchParams.set(
+      "state",
+      new URL(started.authorization_url).searchParams.get("state")!,
+    );
+    callback.searchParams.set("code", "list_token");
+    const multipleTeams = vi.fn(async (target: RequestInfo | URL) => {
+      const targetUrl = String(target);
+      if (targetUrl.endsWith("/oauth/token"))
+        return Response.json({ access_token: "synthetic-list-token" });
+      if (targetUrl.endsWith("/user")) return Response.json({ user: { id: 707 } });
+      return Response.json({ teams: [{ id: 999 }, { id: 888 }] });
+    });
+    const result = await finishClickUpOAuth(
+      new Request(callback),
+      fixture.env,
+      multipleTeams as typeof fetch,
+    );
+    expect(result.status).toBe(200);
+    expect((await personalClickUpCredential(login("11"), fixture.env)).workspaceExclusive).toBe(
+      false,
+    );
   });
 });

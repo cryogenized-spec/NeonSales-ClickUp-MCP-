@@ -1,3 +1,39 @@
+# 21 October 2026 SAST — PR #25 Workspace-bound security candidate
+
+**Owner request:** Resolve the task-move check/use race without dropping any of the 48 tool registrations. The ClickUp API does not document atomic List-bound task-ID writes. Consequently, a strict single-List policy and unrestricted task-ID mutations cannot both be enforced by this MCP alone.
+
+**Candidate code (unmerged):** Introduced server-only opt-in `CLICKUP_RESOURCE_SCOPE=workspace` policy; legacy List mode explicitly denies race-prone task-ID catalogue operations before external API calls, while preserving all 48 tool registrations. Workspace mode validates Lists against the connected Workspace and permits intra-Workspace cross-List operations; task search uses Workspace endpoint only in this mode. The per-user ClickUp OAuth callback now requires exactly one authorised Workspace to store an expanded-privilege credential, and the encrypted per-user Durable Object records that consent evidence transactionally. Existing credentials lack proof and require re-consent.
+
+**Release decision:** D-025 is **PROPOSED**, not ACCEPTED. No expanded policy activated, Cloudflare deployment, ClickUp write, or owner-approved broader access. Live ClickUp verification of token access after external cross-Workspace task moves remains mandatory. See [the design/acceptance plan](PR25_WORKSPACE_SCOPE_PLAN.md) and [original review](PR25_SECURITY_GATE_2026-10-21.md).
+
+**Evidence:** Strict CI and CodeQL are rerunning on the documentation-inclusive PR head. Earlier code-head CI failed formatting and then a test-typecheck issue; both were corrected, but those failures are not release passes. No final exact-head green status claimed until verified. Codex specialist review of the final SHA is also pending.
+
+**Next action:** Obtain exact-HEAD green CI and independent Codex review; then present the broader Workspace boundary for explicit owner acceptance before any staging activation or live mutation.
+
+---
+
+# Security review checkpoint — 21 October 2026 SAST (PR #25 remains blocked)
+
+**Reviewed PR head:** `17eb8df63552781a8559f9a210cbfb8a03e7352f` (prior to this documentation-only update). On that SHA GitHub Strict CI had succeeded, but the latest Codex review retained a P1 task-ID check-then-use race and a P2 cross-List tool semantics issue. The already-implemented home-List search restriction, complete bulk input prevalidation, and preservation of all 48 catalogue adapters remain intact.
+
+**New evidence artifact:** [PR #25 security gate, threat scenario, live acceptance matrix and release options](PR25_SECURITY_GATE_2026-10-21.md), committed first as `f2a266a0572b3f7418448e6b0d0cca90e1158010`. This documents unresolved risk and **does not** claim a code remedy, a successful live ClickUp race test, any security waiver, or owner release approval.
+
+**Release status:** NO MERGE / NO DEPLOY as security-cleared. No staging/production changes or ClickUp writes made. The new documentation commits must be checked against fresh exact-head CI before any specialist re-review or release assessment.
+
+**Next action:** Verify ClickUp permission inheritance and perform controlled cross-List race tests on disposable tasks with independent OAuth accounts; retain all 48 tools and obtain an explicit resource-scope policy decision if single-List isolation cannot be enforced upstream.
+
+---
+
+# Owner correction — 15 October 2026 SAST (PR #25 pending)
+
+**Owner directive:** Do not remove or disable the 22 task-related operations. Restore and retain all **48** operational ClickUp catalogue tool registrations, along with the associated regression tests. The previously proposed 26-tool allowlist and fail-closed dispatcher guard have been reverted on the PR branch. Keep the scoped-List search fix, single-List check and full-batch input validation in PR #25.
+
+**Security status:** The task-ID preflight-to-mutation race remains unresolved. No verified atomic List-bound upstream precondition has been established. The current owner instruction is to preserve feature coverage, **not** an assertion that the race has been fixed or that the owner has approved staging or production exposure of the risk. Do not merge or deploy until independent review and a separately recorded release decision. The exact-head CI and any follow-up review must be repeated after reverting the tool removals.
+
+**Next operational handoff:** The owner can inspect existing Cloudflare staging resources and configure GitHub/Worker secrets through CLI, without deploying or enabling live ClickUp writes. Do not transmit credentials in chat.
+
+---
+
 # Integration checkpoint — 12 October 2026 SAST
 
 **Status: merged and CI-green on main.** Merged [Phase 7 PR #24](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/pull/24), its Codex P1/P2 fixes, and Dependabot pinned GitHub Actions updates #9/#10. Final integration commit `46c834c714c08aa1b13e2f026351292c0fcc9315` passed [Strict CI #38225656102](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/actions/runs/38225656102). Phase 7's reviewed prior head passed 155/155 Vitest tests (15 suites), lint, format, strict TypeScript, Worker build, local HTTPS/OAuth security smoke, policy checks and npm audit; these are **mocked/local tests, not real ClickUp runtime acceptance**.

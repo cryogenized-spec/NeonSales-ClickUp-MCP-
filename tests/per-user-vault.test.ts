@@ -12,6 +12,7 @@ interface Row {
 function fakeSqlite() {
   let pending: { hash: string; expires: number; subject: string } | undefined;
   let account: Row | undefined;
+  let authorization: { subject: string; exclusive: number } | undefined;
   const exec = (sql: string, ...params: (string | number)[]) => {
     let values: unknown[] = [];
     if (sql.startsWith("CREATE TABLE")) {
@@ -30,6 +31,14 @@ function fakeSqlite() {
         values = [{ nonce_hash: pending.hash }];
         pending = undefined;
       }
+    } else if (sql.startsWith("SELECT workspace_exclusive FROM connection_authorization")) {
+      if (authorization && authorization.subject === params[0]) {
+        values = [{ workspace_exclusive: authorization.exclusive }];
+      }
+    } else if (sql.startsWith("INSERT OR REPLACE INTO connection_authorization")) {
+      authorization = { subject: String(params[0]), exclusive: Number(params[1]) };
+    } else if (sql.startsWith("DELETE FROM connection_authorization")) {
+      if (authorization?.subject === params[0]) authorization = undefined;
     } else if (sql.startsWith("SELECT subject,clickup_user_id,workspace_id,cipher,iv")) {
       values = account ? [account] : [];
     } else if (sql.startsWith("INSERT OR REPLACE INTO connection")) {
@@ -79,6 +88,7 @@ describe("actual encrypted SQLite per-user token vault", () => {
       accessToken: "synthetic-personal-token-for-tests",
       clickupUserId: "707",
       workspaceId: "999",
+      workspaceExclusive: true,
     };
     expect((await call(vault, "store", payload)).data["stored"]).toBe(true);
     const stored = backing.stored()!;
@@ -94,6 +104,7 @@ describe("actual encrypted SQLite per-user token vault", () => {
       accessToken: payload.accessToken,
       clickupUserId: "707",
       workspaceId: "999",
+      workspaceExclusive: true,
     });
     expect((await call(vault, "disconnect", { subject: "github:22" })).data["disconnected"]).toBe(
       true,
@@ -138,6 +149,7 @@ describe("actual encrypted SQLite per-user token vault", () => {
       accessToken: "synthetic-personal-token-for-tests",
       clickupUserId: "707",
       workspaceId: "999",
+      workspaceExclusive: true,
     });
     expect(result.status).toBe(503);
     expect(backing.stored()).toBeUndefined();

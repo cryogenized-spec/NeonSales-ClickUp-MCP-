@@ -147,6 +147,10 @@ async function inWorkspace(grant: ReadGrant, f: typeof fetch, spaceId: unknown):
     throw new ReadFailure("CLICKUP_SCOPE_OR_SCHEMA_REJECTED");
 }
 async function listInWorkspace(grant: ReadGrant, f: typeof fetch, listId: unknown): Promise<Json> {
+  // The individual ClickUp token may access additional Lists. That does NOT expand
+  // this MCP's explicitly configured home-List grant.
+  if (grant.resourceScope !== "workspace" && String(listId) !== grant.listId)
+    throw new ReadFailure("CLICKUP_SCOPE_OR_SCHEMA_REJECTED");
   const list = await send(grant, f, "GET", v2("list/" + id(listId)));
   if (String(list["id"]) !== String(listId))
     throw new ReadFailure("CLICKUP_SCOPE_OR_SCHEMA_REJECTED");
@@ -342,14 +346,48 @@ export const OPERATIONAL_CATALOG_NAMES: readonly string[] = [
   "clickup_get_task_time_in_status",
   "clickup_get_list_time_in_status",
 ];
+// Task-ID follow-up endpoints cannot atomically honour a single home-List
+// grant if an external ClickUp actor moves the task between preflight and use.
+// Preserve all 48 registrations, but execute this subset only after the owner
+// explicitly enables Workspace authority and exclusive one-Workspace OAuth.
+const WORKSPACE_SCOPE_OPERATIONS = new Set([
+  "clickup_get_task",
+  "clickup_update_task",
+  "clickup_set_custom_field",
+  "clickup_delete_task",
+  "clickup_attach_file_to_task",
+  "clickup_update_bulk_tasks",
+  "clickup_get_task_comments",
+  "clickup_get_threaded_replies",
+  "clickup_create_task_comment",
+  "clickup_add_tag_to_task",
+  "clickup_remove_tag_from_task",
+  "clickup_add_task_link",
+  "clickup_remove_task_link",
+  "clickup_add_dependency",
+  "clickup_remove_dependency",
+  "clickup_move_task_to_list",
+  "clickup_add_task_to_list",
+  "clickup_get_task_time_entries",
+  "clickup_start_time_tracking",
+  "clickup_stop_time_tracking",
+  "clickup_add_time_entry",
+  "clickup_get_current_time_entry",
+  "clickup_get_task_time_in_status",
+  "clickup_get_list_time_in_status",
+]);
+
 export async function runCatalogOperation(
   name: string,
   a: Json,
   g: ReadGrant,
   f: typeof fetch,
 ): Promise<Json> {
+  if (g.resourceScope !== "workspace" && WORKSPACE_SCOPE_OPERATIONS.has(name))
+    throw new ReadFailure("CLICKUP_WORKSPACE_SCOPE_REQUIRED");
   const W = id(g.workspaceId),
     N = count(a);
+  const workspaceScope = g.resourceScope === "workspace";
   const call = (method: Method, path: string, body?: Json) => send(g, f, method, path, body);
   const task = async (k: string) => taskInWorkspace(g, f, a[k]);
   const list = async (k: string) => listInWorkspace(g, f, a[k]);
@@ -360,9 +398,24 @@ export async function runCatalogOperation(
   switch (name) {
     case "clickup_search_workspace": {
       const q = txt(a["query"], 160).toLowerCase();
-      const results = await call("GET", v2("team/" + W + "/task?page=0&subtasks=true"));
+      // Never search all Workspace tasks: the user may have more upstream rights
+      // than this MCP's configured home-List grant permits.
+      if (!workspaceScope) await listInWorkspace(g, f, g.listId);
+      const results = await call(
+        "GET",
+        workspaceScope
+          ? v2("team/" + W + "/task?page=0&subtasks=true&include_closed=true")
+          : v2("list/" + id(g.listId) + "/task?page=0&subtasks=true&include_closed=true"),
+      );
       if (!Array.isArray(results["tasks"])) throw new ReadFailure("CLICKUP_BAD_RESPONSE");
       const tasks = results["tasks"];
+      // A ClickUp task can appear in additional Lists. Only expose its home-List
+      // data under this one-List grant, and fail closed on incomplete metadata.
+      for (const candidate of tasks) {
+        const t = obj(candidate);
+        if (!t || (!workspaceScope && String(obj(t["list"])?.["id"]) !== g.listId))
+          throw new ReadFailure("CLICKUP_SCOPE_OR_SCHEMA_REJECTED");
+      }
       const docs = await call("GET", v3("workspaces/" + W + "/docs?limit=50"));
       if (!Array.isArray(docs["docs"])) throw new ReadFailure("CLICKUP_BAD_RESPONSE");
       const d = docs["docs"];
@@ -404,13 +457,20 @@ export async function runCatalogOperation(
     case "clickup_search_tasks_by_type":
     case "clickup_search_tasks_by_tag": {
       const target = a["list_id"] ?? g.listId;
-      await listInWorkspace(g, f, target);
+      if (!workspaceScope || a["list_id"] !== undefined) await listInWorkspace(g, f, target);
       const result = await call(
         "GET",
-        v2("list/" + id(target) + "/task?page=0&subtasks=true&include_closed=true"),
+        workspaceScope && a["list_id"] === undefined
+          ? v2("team/" + W + "/task?page=0&subtasks=true&include_closed=true")
+          : v2("list/" + id(target) + "/task?page=0&subtasks=true&include_closed=true"),
       );
       if (!Array.isArray(result["tasks"])) throw new ReadFailure("CLICKUP_BAD_RESPONSE");
       const tasks = result["tasks"];
+      for (const candidate of tasks) {
+        const t = obj(candidate);
+        if (!t || String(obj(t["list"])?.["id"]) !== g.listId)
+          throw new ReadFailure("CLICKUP_SCOPE_OR_SCHEMA_REJECTED");
+      }
       const found = tasks.filter((x) => {
         const t = obj(x);
         if (!t) return false;
@@ -471,10 +531,19 @@ export async function runCatalogOperation(
       const tasks = a["tasks"];
       if (!Array.isArray(tasks) || tasks.length < 1 || tasks.length > 10)
         throw new ReadFailure("CLICKUP_INVALID_ARGUMENT");
-      const outcome: unknown[] = [];
-      for (let i = 0; i < tasks.length; i++) {
-        const payload = taskBody(obj(tasks[i]) ?? {});
+      // Validate the ENTIRE batch before sending the first non-idempotent POST.
+      // Otherwise a bad later draft creates a task and returns a bare error,
+      // encouraging an accidental retry that duplicates the first task.
+      const validated = tasks.map((draft) => {
+        const item = obj(draft);
+        if (!item) throw new ReadFailure("CLICKUP_INVALID_ARGUMENT");
+        const payload = taskBody(item);
         if (!payload.name) throw new ReadFailure("CLICKUP_INVALID_ARGUMENT");
+        return payload;
+      });
+      const outcome: unknown[] = [];
+      for (let i = 0; i < validated.length; i++) {
+        const payload = validated[i]!;
         try {
           outcome.push({
             index: i,
@@ -500,22 +569,24 @@ export async function runCatalogOperation(
       const updates = a["task_updates"];
       if (!Array.isArray(updates) || updates.length < 1 || updates.length > 10)
         throw new ReadFailure("CLICKUP_INVALID_ARGUMENT");
-      const outcome: unknown[] = [];
-      for (let i = 0; i < updates.length; i++) {
-        const x = obj(updates[i]);
+      const validated = updates.map((draft) => {
+        const x = obj(draft);
         if (!x) throw new ReadFailure("CLICKUP_INVALID_ARGUMENT");
+        id(x["task_id"]);
+        const changes = obj(x["changes"]);
+        if (!changes || Object.keys(changes).length === 0)
+          throw new ReadFailure("CLICKUP_INVALID_ARGUMENT");
+        return { taskId: x["task_id"], changes: taskBody(changes, true) };
+      });
+      const outcome: unknown[] = [];
+      for (let i = 0; i < validated.length; i++) {
+        const x = validated[i]!;
         try {
-          await taskInWorkspace(g, f, x["task_id"]);
+          await taskInWorkspace(g, f, x.taskId);
           outcome.push({
             index: i,
             success: true,
-            response: clip(
-              await call(
-                "PUT",
-                v2("task/" + id(x["task_id"])),
-                taskBody(obj(x["changes"]) ?? {}, true),
-              ),
-            ),
+            response: clip(await call("PUT", v2("task/" + id(x.taskId)), x.changes)),
           });
         } catch (e) {
           outcome.push({
