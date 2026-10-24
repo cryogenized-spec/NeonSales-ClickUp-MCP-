@@ -469,11 +469,7 @@ export async function runCatalogOperation(
       for (const candidate of tasks) {
         const t = obj(candidate);
         const homeList = obj(t?.["list"])?.["id"];
-        if (
-          !t ||
-          homeList === undefined ||
-          (!workspaceScope && String(homeList) !== g.listId)
-        )
+        if (!t || homeList === undefined || (!workspaceScope && String(homeList) !== g.listId))
           throw new ReadFailure("CLICKUP_SCOPE_OR_SCHEMA_REJECTED");
       }
       const found = tasks.filter((x) => {
