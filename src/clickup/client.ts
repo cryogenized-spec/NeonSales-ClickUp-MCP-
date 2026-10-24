@@ -236,9 +236,10 @@ export async function getScopedTask(
   fetcher: Fetcher,
 ): Promise<ScopedTaskDetail> {
   if (!/^[a-zA-Z0-9_-]{2,40}$/.test(taskId)) throw new ReadFailure("CLICKUP_INVALID_ARGUMENT");
+  const taskPath = "task/" + encodeURIComponent(taskId);
   const raw = await getJson(
     grant,
-    "task/" + encodeURIComponent(taskId) + "?custom_task_ids=false&include_markdown_description=true",
+    taskPath + "?custom_task_ids=false&include_markdown_description=true",
     fetcher,
   );
   const task = normalizeTask(raw, grant.listId);
@@ -255,15 +256,18 @@ export async function getScopedTask(
   ) {
     throw new ReadFailure("CLICKUP_BAD_RESPONSE");
   }
-  const hasMarkdown = typeof markdown === "string" && markdown.length > 0;
-  const description =
-    typeof markdown === "string" && markdown.length > 0
-      ? markdown
-      : typeof plain === "string"
-        ? plain
-        : typeof markdown === "string"
-          ? markdown
-          : null;
+  let description: string | null = null;
+  let descriptionFormat: "markdown" | "plain" | "none" = "none";
+  if (typeof markdown === "string" && markdown.length > 0) {
+    description = markdown;
+    descriptionFormat = "markdown";
+  } else if (typeof plain === "string") {
+    description = plain;
+    descriptionFormat = "plain";
+  } else if (typeof markdown === "string") {
+    description = markdown;
+    descriptionFormat = "markdown";
+  }
   const priorityRaw = detail["priority"];
   let priority: number | null = null;
   if (priorityRaw != null) {
@@ -279,11 +283,7 @@ export async function getScopedTask(
   return {
     ...task,
     description: description === null ? null : description.slice(0, MAX_DESCRIPTION),
-    description_format: hasMarkdown
-      ? "markdown"
-      : description === null
-        ? "none"
-        : "plain",
+    description_format: descriptionFormat,
     description_truncated: description !== null && description.length > MAX_DESCRIPTION,
     priority,
   };
