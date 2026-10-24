@@ -256,18 +256,22 @@ export async function getScopedTask(
     throw new ReadFailure("CLICKUP_BAD_RESPONSE");
   }
   const hasMarkdown = typeof markdown === "string" && markdown.length > 0;
-  const description = typeof markdown === "string" && markdown.length > 0
-    ? markdown
-    : typeof plain === "string"
-      ? plain
-      : typeof markdown === "string"
-        ? markdown
-        : null;
+  const description =
+    typeof markdown === "string" && markdown.length > 0
+      ? markdown
+      : typeof plain === "string"
+        ? plain
+        : typeof markdown === "string"
+          ? markdown
+          : null;
   const priorityRaw = detail["priority"];
   let priority: number | null = null;
   if (priorityRaw != null) {
     const value = object(priorityRaw)?.["id"];
-    if ((typeof value !== "string" && typeof value !== "number") || !/^[1-4]$/.test(String(value)))
+    if (
+      (typeof value !== "string" && typeof value !== "number") ||
+      !/^[1-4]$/.test(String(value))
+    )
       throw new ReadFailure("CLICKUP_BAD_RESPONSE");
     priority = Number(value);
   }
@@ -275,7 +279,11 @@ export async function getScopedTask(
   return {
     ...task,
     description: description === null ? null : description.slice(0, MAX_DESCRIPTION),
-    description_format: hasMarkdown ? "markdown" : description === null ? "none" : "plain",
+    description_format: hasMarkdown
+      ? "markdown"
+      : description === null
+        ? "none"
+        : "plain",
     description_truncated: description !== null && description.length > MAX_DESCRIPTION,
     priority,
   };
