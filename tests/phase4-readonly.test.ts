@@ -216,11 +216,7 @@ describe("Phase 4 ClickUp GET-only transport", () => {
       task("allowed1", { priority: { id: "99" } }),
     ]) {
       await expect(
-        getScopedTask(
-          grant,
-          "allowed1",
-          vi.fn(async () => json(bad)) as typeof fetch,
-        ),
+        getScopedTask(grant, "allowed1", vi.fn(async () => json(bad)) as typeof fetch),
       ).rejects.toBeInstanceOf(ReadFailure);
     }
   });
