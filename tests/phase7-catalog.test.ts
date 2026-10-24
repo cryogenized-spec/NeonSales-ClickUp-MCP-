@@ -587,6 +587,70 @@ describe("Phase 7 individual OAuth and native catalogue - adversarial tests", ()
     expect(f.mock.calls.every(([, init]) => init?.method !== "PUT")).toBe(true);
   });
 
+  it("searches tags and task types across Workspace home Lists without applying the legacy grant", async () => {
+    const requests: string[] = [];
+    const f = vi.fn(async (req: RequestInfo | URL) => {
+      const url = new URL(String(req));
+      requests.push(url.pathname);
+      if (url.pathname === "/api/v2/team/555/task") {
+        return reply({
+          tasks: [
+            { id: "a1", list: { id: "12345" }, custom_item_id: 7, tags: [{ name: "Urgent" }] },
+            { id: "b2", list: { id: "12346" }, custom_item_id: 7, tags: [{ name: "Urgent" }] },
+          ],
+        });
+      }
+      throw Error("unexpected endpoint " + url.pathname);
+    });
+    for (const [name, args] of [
+      ["clickup_search_tasks_by_tag", { tag: "Urgent" }],
+      ["clickup_search_tasks_by_type", { task_type: "7" }],
+    ] as const) {
+      const result = await runCatalogOperation(name, args, makeGrant(), f as typeof fetch);
+      expect(result["tasks"]).toHaveLength(2);
+    }
+    expect(requests).toEqual(["/api/v2/team/555/task", "/api/v2/team/555/task"]);
+  });
+
+  it("allows a Workspace-authorized additional List search when the task has another home List", async () => {
+    const f = vi.fn(async (req: RequestInfo | URL) => {
+      const url = new URL(String(req));
+      if (url.pathname === "/api/v2/list/12346") return reply(fixture(url.pathname));
+      if (url.pathname === "/api/v2/team/555/space") return reply(fixture(url.pathname));
+      if (url.pathname === "/api/v2/list/12346/task") {
+        return reply({ tasks: [{ id: "t1", list: { id: "12345" }, tags: [{ name: "Urgent" }] }] });
+      }
+      throw Error("unexpected endpoint " + url.pathname);
+    });
+    const result = await runCatalogOperation(
+      "clickup_search_tasks_by_tag",
+      { list_id: "12346", tag: "Urgent" },
+      makeGrant(),
+      f as typeof fetch,
+    );
+    expect(result["tasks"]).toHaveLength(1);
+  });
+
+  it("still rejects foreign-home search results under a single-List grant", async () => {
+    const f = vi.fn(async (req: RequestInfo | URL) => {
+      const url = new URL(String(req));
+      if (url.pathname === "/api/v2/list/12345") return reply(fixture(url.pathname));
+      if (url.pathname === "/api/v2/team/555/space") return reply(fixture(url.pathname));
+      if (url.pathname === "/api/v2/list/12345/task") {
+        return reply({ tasks: [{ id: "foreign", list: { id: "12346" }, tags: [{ name: "Urgent" }] }] });
+      }
+      throw Error("unexpected endpoint " + url.pathname);
+    });
+    await expect(
+      runCatalogOperation(
+        "clickup_search_tasks_by_tag",
+        { tag: "Urgent" },
+        makeListGrant(),
+        f as typeof fetch,
+      ),
+    ).rejects.toThrow("CLICKUP_SCOPE_OR_SCHEMA_REJECTED");
+  });
+
   it("routes expanded search to the ClickUp Workspace endpoint", async () => {
     const requests: string[] = [];
     const f = vi.fn(async (req: RequestInfo | URL) => {
