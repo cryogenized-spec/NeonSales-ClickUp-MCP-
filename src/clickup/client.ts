@@ -272,10 +272,7 @@ export async function getScopedTask(
   let priority: number | null = null;
   if (priorityRaw != null) {
     const value = object(priorityRaw)?.["id"];
-    if (
-      (typeof value !== "string" && typeof value !== "number") ||
-      !/^[1-4]$/.test(String(value))
-    )
+    if ((typeof value !== "string" && typeof value !== "number") || !/^[1-4]$/.test(String(value)))
       throw new ReadFailure("CLICKUP_BAD_RESPONSE");
     priority = Number(value);
   }
