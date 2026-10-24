@@ -1,4 +1,4 @@
-import { claudeGlyph, neonSalesMcpBadgeDataUri } from "./brand-assets.js";
+import { chatGptGlyph, claudeGlyph, neonSalesMcpBadgeDataUri } from "./brand-assets.js";
 
 interface ConsentDisplay {
   readonly clientName: string;
@@ -6,6 +6,35 @@ interface ConsentDisplay {
   readonly redirectHost: string;
   readonly redirectIsLoopback: boolean;
   readonly scope: readonly string[];
+}
+
+/**
+ * Client branding is presentation only, never an authentication decision.
+ * Require an exact identity tuple: displaying a provider's mark based on
+ * clientName alone would let a self-declared OAuth client impersonate it.
+ * New clients can be registered here after their origins and assets are reviewed.
+ */
+const CLIENT_BRANDS: readonly {
+  readonly name: string;
+  readonly domain: string;
+  readonly redirectHost: string;
+  readonly glyph: string;
+}[] = [
+  { name: "Claude", domain: "claude.ai", redirectHost: "claude.ai", glyph: claudeGlyph },
+  { name: "ChatGPT", domain: "chatgpt.com", redirectHost: "chatgpt.com", glyph: chatGptGlyph },
+];
+
+const genericClientGlyph =
+  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="4"/><path d="M9 12h6M12 9v6"/></svg>';
+
+function clientGlyphFor(details: ConsentDisplay): string {
+  const known = CLIENT_BRANDS.find(
+    (brand) =>
+      details.clientName === brand.name &&
+      details.clientDomain === brand.domain &&
+      details.redirectHost === brand.redirectHost,
+  );
+  return known?.glyph ?? genericClientGlyph;
 }
 
 function escapeHtml(text: string): string {
@@ -28,15 +57,7 @@ export function renderConsentPage(details: ConsentDisplay, handle: string): stri
         "</label>",
     )
     .join("\n");
-  // Only a recognized Claude identity gets Claude's mark; arbitrary metadata
-  // must not select remote images or impersonate another provider visually.
-  const recognizedClaude =
-    details.clientName === "Claude" &&
-    details.clientDomain === "claude.ai" &&
-    details.redirectHost === "claude.ai";
-  const clientGlyph = recognizedClaude
-    ? claudeGlyph
-    : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="4"/><path d="M9 12h6M12 9v6"/></svg>';
+  const clientGlyph = clientGlyphFor(details);
   const loopbackWarning = details.redirectIsLoopback
     ? '<div class="info warning"><strong>Local destination:</strong> This sends access to an app on your computer. Verify that you trust it.</div>'
     : "";
