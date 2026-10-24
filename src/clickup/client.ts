@@ -256,7 +256,7 @@ export async function getScopedTask(
     throw new ReadFailure("CLICKUP_BAD_RESPONSE");
   }
   const hasMarkdown = typeof markdown === "string" && markdown.length > 0;
-  const description = hasMarkdown
+  const description = typeof markdown === "string" && markdown.length > 0
     ? markdown
     : typeof plain === "string"
       ? plain
