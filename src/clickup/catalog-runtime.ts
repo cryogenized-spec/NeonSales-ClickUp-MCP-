@@ -180,7 +180,10 @@ const taskBody = (a: Json, update = false) => ({
   ...(typeof a["description"] === "string" ? { description: txt(a["description"]) } : {}),
   ...(typeof a["status"] === "string" ? { status: txt(a["status"], 80) } : {}),
   ...(a["priority"] !== undefined ? { priority: a["priority"] } : {}),
-  ...(a["due_date_ms"] !== undefined ? { due_date: a["due_date_ms"] } : {}),
+  // ClickUp defaults timestamp-only due dates to date-only at 04:00 local time.
+  ...(a["due_date_ms"] !== undefined
+    ? { due_date: a["due_date_ms"], due_date_time: true }
+    : {}),
   ...(Array.isArray(a["assignee_ids"])
     ? {
         assignees: update
