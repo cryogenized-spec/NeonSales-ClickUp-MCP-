@@ -95,6 +95,14 @@ describe("Official ClickUp MCP capability catalogue (model-facing only)", () => 
           ...OPERATIONAL_CATALOG_NAMES,
         ].sort(),
       );
+      const scopedRead = tools.find((tool) => tool.name === "get_scoped_task");
+      const taskRead = tools.find((tool) => tool.name === "clickup_get_task");
+      const catalog = tools.find((tool) => tool.name === "clickup_tool_catalog");
+      expect(scopedRead?.description).toContain("bounded description");
+      expect(taskRead?.description).toContain("policy-blocked");
+      expect(taskRead?.description).not.toContain("schema-only tool is disabled");
+      expect(catalog?.description).toContain("48 catalogue names");
+      expect(catalog?.description).not.toContain("Every listed schema_only capability");
       const answer = await client.callTool({
         name: "clickup_tool_catalog",
         arguments: { group: "relationships", include_schema: true },
