@@ -199,9 +199,7 @@ describe("Phase 4 ClickUp GET-only transport", () => {
   it("truncates descriptions and rejects unsafe detail payloads", async () => {
     const grant = await requireReadGrant(auth, env);
     const description = "x".repeat(10000);
-    const fetcher = vi.fn(async () =>
-      json(task("allowed1", { description, priority: null })),
-    );
+    const fetcher = vi.fn(async () => json(task("allowed1", { description, priority: null })));
     const detail = await getScopedTask(grant, "allowed1", fetcher as typeof fetch);
     expect(detail.description).toHaveLength(8000);
     expect(detail.description_truncated).toBe(true);
