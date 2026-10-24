@@ -106,9 +106,7 @@ describe("Phase 4 official SDK integration", () => {
         mcp_read_scope_granted: true,
         mcp_write_scope_granted: false,
       });
-      expect(JSON.stringify(grantStatus.structuredContent)).not.toContain(
-        "nonworking-personal-fixture",
-      );
+      expect(JSON.stringify(grantStatus.structuredContent)).not.toContain("nonworking-personal-fixture");
       await expect(
         client.callTool({
           name: "create_scoped_task",
@@ -159,9 +157,7 @@ describe("Phase 4 official SDK integration", () => {
         mcp_read_scope_granted: true,
         mcp_write_scope_granted: true,
       });
-      expect(JSON.stringify(status.structuredContent)).not.toContain(
-        "nonworking-personal-fixture",
-      );
+      expect(JSON.stringify(status.structuredContent)).not.toContain("nonworking-personal-fixture");
     } finally {
       await client.close();
       await handler.close();
