@@ -587,7 +587,7 @@ describe("Phase 7 individual OAuth and native catalogue - adversarial tests", ()
     expect(f.mock.calls.every(([, init]) => init?.method !== "PUT")).toBe(true);
   });
 
-  it("searches tags and task types across Workspace home Lists without applying the legacy grant", async () => {
+  it("accepts Workspace tag and type results from multiple home Lists", async () => {
     const requests: string[] = [];
     const f = vi.fn(async (req: RequestInfo | URL) => {
       const url = new URL(String(req));
@@ -612,7 +612,7 @@ describe("Phase 7 individual OAuth and native catalogue - adversarial tests", ()
     expect(requests).toEqual(["/api/v2/team/555/task", "/api/v2/team/555/task"]);
   });
 
-  it("allows a Workspace-authorized additional List search when the task has another home List", async () => {
+  it("accepts additional-List tasks with a different home List", async () => {
     const f = vi.fn(async (req: RequestInfo | URL) => {
       const url = new URL(String(req));
       if (url.pathname === "/api/v2/list/12346") return reply(fixture(url.pathname));
@@ -637,7 +637,9 @@ describe("Phase 7 individual OAuth and native catalogue - adversarial tests", ()
       if (url.pathname === "/api/v2/list/12345") return reply(fixture(url.pathname));
       if (url.pathname === "/api/v2/team/555/space") return reply(fixture(url.pathname));
       if (url.pathname === "/api/v2/list/12345/task") {
-        return reply({ tasks: [{ id: "foreign", list: { id: "12346" }, tags: [{ name: "Urgent" }] }] });
+        return reply({
+          tasks: [{ id: "foreign", list: { id: "12346" }, tags: [{ name: "Urgent" }] }],
+        });
       }
       throw Error("unexpected endpoint " + url.pathname);
     });
