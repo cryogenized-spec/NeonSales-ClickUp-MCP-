@@ -128,7 +128,7 @@ export function createServer(deps?: ReadDependencies): McpServer {
     "get_clickup_connection_status",
     {
       description:
-        "Check your OWN ClickUp OAuth connection; returns no secrets, only connection status and authenticated ClickUp user/Workspace IDs. Connection never grants permission to modify tasks.",
+        "Check your OWN ClickUp OAuth connection and non-secret MCP scope diagnostics. mcp_write_scope_granted only reports what the client's verified MCP token permits; it is not a ClickUp write-success guarantee.",
       inputSchema: fromJsonSchema<Record<string, never>>({
         type: "object",
         properties: {},
@@ -138,9 +138,15 @@ export function createServer(deps?: ReadDependencies): McpServer {
     },
     async (_args, extra) => {
       try {
-        return toolSuccess(
-          await clickUpConnectionStatus(extra.http?.authInfo, dependencies.bindings),
-        );
+        const status = await clickUpConnectionStatus(extra.http?.authInfo, dependencies.bindings);
+        // authInfo comes only from our OAuthProvider-verified request context.
+        // Never expose the bearer token, OAuth client ID or personal ClickUp credential.
+        const scopes = extra.http?.authInfo?.scopes;
+        return toolSuccess({
+          ...status,
+          mcp_read_scope_granted: Array.isArray(scopes) && scopes.includes("mcp:read"),
+          mcp_write_scope_granted: Array.isArray(scopes) && scopes.includes("mcp:write"),
+        });
       } catch (error) {
         return toolError(error);
       }
