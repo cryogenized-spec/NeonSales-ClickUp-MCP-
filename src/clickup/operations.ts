@@ -126,7 +126,8 @@ function bodyFromInput(raw: unknown, create: boolean): Record<string, unknown> {
     ...(description !== undefined ? { description } : {}),
     ...(status !== undefined ? { status } : {}),
     ...(priority !== undefined ? { priority } : {}),
-    ...(due !== undefined ? { due_date: due } : {}),
+    // ClickUp otherwise stores a date-only value at 04:00 in the user's timezone.
+    ...(due !== undefined ? { due_date: due, due_date_time: true } : {}),
     ...(create ? { check_required_custom_fields: true, notify_all: false } : {}),
   };
 }
