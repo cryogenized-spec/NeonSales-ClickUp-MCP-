@@ -88,6 +88,43 @@ describe("branded consent identity diagram", () => {
     expect(html).not.toContain("<script");
   });
 
+  it("uses the ChatGPT knot only for the matching client identity tuple", () => {
+    const html = renderConsentPage(
+      {
+        clientName: "ChatGPT",
+        clientDomain: "chatgpt.com",
+        redirectHost: "chatgpt.com",
+        redirectIsLoopback: false,
+        scope: ["mcp:read"],
+      },
+      "browser-bound-handle",
+    );
+    expect(html).toContain('data-client-brand="chatgpt"');
+    expect(html).not.toContain('viewBox="0 0 256 257"');
+    expect(html).not.toContain('src="https://');
+    expect(html).not.toContain("<script");
+  });
+
+  it("falls back to a neutral glyph for unknown clients and spoofed known brands", () => {
+    const identities = [
+      { clientName: "ChatGPT", clientDomain: "evil.example", redirectHost: "chatgpt.com" },
+      { clientName: "ChatGPT", clientDomain: "chatgpt.com", redirectHost: "evil.example" },
+      { clientName: "Not ChatGPT", clientDomain: "chatgpt.com", redirectHost: "chatgpt.com" },
+      { clientName: "Claude", clientDomain: "claude.ai", redirectHost: "evil.example" },
+      { clientName: "Cursor", clientDomain: "cursor.com", redirectHost: "cursor.com" },
+    ];
+    for (const identity of identities) {
+      const html = renderConsentPage(
+        { ...identity, redirectIsLoopback: false, scope: ["mcp:read"] },
+        "browser-bound-handle",
+      );
+      expect(html).toContain('viewBox="0 0 24 24"');
+      expect(html).toContain('<rect x="4" y="4" width="16" height="16" rx="4"/>');
+      expect(html).not.toContain('data-client-brand="chatgpt"');
+      expect(html).not.toContain('viewBox="0 0 256 257"');
+    }
+  });
+
   it("never lends Claude branding to a spoofed or unrecognized client", () => {
     for (const client of [
       {
