@@ -169,7 +169,7 @@ describe("Phase 4 ClickUp GET-only transport", () => {
     expect(fetcher).not.toHaveBeenCalled();
   });
 
-  it("returns a bounded Markdown task description and exact priority for an authorized detail read", async () => {
+  it("returns bounded Markdown details and priority", async () => {
     const grant = await requireReadGrant(auth, env);
     const requests: string[] = [];
     const fetcher = vi.fn(async (input: RequestInfo | URL) => {
@@ -196,7 +196,7 @@ describe("Phase 4 ClickUp GET-only transport", () => {
     ]);
   });
 
-  it("truncates verbose task content, keeps bulk results metadata-only, and fails closed on unsafe response shapes", async () => {
+  it("truncates descriptions and rejects unsafe detail payloads", async () => {
     const grant = await requireReadGrant(auth, env);
     const description = "x".repeat(10000);
     const fetcher = vi.fn(async () =>
