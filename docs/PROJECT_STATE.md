@@ -1,3 +1,13 @@
+# 24 October 2026 SAST — Client-aware OAuth consent branding (PR #32, draft)
+
+**Owner clarification:** Consent diagrams must show the logo of the actual connecting client/vendor, not a fixed ChatGPT/Claude identity. The self-contained consent view now chooses between bundled ChatGPT/OpenAI and Claude marks using the matched client name, publisher domain, and OAuth redirect host. Unknown or mismatched clients receive a neutral placeholder; arbitrary client-supplied remote logo URLs are not fetched. Visual matching must not be mistaken for cryptographic client verification.
+
+**Code:** Branch `feature/consent-client-aware-brand-20261024`, [draft PR #32](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/pull/32); `src/auth/brand-assets.ts`, `src/auth/consent.ts`, and `tests/consent.test.ts`. Tests were added for ChatGPT, vendor mismatch and unknown fallback. No ClickUp task records, credentials, OAuth grants, production configuration or staging Worker have been changed by this PR.
+
+**Evidence and blockers:** Changes are committed, but exact-final-head Strict CI, specialist review and owner merge remain pending; a new client logo is not yet visible on the deployed Cloudflare staging Worker. **Next:** verify Strict CI on the final PR SHA and review its diff before owner-directed staging deployment.
+
+---
+
 # 21 October 2026 SAST — PR #25 Workspace-bound security candidate
 
 **Owner request:** Resolve the task-move check/use race without dropping any of the 48 tool registrations. The ClickUp API does not document atomic List-bound task-ID writes. Consequently, a strict single-List policy and unrestricted task-ID mutations cannot both be enforced by this MCP alone.
