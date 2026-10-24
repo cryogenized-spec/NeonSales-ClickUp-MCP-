@@ -95,6 +95,20 @@ describe("Phase 4 official SDK integration", () => {
         liveClickUp: true,
         authentication: "github-oauth-plus-individual-clickup-oauth",
       });
+      const grantStatus = await client.callTool({
+        name: "get_clickup_connection_status",
+        arguments: {},
+      });
+      expect(grantStatus.structuredContent).toMatchObject({
+        connected: true,
+        clickup_user_id: "456",
+        workspace_id: "555",
+        mcp_read_scope_granted: true,
+        mcp_write_scope_granted: false,
+      });
+      expect(JSON.stringify(grantStatus.structuredContent)).not.toContain(
+        "nonworking-personal-fixture",
+      );
       await expect(
         client.callTool({
           name: "create_scoped_task",
@@ -114,6 +128,40 @@ describe("Phase 4 official SDK integration", () => {
         pages_scanned: 1,
       });
       expect(outbound).toHaveBeenCalledTimes(3);
+    } finally {
+      await client.close();
+      await handler.close();
+    }
+  });
+
+  it("reports verified write scope without exposing any OAuth token", async () => {
+    const handler = createProtocolHandler({ bindings: configuration() });
+    const client = new Client({ name: "write-scope-diagnostic", version: "0.1.0" });
+    const transport = new StreamableHTTPClientTransport(new URL("http://local.test/mcp"), {
+      fetch: async (input, init) =>
+        handler.fetch(new Request(input, init), {
+          authInfo: {
+            token: "verified-internal-only",
+            clientId: "mcp-test",
+            scopes: ["mcp:read", "mcp:write"],
+            extra: { subject: "github:11" },
+          },
+        }),
+    });
+    try {
+      await client.connect(transport);
+      const status = await client.callTool({
+        name: "get_clickup_connection_status",
+        arguments: {},
+      });
+      expect(status.structuredContent).toMatchObject({
+        connected: true,
+        mcp_read_scope_granted: true,
+        mcp_write_scope_granted: true,
+      });
+      expect(JSON.stringify(status.structuredContent)).not.toContain(
+        "nonworking-personal-fixture",
+      );
     } finally {
       await client.close();
       await handler.close();
