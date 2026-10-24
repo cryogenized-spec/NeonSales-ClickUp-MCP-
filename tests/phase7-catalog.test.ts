@@ -618,7 +618,8 @@ describe("Phase 7 individual OAuth and native catalogue - adversarial tests", ()
       if (url.pathname === "/api/v2/list/12346") return reply(fixture(url.pathname));
       if (url.pathname === "/api/v2/team/555/space") return reply(fixture(url.pathname));
       if (url.pathname === "/api/v2/list/12346/task") {
-        return reply({ tasks: [{ id: "t1", list: { id: "12345" }, tags: [{ name: "Urgent" }] }] });
+        if (url.searchParams.get("include_timl") !== "true") return reply({ tasks: [] });
+        return reply({ tasks: [{ id: "t1", list: { id: "12347" }, tags: [{ name: "Urgent" }] }] });
       }
       throw Error("unexpected endpoint " + url.pathname);
     });
@@ -629,6 +630,28 @@ describe("Phase 7 individual OAuth and native catalogue - adversarial tests", ()
       f as typeof fetch,
     );
     expect(result["tasks"]).toHaveLength(1);
+  });
+
+  it("rejects malformed home-List IDs in Workspace searches for both task types and tags", async () => {
+    for (const badId of [null, {}, [], "", 0]) {
+      const f = vi.fn(async (req: RequestInfo | URL) => {
+        const url = new URL(String(req));
+        if (url.pathname === "/api/v2/team/555/task") {
+          return reply({
+            tasks: [{ id: "bad", list: { id: badId }, tags: [{ name: "Urgent" }], custom_item_id: 7 }],
+          });
+        }
+        throw Error("unexpected endpoint " + url.pathname);
+      });
+      for (const [name, args] of [
+        ["clickup_search_tasks_by_tag", { tag: "Urgent" }],
+        ["clickup_search_tasks_by_type", { task_type: "7" }],
+      ] as const) {
+        await expect(runCatalogOperation(name, args, makeGrant(), f as typeof fetch)).rejects.toThrow(
+          "CLICKUP_SCOPE_OR_SCHEMA_REJECTED",
+        );
+      }
+    }
   });
 
   it("still rejects foreign-home search results under a single-List grant", async () => {
