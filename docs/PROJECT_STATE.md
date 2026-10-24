@@ -4,7 +4,9 @@
 
 **Code:** Branch `feature/consent-client-aware-brand-20261024`, [draft PR #32](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/pull/32); `src/auth/brand-assets.ts`, `src/auth/consent.ts`, and `tests/consent.test.ts`. Tests were added for ChatGPT, vendor mismatch and unknown fallback. No ClickUp task records, credentials, OAuth grants, production configuration or staging Worker have been changed by this PR.
 
-**Evidence and blockers:** Changes are committed, but exact-final-head Strict CI, specialist review and owner merge remain pending; a new client logo is not yet visible on the deployed Cloudflare staging Worker. **Next:** verify Strict CI on the final PR SHA and review its diff before owner-directed staging deployment.
+**Security remediation and evidence (24 October):** Updated root and all nested Zod copies to 4.6.7 and the Miniflare-provided Undici to 7.30.1 using verified tarball SRI hashes and npm overrides; retained MCP SDK 2.3.1 and Wrangler 4.149.0. Code head `8c6e2a0eeabcf4653d9e44550975893609a83b49` passed [Strict CI #40121156676](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/actions/runs/40121156676), including all 168 Vitest, typecheck/lint/format, reproducible build, real local workerd OAuth smoke and mandatory npm audit, and [CodeQL #40121156689](https://github.com/cryogenized-spec/NeonSales-ClickUp-MCP-/actions/runs/40121156689) succeeded. Focused `@codex review` requested at that exact code head; completion/approval is **not** asserted. This documentation change advances HEAD and requires renewed exact-head CI before merge.
+
+**Release boundary:** PR #32 is still a draft; no merged main, staging deployment, additional ClickUp permission, real task write, or connected-client acceptance is implied. **Next:** verify final exact-head CI and reviewer comments, then owner-authorised merge followed by manual main-branch staging deployment and live ChatGPT consent-page verification.
 
 ---
 
