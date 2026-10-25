@@ -94,12 +94,11 @@ describe("Phase 4 official SDK integration", () => {
             "disconnect_clickup_account",
             "create_scoped_task",
             "clickup_set_workspace_access",
-          ].includes(
-            tool.name,
-          ),
+          ].includes(tool.name),
         );
         expect(tool.annotations?.destructiveHint).toBe(
-          tool.name === "disconnect_clickup_account" || tool.name === "clickup_set_workspace_access",
+          tool.name === "disconnect_clickup_account" ||
+            tool.name === "clickup_set_workspace_access",
         );
       }
       const diagnostic = await client.callTool({ name: "service_info", arguments: {} });
