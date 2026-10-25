@@ -82,7 +82,7 @@ describe("explicit per-user Workspace operations", () => {
     const { env, flags } = testRig();
     expect((await requireReadGrant(auth("11"), env)).resourceScope).toBe("list");
     expect((await requireReadGrant(auth("22"), env)).resourceScope).toBe("list");
-    expect((await clickUpConnectionStatus(auth("11"), env))).toMatchObject({
+    expect(await clickUpConnectionStatus(auth("11"), env)).toMatchObject({
       workspace_exclusive: true,
       workspace_scope_approved: true,
       workspace_scope_enabled: false,
@@ -93,7 +93,7 @@ describe("explicit per-user Workspace operations", () => {
     });
     expect((await requireReadGrant(auth("11"), env)).resourceScope).toBe("workspace");
     expect((await requireReadGrant(auth("22"), env)).resourceScope).toBe("list");
-    expect((await clickUpConnectionStatus(auth("11"), env)).workspace_scope_enabled).toBe(true);
+    expect((await clickUpConnectionStatus(auth("11"), env))["workspace_scope_enabled"]).toBe(true);
     await setClickUpWorkspaceAccess(auth("11"), env, "555", false);
     expect(flags.get("github:11")?.enabled).toBe(false);
     expect((await requireReadGrant(auth("11"), env)).resourceScope).toBe("list");
@@ -105,9 +105,16 @@ describe("explicit per-user Workspace operations", () => {
       [auth("22"), env, "555", "CLICKUP_WORKSPACE_OWNER_APPROVAL_REQUIRED"],
       [auth("11", false), env, "555", "CLICKUP_WRITE_SCOPE_REQUIRED"],
       [auth("11"), env, "666", "CLICKUP_SCOPE_OR_SCHEMA_REJECTED"],
-      [auth("11"), { ...env, CLICKUP_WORKSPACE_GITHUB_IDS: undefined }, "555", "CLICKUP_WORKSPACE_OWNER_APPROVAL_REQUIRED"],
+      [
+        auth("11"),
+        { ...env, CLICKUP_WORKSPACE_GITHUB_IDS: undefined },
+        "555",
+        "CLICKUP_WORKSPACE_OWNER_APPROVAL_REQUIRED",
+      ],
     ] as const) {
-      await expect(setClickUpWorkspaceAccess(identity, config, workspace, true)).rejects.toThrow(code);
+      await expect(setClickUpWorkspaceAccess(identity, config, workspace, true)).rejects.toThrow(
+        code,
+      );
     }
     expect(calls.filter((x) => x.endsWith("/workspace-access"))).toHaveLength(0);
     flags.get("github:11")!.exclusive = false;
