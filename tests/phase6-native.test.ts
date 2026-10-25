@@ -70,6 +70,21 @@ describe("native ClickUp endpoints: no duplicate journal or server approval sett
     expect(outbound).toHaveBeenCalledTimes(1);
   });
 
+  it("preserves explicit due time in native List-bound task creates", async () => {
+    const due = Date.parse("2026-10-28T07:30:00.000Z"); // 09:30 SAST
+    const outbound = vi.fn(async (url: RequestInfo | URL, init?: RequestInit) => {
+      expect(String(url)).toBe("https://api.clickup.com/api/v2/list/12345/task");
+      expect(JSON.parse(String(init?.body))).toMatchObject({
+        name: "Time-sensitive",
+        due_date: due,
+        due_date_time: true,
+      });
+      return json({ id: "abc123", list: { id: "12345" } });
+    });
+    await createScopedTask(grant, { name: "Time-sensitive", due_date_ms: due }, outbound as typeof fetch);
+    expect(outbound).toHaveBeenCalledTimes(1);
+  });
+
   it("binds the configured List to an actual Space in the approved Workspace", async () => {
     const outbound = vi.fn(async (url: RequestInfo | URL, init?: RequestInit) => {
       expect(init?.method).toBe("GET");
