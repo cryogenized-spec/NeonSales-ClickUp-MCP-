@@ -5,8 +5,8 @@ import { handleOAuthRequest } from "../src/auth/oauth-runtime.js";
 const captures = vi.hoisted(() => ({
   requests: [] as { url: string; options: unknown }[],
   providerSettings: [] as {
-    requiredScopes?: readonly string[];
-    scopesSupported?: readonly string[];
+    requiredScopes: readonly string[] | undefined;
+    scopesSupported: readonly string[] | undefined;
   }[],
 }));
 
