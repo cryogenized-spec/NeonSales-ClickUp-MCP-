@@ -447,7 +447,7 @@ export async function runCatalogOperation(
     throw new ReadFailure("CLICKUP_SCOPE_OR_SCHEMA_REJECTED");
   switch (name) {
     case "clickup_search_workspace": {
-      const q = txt(a["query"], 160).toLowerCase();
+      const q = txt(a["query"], 240).toLowerCase();
       // Never search all Workspace tasks: the user may have more upstream rights
       // than this MCP's configured home-List grant permits.
       if (!workspaceScope) await listInWorkspace(g, f, g.listId);
@@ -571,6 +571,16 @@ export async function runCatalogOperation(
     case "clickup_set_custom_field": {
       await task("task_id");
       const field = buildArgs(a, "field_value");
+      const allowed = new Set([
+        "text",
+        "number",
+        "option_id",
+        "selected_option_ids",
+        "checked",
+        "timestamp_ms",
+      ]);
+      if (Object.keys(field).length !== 1 || Object.keys(field).some((key) => !allowed.has(key)))
+        throw new ReadFailure("CLICKUP_INVALID_ARGUMENT");
       const value =
         field["text"] ??
         field["number"] ??
@@ -579,6 +589,15 @@ export async function runCatalogOperation(
         field["checked"] ??
         field["timestamp_ms"];
       if (value === undefined) throw new ReadFailure("CLICKUP_INVALID_ARGUMENT");
+      if (
+        ("number" in field && (typeof value !== "number" || !Number.isFinite(value))) ||
+        ("text" in field && typeof value !== "string") ||
+        ("checked" in field && typeof value !== "boolean") ||
+        ("timestamp_ms" in field && (!Number.isSafeInteger(value) || Number(value) <= 0)) ||
+        ("selected_option_ids" in field &&
+          (!Array.isArray(value) || value.some((id) => typeof id !== "string")))
+      )
+        throw new ReadFailure("CLICKUP_INVALID_ARGUMENT");
       return short(
         await call("POST", v2("task/" + val(a, "task_id") + "/field/" + val(a, "field_id")), {
           value,
