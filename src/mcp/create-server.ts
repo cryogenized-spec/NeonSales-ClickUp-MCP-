@@ -375,7 +375,7 @@ export function createServer(deps?: ReadDependencies): McpServer {
     "get_scoped_list",
     {
       description:
-        "Read the currently configured ClickUp List name and available statuses using YOUR own ClickUp OAuth connection. Does not list unapproved Lists or modify anything.",
+        "Read the configured ClickUp List, statuses and current resource_scope. task_id_operations_enabled is false under legacy List-only grants because ClickUp task-ID mutations lack an atomic List boundary; changing that requires separately approved Workspace authorization.",
       inputSchema: fromJsonSchema<Record<string, never>>({
         type: "object",
         properties: {},
@@ -386,7 +386,12 @@ export function createServer(deps?: ReadDependencies): McpServer {
     async (_args, extra) => {
       try {
         const grant = await scopedGrant(extra.http?.authInfo);
-        return toolSuccess(await getScopedList(grant, dependencies.fetcher ?? fetch));
+        const list = await getScopedList(grant, dependencies.fetcher ?? fetch);
+        return toolSuccess({
+          ...list,
+          resource_scope: grant.resourceScope ?? "list",
+          task_id_operations_enabled: grant.resourceScope === "workspace",
+        });
       } catch (error) {
         return toolError(error);
       }
