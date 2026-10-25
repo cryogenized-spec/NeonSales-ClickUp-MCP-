@@ -19,6 +19,9 @@ if (!/^[1-9]\\d{0,15}(?:,[1-9]\\d{0,15}){0,3}$/.test(workspaceOwnerIds)) {
 const stage = {
   name: "neonsales-clickup-mcp-staging",
   vars: { CLICKUP_WORKSPACE_GITHUB_IDS: workspaceOwnerIds },
+  // Existing OAuth/ClickUp dashboard variables must not disappear on deploy.
+  // Cloudflare documents keep_vars for preserving dashboard-managed bindings.
+  keep_vars: true,
   main: "src/index.ts",
   compatibility_date: "2026-10-10",
   compatibility_flags: ["global_fetch_strictly_public"],
