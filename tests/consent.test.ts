@@ -42,10 +42,7 @@ describe("explicit optional write consent", () => {
     expect(html).toContain("Leave unchecked for read-only access.");
     // Merely rendering an extra checkbox must not elevate the submitted grant.
     expect(validatedReadOnlyScopes(["mcp:read"])).toEqual(["mcp:read"]);
-    expect(validatedReadOnlyScopes(["mcp:read", "mcp:write"])).toEqual([
-      "mcp:read",
-      "mcp:write",
-    ]);
+    expect(validatedReadOnlyScopes(["mcp:read", "mcp:write"])).toEqual(["mcp:read", "mcp:write"]);
   });
 
   it("does not duplicate client-requested write scope", () => {
