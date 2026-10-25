@@ -88,14 +88,16 @@ export async function requireReadGrant(auth: unknown, bindings: unknown): Promis
   if (typeof workspaceIds === "string") {
     try {
       const permitted = parseStaffAllowlist(workspaceIds);
-      workspaceApproved = permitted.has(subject.slice(7)) &&
-        [...permitted].every((entry) => approved.has(entry));
+      workspaceApproved =
+        permitted.has(subject.slice(7)) && [...permitted].every((entry) => approved.has(entry));
     } catch {
       throw new ReadFailure("CLICKUP_NOT_CONFIGURED");
     }
   }
-  const effectiveScope = resourceScope === "workspace" ||
-    (workspaceApproved && user.workspaceEnabled === true) ? "workspace" : "list";
+  const effectiveScope =
+    resourceScope === "workspace" || (workspaceApproved && user.workspaceEnabled === true)
+      ? "workspace"
+      : "list";
   if (effectiveScope === "workspace" && user.workspaceExclusive !== true)
     throw new ReadFailure("CLICKUP_WORKSPACE_RECONSENT_REQUIRED");
   return {
