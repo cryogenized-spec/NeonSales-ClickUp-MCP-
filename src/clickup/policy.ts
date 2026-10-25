@@ -79,13 +79,30 @@ export async function requireReadGrant(auth: unknown, bindings: unknown): Promis
   // Workspace-wide catalogue operations are safe only with an OAuth credential
   // proven at consent to cover precisely this one Workspace; legacy cached
   // tokens carry no such proof and must reconnect rather than be grandfathered.
-  if (resourceScope === "workspace" && user.workspaceExclusive !== true)
+  // A staff member may separately enable Workspace tools, but ONLY if the
+  // owner allowlisted that exact GitHub ID and ClickUp OAuth proved that their
+  // token authorizes exactly this one Workspace. Changing the Worker allowlist
+  // revokes the effective grant immediately without a global scope change.
+  let workspaceApproved = false;
+  const workspaceIds = env["CLICKUP_WORKSPACE_GITHUB_IDS"];
+  if (typeof workspaceIds === "string") {
+    try {
+      const permitted = parseStaffAllowlist(workspaceIds);
+      workspaceApproved = permitted.has(subject.slice(7)) &&
+        [...permitted].every((entry) => approved.has(entry));
+    } catch {
+      throw new ReadFailure("CLICKUP_NOT_CONFIGURED");
+    }
+  }
+  const effectiveScope = resourceScope === "workspace" ||
+    (workspaceApproved && user.workspaceEnabled === true) ? "workspace" : "list";
+  if (effectiveScope === "workspace" && user.workspaceExclusive !== true)
     throw new ReadFailure("CLICKUP_WORKSPACE_RECONSENT_REQUIRED");
   return {
     subject,
     clickupUserId: user.clickupUserId,
     listId,
-    resourceScope,
+    resourceScope: effectiveScope,
     workspaceId: user.workspaceId,
     apiToken: user.token,
     quota: quota as unknown as ReadGrant["quota"],
