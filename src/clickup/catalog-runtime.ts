@@ -37,6 +37,16 @@ const clip = (v: unknown): unknown => {
   if (typeof v === "string") return v.slice(0, 12000);
   return v;
 };
+// Report the same nested presentation bounds that clip() actually applies.
+const wouldClip = (v: unknown): boolean => {
+  if (Array.isArray(v)) return v.length > 50 || v.some(wouldClip);
+  const item = obj(v);
+  if (item)
+    return Object.entries(item)
+      .filter(([key]) => !/token|secret|authorization|password/i.test(key))
+      .some(([, value]) => wouldClip(value));
+  return typeof v === "string" && v.length > 12000;
+};
 function buildArgs(a: Json, key: string): Json {
   const b = obj(a[key]);
   if (!b) throw new ReadFailure("CLICKUP_INVALID_ARGUMENT");
@@ -245,6 +255,7 @@ const short = (d: Json, limit = 50): Json => {
     ...Object.fromEntries(arrays.map((k) => [k, (d[k] as unknown[]).slice(0, limit)])),
     incomplete:
       truncated ||
+      wouldClip(d) ||
       possibleMorePages ||
       d["incomplete"] === true ||
       (typeof d["next_cursor"] === "string" && d["next_cursor"].length > 0),
@@ -479,7 +490,8 @@ export async function runCatalogOperation(
           docs: [],
           lists: [],
           folders: [],
-          incomplete: tasks.length >= 100 || matchedTasks.length > N,
+          incomplete:
+            tasks.length >= 100 || matchedTasks.length > N || wouldClip(matchedTasks.slice(0, N)),
         };
       const docs = await call("GET", v3("workspaces/" + W + "/docs?limit=50"));
       if (!Array.isArray(docs["docs"])) throw new ReadFailure("CLICKUP_BAD_RESPONSE");
@@ -520,6 +532,12 @@ export async function runCatalogOperation(
           d.filter(match).length > N ||
           d.length >= 50 ||
           hierarchyIncomplete ||
+          wouldClip([
+            tasks.filter(match).slice(0, N),
+            d.filter(match).slice(0, N),
+            foundLists.filter(match).slice(0, N),
+            foundFolders.filter(match).slice(0, N),
+          ]) ||
           hierarchySpaces.length > 5 ||
           foundLists.length > N ||
           foundFolders.length > N,
@@ -812,10 +830,12 @@ export async function runCatalogOperation(
     case "clickup_get_workspace_hierarchy": {
       const sp = await spaces(g, f);
       const results: unknown[] = [];
+      let incomplete = sp.length > Math.min(N, 10);
       for (const space of sp.slice(0, Math.min(N, 10))) {
         const sid = id(space["id"]);
         const fs = await call("GET", v2("space/" + sid + "/folder?archived=false"));
         const ls = await call("GET", v2("space/" + sid + "/list?archived=false"));
+        incomplete ||= wouldClip(space) || wouldClip(fs) || wouldClip(ls);
         results.push({
           space: clip(space),
           folders: clip(fs["folders"]),
@@ -826,7 +846,7 @@ export async function runCatalogOperation(
         source: "clickup-api-v2",
         workspace_id: g.workspaceId,
         spaces: results,
-        incomplete: sp.length > Math.min(N, 10),
+        incomplete,
       };
     }
     case "clickup_create_list": {

@@ -89,6 +89,46 @@ async function issues(name: string, args: Record<string, unknown>) {
 }
 
 describe("48-tool contract audit", () => {
+  it("marks nested hierarchy clipping incomplete within a single Space", async () => {
+    const api = vi.fn(async (req: RequestInfo | URL) => {
+      const p = new URL(String(req)).pathname;
+      if (p.endsWith("/space")) return Response.json({ spaces: [{ id: "777" }] });
+      if (p.endsWith("/folder")) return Response.json({ folders: [] });
+      return Response.json({
+        lists: Array.from({ length: 51 }, (_, n) => ({ id: String(1000 + n), name: "List " + n })),
+      });
+    });
+    const result = await runCatalogOperation(
+      "clickup_get_workspace_hierarchy",
+      { workspace_id: "555" },
+      grant,
+      api as typeof fetch,
+    );
+    expect(result["incomplete"]).toBe(true);
+    const spaces = result["spaces"] as Array<{ lists: unknown[] }>;
+    expect(spaces[0]?.lists).toHaveLength(50);
+  });
+
+  it("reports nested clipping in a task response instead of claiming completeness", async () => {
+    const api = vi.fn(async (req: RequestInfo | URL) => {
+      const p = new URL(String(req)).pathname;
+      if (p.endsWith("/space")) return Response.json({ spaces: [{ id: "777" }] });
+      if (p.includes("/list/")) return Response.json({ id: "12345", space: { id: "777" } });
+      return Response.json({
+        id: "abc123",
+        list: { id: "12345" },
+        custom_fields: Array.from({ length: 51 }, (_, n) => ({ id: "field" + n })),
+      });
+    });
+    const result = await runCatalogOperation(
+      "clickup_get_task",
+      { task_id: "abc123" },
+      grant,
+      api as typeof fetch,
+    );
+    expect(result["incomplete"]).toBe(true);
+    expect(result["custom_fields"]).toHaveLength(50);
+  });
   it("uses ClickUp's numeric Folder parent type when creating a Doc", async () => {
     const api = vi.fn(async (req: RequestInfo | URL, init?: RequestInit) => {
       if (init?.method === "POST") return Response.json({ id: "doc1" });

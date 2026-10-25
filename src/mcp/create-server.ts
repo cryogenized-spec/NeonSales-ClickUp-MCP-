@@ -284,7 +284,7 @@ export function createServer(deps?: ReadDependencies): McpServer {
                 code: "CLICKUP_SCHEMA_ONLY",
                 tool: spec.name,
                 message:
-                  "Schema registered only for model-discovery tests; no backend operation exists.",
+                  "Injected model-discovery preview only; this callback never invokes a ClickUp backend.",
               }),
             },
           ],

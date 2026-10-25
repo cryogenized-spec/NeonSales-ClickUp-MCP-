@@ -162,6 +162,9 @@ of the hosted ClickUp MCP. Fixture success does not prove native compatibility.
   not exhaustively retrieved. Single-page reads are separate. Hierarchy listing
   does not expand Folder child Lists; use bounded Workspace text search or native
   ClickUp for missing detail.
+- Nested hierarchy/task arrays and long text clipped by presentation bounds also
+  mark the result incomplete; a small top-level collection does not imply that
+  its nested data is complete.
 - Member resolution uses the full bounded HTTP response before deciding
   ambiguity. Presentation caps do not turn multiple matches into a unique match.
   Member listing and capped match results explicitly signal incompleteness.
