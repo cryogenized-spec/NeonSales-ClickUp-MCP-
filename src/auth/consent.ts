@@ -47,16 +47,26 @@ export function renderConsentPage(details: ConsentDisplay, handle: string): stri
   const origin = details.clientDomain
     ? "Published by " + escapeHtml(details.clientDomain) + "."
     : "This application's name is self-declared and has not been independently verified.";
-  const scopes = details.scope
-    .map(
+  // describeConsent() only lists scopes the CLIENT asked for. Some MCP clients
+  // initiate a read-only grant even when the authorization server supports writes
+  // and cannot launch a later step-up browser prompt. Cloudflare's approveConsent
+  // explicitly permits the human to select additional *supported* scopes.
+  // Offer write as an optional, UNCHECKED choice; never add it invisibly.
+  const scopes = [
+    ...details.scope.map(
       (scope) =>
         '<label><input name="scope" type="checkbox" checked value="' +
         escapeHtml(scope) +
         '"> ' +
         escapeHtml(scope) +
         "</label>",
-    )
-    .join("\n");
+    ),
+    ...(details.scope.includes("mcp:read") && !details.scope.includes("mcp:write")
+      ? [
+          '<label><input name="scope" type="checkbox" value="mcp:write"><span>mcp:write <span class="permission-hint">Optional: create, change and delete authorized ClickUp records. Leave unchecked for read-only access.</span></span></label>',
+        ]
+      : []),
+  ].join("\n");
   const clientGlyph = clientGlyphFor(details);
   const loopbackWarning = details.redirectIsLoopback
     ? '<div class="info warning"><strong>Local destination:</strong> This sends access to an app on your computer. Verify that you trust it.</div>'
@@ -108,6 +118,7 @@ h1{font-size:clamp(26px,5vw,32px);line-height:1.16;letter-spacing:-.035em;margin
 .permission-list label{display:flex;gap:13px;align-items:center;padding:14px 15px;background:#111f36;border:1px solid #395273;border-radius:13px;color:#e7f0ff;overflow-wrap:anywhere;font-size:13px;font-weight:700;cursor:pointer}
 .permission-list label:focus-within{outline:2px solid #83b9ff;outline-offset:2px}
 .permission-list input{width:18px;height:18px;flex:0 0 auto;accent-color:#5298ff;cursor:pointer}
+.permission-hint{display:block;color:#b3c8e6;font-size:11px;font-weight:450;line-height:1.55;margin-top:3px}
 .info{padding:13px 14px;border-radius:12px;border:1px solid #37547b;background:#172d4b;color:#c7d8f2;line-height:1.55;font-size:12px;margin-bottom:22px}
 .info strong{color:#f0f5ff}
 .info.warning{border-color:#a17d45;background:#322719;color:#ffdfaf}
@@ -147,7 +158,7 @@ h1{font-size:clamp(26px,5vw,32px);line-height:1.16;letter-spacing:-.035em;margin
 <p class="publisher">${origin}</p>
 ${loopbackWarning}
 <h2 class="permissions-title" id="permissions-heading">Requested permission</h2>
-<p class="permissions-intro">Read and optional write OAuth scopes are shown here. Per-tool approvals are handled by your Claude or ChatGPT client.</p>
+<p class="permissions-intro">Review the permission requested by your client. Optional write access is not enabled unless you explicitly check it. Per-tool approvals are handled by your client.</p>
 <form method="post" action="/authorize" aria-labelledby="permissions-heading">
 <input type="hidden" name="handle" value="${escapeHtml(handle)}">
 <div class="permission-list">${scopes}</div>
