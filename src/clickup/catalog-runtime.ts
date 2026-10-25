@@ -215,9 +215,7 @@ const taskBody = (a: Json, update = false): Json => {
     ...(a["description"] !== undefined ? { description: txt(a["description"]) } : {}),
     ...(a["status"] !== undefined ? { status: txt(a["status"], 80) } : {}),
     ...(a["priority"] !== undefined ? { priority: a["priority"] } : {}),
-    ...(a["due_date_ms"] !== undefined
-      ? { due_date: a["due_date_ms"], due_date_time: true }
-      : {}),
+    ...(a["due_date_ms"] !== undefined ? { due_date: a["due_date_ms"], due_date_time: true } : {}),
     ...(Array.isArray(assignees)
       ? { assignees: update ? { add: assignees, rem: [] } : assignees }
       : {}),
@@ -553,7 +551,7 @@ export async function runCatalogOperation(
     case "clickup_create_task": {
       await list("list_id");
       const payload = taskBody(buildArgs(a, "new_task"));
-      if (!payload.name) throw new ReadFailure("CLICKUP_INVALID_ARGUMENT");
+      if (!payload["name"]) throw new ReadFailure("CLICKUP_INVALID_ARGUMENT");
       return short(
         await call("POST", v2("list/" + val(a, "list_id") + "/task"), {
           ...payload,
@@ -619,7 +617,7 @@ export async function runCatalogOperation(
         const item = obj(draft);
         if (!item) throw new ReadFailure("CLICKUP_INVALID_ARGUMENT");
         const payload = taskBody(item);
-        if (!payload.name) throw new ReadFailure("CLICKUP_INVALID_ARGUMENT");
+        if (!payload["name"]) throw new ReadFailure("CLICKUP_INVALID_ARGUMENT");
         return payload;
       });
       const outcome: unknown[] = [];
