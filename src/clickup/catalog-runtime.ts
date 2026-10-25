@@ -462,13 +462,24 @@ export async function runCatalogOperation(
         "GET",
         workspaceScope && a["list_id"] === undefined
           ? v2("team/" + W + "/task?page=0&subtasks=true&include_closed=true")
-          : v2("list/" + id(target) + "/task?page=0&subtasks=true&include_closed=true"),
+          : v2(
+              "list/" +
+                id(target) +
+                "/task?page=0&subtasks=true&include_closed=true" +
+                (workspaceScope ? "&include_timl=true" : ""),
+            ),
       );
       if (!Array.isArray(result["tasks"])) throw new ReadFailure("CLICKUP_BAD_RESPONSE");
       const tasks = result["tasks"];
       for (const candidate of tasks) {
         const t = obj(candidate);
-        if (!t || String(obj(t["list"])?.["id"]) !== g.listId)
+        const homeList = obj(t?.["list"])?.["id"];
+        if (
+          !t ||
+          (typeof homeList !== "number" && typeof homeList !== "string") ||
+          !/^[1-9]\d{0,17}$/.test(String(homeList)) ||
+          (!workspaceScope && String(homeList) !== g.listId)
+        )
           throw new ReadFailure("CLICKUP_SCOPE_OR_SCHEMA_REJECTED");
       }
       const found = tasks.filter((x) => {
