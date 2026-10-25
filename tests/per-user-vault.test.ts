@@ -147,18 +147,22 @@ describe("actual encrypted SQLite per-user token vault", () => {
       workspaceEnabled: false,
     });
     expect(
-      (await call(vault, "workspace-access", {
-        subject: "github:11",
-        workspaceId: "888",
-        enabled: true,
-      })).status,
+      (
+        await call(vault, "workspace-access", {
+          subject: "github:11",
+          workspaceId: "888",
+          enabled: true,
+        })
+      ).status,
     ).toBe(403);
     expect(
-      (await call(vault, "workspace-access", {
-        subject: "github:22",
-        workspaceId: "999",
-        enabled: true,
-      })).status,
+      (
+        await call(vault, "workspace-access", {
+          subject: "github:22",
+          workspaceId: "999",
+          enabled: true,
+        })
+      ).status,
     ).toBe(403);
     const enabled = await call(vault, "workspace-access", {
       subject: "github:11",
@@ -198,11 +202,13 @@ describe("actual encrypted SQLite per-user token vault", () => {
       workspaceExclusive: false,
     });
     expect(
-      (await call(vault, "workspace-access", {
-        subject: "github:11",
-        workspaceId: "999",
-        enabled: true,
-      })).status,
+      (
+        await call(vault, "workspace-access", {
+          subject: "github:11",
+          workspaceId: "999",
+          enabled: true,
+        })
+      ).status,
     ).toBe(403);
   });
 
