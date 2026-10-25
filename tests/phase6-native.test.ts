@@ -81,7 +81,11 @@ describe("native ClickUp endpoints: no duplicate journal or server approval sett
       });
       return json({ id: "abc123", list: { id: "12345" } });
     });
-    await createScopedTask(grant, { name: "Time-sensitive", due_date_ms: due }, outbound as typeof fetch);
+    await createScopedTask(
+      grant,
+      { name: "Time-sensitive", due_date_ms: due },
+      outbound as typeof fetch,
+    );
     expect(outbound).toHaveBeenCalledTimes(1);
   });
 
