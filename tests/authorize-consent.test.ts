@@ -2,6 +2,12 @@ import { describe, expect, it, vi } from "vitest";
 import { handleAuthorizationPage } from "../src/auth/authorize.js";
 import type { OAuthEnv } from "../src/auth/env.js";
 
+vi.mock("@cloudflare/workers-oauth-provider", () => ({
+  AuthorizationError: class extends Error {},
+  CimdFetchError: class extends Error {},
+  authorizationErrorRedirect: () => "https://client.invalid/rejected",
+}));
+
 function fixture() {
   const requested = { scope: ["mcp:read"] };
   const approveConsent = vi.fn(async (_request: Request, _handle: string, _options: unknown) => ({
@@ -40,22 +46,18 @@ describe("OAuth browser consent scope selection", () => {
     const response = await submit(["mcp:read", "mcp:write"]);
     expect(response.status).toBe(302);
     expect(response.headers.get("location")).toContain("github.com/login/oauth/authorize");
-    expect(approveConsent).toHaveBeenCalledWith(
-      expect.any(Request),
-      "browser-bound-handle",
-      { scope: ["mcp:read", "mcp:write"] },
-    );
+    expect(approveConsent).toHaveBeenCalledWith(expect.any(Request), "browser-bound-handle", {
+      scope: ["mcp:read", "mcp:write"],
+    });
     expect(beginUpstream).toHaveBeenCalledTimes(1);
   });
 
   it("keeps a read-only grant read-only if optional write is not selected", async () => {
     const { submit, approveConsent } = fixture();
     expect((await submit(["mcp:read"])).status).toBe(302);
-    expect(approveConsent).toHaveBeenCalledWith(
-      expect.any(Request),
-      "browser-bound-handle",
-      { scope: ["mcp:read"] },
-    );
+    expect(approveConsent).toHaveBeenCalledWith(expect.any(Request), "browser-bound-handle", {
+      scope: ["mcp:read"],
+    });
   });
 
   it("rejects invalid scope submissions before beginning an upstream OAuth exchange", async () => {
