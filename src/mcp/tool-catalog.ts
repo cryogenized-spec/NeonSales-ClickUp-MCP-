@@ -72,13 +72,21 @@ const integer = (description: string, minimum = 0, maximum = 1_000_000): Field =
   minimum,
   maximum,
 });
-const decimal = (description: string, minimum = -1_000_000_000, maximum = 1_000_000_000): Field => ({
+const decimal = (
+  description: string,
+  minimum = -1_000_000_000,
+  maximum = 1_000_000_000,
+): Field => ({
   type: "number",
   description,
   minimum,
   maximum,
 });
-const memberId = integer("Positive numeric ClickUp user ID, not a name or a GitHub ID.", 1, 9_007_199_254_740_991);
+const memberId = integer(
+  "Positive numeric ClickUp user ID, not a name or a GitHub ID.",
+  1,
+  9_007_199_254_740_991,
+);
 const arrayOf = (description: string, item: Field, maxItems = 20): Field => ({
   type: "array",
   description,
@@ -99,11 +107,7 @@ const taskPatch = obj(
     status: str("Target status; must be valid for the task's home List.", 80),
     priority: integer("ClickUp priority: 1 urgent, 2 high, 3 normal, 4 low.", 1, 4),
     due_date_ms: integer("Due date as Unix epoch milliseconds, not seconds.", 0, 9_000_000_000_000),
-    assignee_ids: arrayOf(
-      "ClickUp user IDs; resolve names first.",
-      memberId,
-      12,
-    ),
+    assignee_ids: arrayOf("ClickUp user IDs; resolve names first.", memberId, 12),
   },
 );
 const taskDraft = obj(
@@ -114,11 +118,7 @@ const taskDraft = obj(
     status: str("Optional status valid in the target List.", 80),
     due_date_ms: integer("Unix epoch milliseconds, not seconds.", 0, 9_000_000_000_000),
     priority: integer("ClickUp priority 1-4.", 1, 4),
-    assignee_ids: arrayOf(
-      "ClickUp user IDs, not display names.",
-      memberId,
-      12,
-    ),
+    assignee_ids: arrayOf("ClickUp user IDs, not display names.", memberId, 12),
   },
   ["name"],
 );
@@ -169,7 +169,9 @@ const F = {
   field_id: str("Custom Field UUID from server-verified List configuration.", 100),
   field_value: obj("Typed Custom Field draft; infer legal options from field metadata.", {
     text: str("For text/URL fields.", 4_000),
-    number: decimal("Numeric Custom Field value, including negative or decimal values where permitted."),
+    number: decimal(
+      "Numeric Custom Field value, including negative or decimal values where permitted.",
+    ),
     option_id: str("Existing dropdown option ID.", 100),
     selected_option_ids: arrayOf(
       "Existing multi-select option IDs.",
