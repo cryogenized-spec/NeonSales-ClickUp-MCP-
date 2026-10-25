@@ -385,6 +385,22 @@ export const OPERATIONAL_CATALOG_NAMES: readonly string[] = [
 // Preserve all 48 registrations, but execute this subset only after the owner
 // explicitly enables Workspace authority and exclusive one-Workspace OAuth.
 const WORKSPACE_SCOPE_OPERATIONS = new Set([
+  // These tools have Workspace-wide effects or return data outside the home List.
+  "clickup_get_workspace_hierarchy",
+  "clickup_get_folder",
+  "clickup_create_list",
+  "clickup_create_list_in_folder",
+  "clickup_create_folder",
+  "clickup_update_folder",
+  "clickup_get_chat_channels",
+  "clickup_send_chat_message",
+  "clickup_create_document",
+  "clickup_list_document_pages",
+  "clickup_get_document_pages",
+  "clickup_create_document_page",
+  "clickup_update_document_page",
+  "clickup_stop_time_tracking",
+  "clickup_get_current_time_entry",
   "clickup_get_task",
   "clickup_update_task",
   "clickup_set_custom_field",
@@ -450,6 +466,19 @@ export async function runCatalogOperation(
         if (!t || (!workspaceScope && String(obj(t["list"])?.["id"]) !== g.listId))
           throw new ReadFailure("CLICKUP_SCOPE_OR_SCHEMA_REJECTED");
       }
+      const match = (v: unknown) => JSON.stringify(v).toLowerCase().includes(q);
+      if (!workspaceScope) {
+        // Never search Workspace Docs, Folders or unrelated Lists under a single-List grant.
+        return {
+          source: "clickup-api-v2",
+          scope: "list",
+          tasks: clip(tasks.filter(match).slice(0, N)),
+          docs: [],
+          lists: [],
+          folders: [],
+          incomplete: tasks.length >= 100 || tasks.filter(match).length > N,
+        };
+      }
       const docs = await call("GET", v3("workspaces/" + W + "/docs?limit=50"));
       if (!Array.isArray(docs["docs"])) throw new ReadFailure("CLICKUP_BAD_RESPONSE");
       const d = docs["docs"];
@@ -473,7 +502,6 @@ export async function runCatalogOperation(
           foundLists.push(...childLists["lists"]);
         }
       }
-      const match = (v: unknown) => JSON.stringify(v).toLowerCase().includes(q);
       return {
         source: "clickup-api",
         tasks: clip(tasks.filter(match).slice(0, N)),
