@@ -585,7 +585,7 @@ export async function runCatalogOperation(
       return {
         source: "clickup-api-v2",
         tasks: clip(found.slice(0, N)),
-        incomplete: tasks.length >= 100 || found.length > N,
+        incomplete: tasks.length >= 100 || found.length > N || wouldClip(found.slice(0, N)),
       };
     }
     case "clickup_create_task": {

@@ -89,6 +89,27 @@ async function issues(name: string, args: Record<string, unknown>) {
 }
 
 describe("48-tool contract audit", () => {
+  it.each(["clickup_search_tasks_by_tag", "clickup_search_tasks_by_type"])(
+    "reports nested clipping in %s matches",
+    async (name) => {
+      const api = vi.fn(async () =>
+        Response.json({
+          tasks: [
+            {
+              id: "abc123",
+              list: { id: "12345" },
+              tags: [{ name: "Urgent" }],
+              custom_item_id: 7,
+              custom_fields: Array.from({ length: 51 }, (_, n) => ({ id: "field" + n })),
+            },
+          ],
+        }),
+      );
+      const args = name === "clickup_search_tasks_by_tag" ? { tag: "Urgent" } : { task_type: "7" };
+      const result = await runCatalogOperation(name, args, grant, api as typeof fetch);
+      expect(result["incomplete"]).toBe(true);
+    },
+  );
   it("marks nested hierarchy clipping incomplete within a single Space", async () => {
     const api = vi.fn(async (req: RequestInfo | URL) => {
       const p = new URL(String(req)).pathname;
