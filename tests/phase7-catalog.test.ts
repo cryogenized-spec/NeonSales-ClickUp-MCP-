@@ -595,7 +595,7 @@ describe("Phase 7 individual OAuth and native catalogue - adversarial tests", ()
   });
 
   it("rejects foreign-List task metadata before any further API request", async () => {
-    const api = vi.fn(async (req: RequestInfo | URL) =>
+    const api = vi.fn(async (_req: RequestInfo | URL) =>
       reply({ id: "foreign1", name: "Private", list: { id: "12346" } }),
     );
     await expect(
