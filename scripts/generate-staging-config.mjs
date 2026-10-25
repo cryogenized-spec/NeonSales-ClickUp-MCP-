@@ -9,8 +9,16 @@ const kv = process.env.STAGING_OAUTH_KV_ID;
 if (typeof kv !== "string" || !/^[a-f0-9]{32}$/i.test(kv)) {
   throw new Error("Missing valid STAGING_OAUTH_KV_ID in GitHub staging environment vars");
 }
+// The repository owner's public numeric GitHub ID. It is NOT an OAuth token.
+// Other staff cannot acquire Workspace mode unless the owner explicitly amends
+// this staging allowlist. User opt-in and exclusive ClickUp OAuth remain required.
+const workspaceOwnerIds = process.env.STAGING_WORKSPACE_GITHUB_IDS ?? "256972168";
+if (!/^[1-9]\\d{0,15}(?:,[1-9]\\d{0,15}){0,3}$/.test(workspaceOwnerIds)) {
+  throw new Error("STAGING_WORKSPACE_GITHUB_IDS contains invalid GitHub ID(s)");
+}
 const stage = {
   name: "neonsales-clickup-mcp-staging",
+  vars: { CLICKUP_WORKSPACE_GITHUB_IDS: workspaceOwnerIds },
   main: "src/index.ts",
   compatibility_date: "2026-10-10",
   compatibility_flags: ["global_fetch_strictly_public"],
