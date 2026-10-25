@@ -99,7 +99,7 @@ describe("Codex P1 OAuth integration regressions", () => {
     captures.providerSettings.length = 0;
   });
 
-  it("advertises read and write scopes for first-time browser consent", async () => {
+  it("advertises only read as the baseline, and write as a supported opt-in", async () => {
     await handleOAuthRequest(
       new Request(origin + "/mcp", { method: "POST" }),
       env,
@@ -108,7 +108,7 @@ describe("Codex P1 OAuth integration regressions", () => {
     );
     expect(captures.providerSettings).toEqual([
       {
-        requiredScopes: ["mcp:read", "mcp:write"],
+        requiredScopes: ["mcp:read"],
         scopesSupported: ["mcp:read", "mcp:write"],
       },
     ]);

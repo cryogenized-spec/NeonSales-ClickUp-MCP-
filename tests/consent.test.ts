@@ -23,6 +23,57 @@ describe("browser-bound OAuth consent UI", () => {
   });
 });
 
+describe("explicit optional write consent", () => {
+  it("offers unchecked mcp:write even when ChatGPT requested only mcp:read", () => {
+    const html = renderConsentPage(
+      {
+        clientName: "ChatGPT",
+        clientDomain: "chatgpt.com",
+        redirectHost: "chatgpt.com",
+        redirectIsLoopback: false,
+        scope: ["mcp:read"],
+      },
+      "browser-bound-handle",
+    );
+    expect(html).toContain('name="scope" type="checkbox" checked value="mcp:read"');
+    expect(html).toContain('name="scope" type="checkbox" value="mcp:write"');
+    expect(html).not.toContain('checked value="mcp:write"');
+    expect(html).toContain("Optional: create, change and delete authorized ClickUp records");
+    expect(html).toContain("Leave unchecked for read-only access.");
+    // Merely rendering an extra checkbox must not elevate the submitted grant.
+    expect(validatedReadOnlyScopes(["mcp:read"])).toEqual(["mcp:read"]);
+    expect(validatedReadOnlyScopes(["mcp:read", "mcp:write"])).toEqual(["mcp:read", "mcp:write"]);
+  });
+
+  it("does not duplicate client-requested write scope", () => {
+    const html = renderConsentPage(
+      {
+        clientName: "ChatGPT",
+        clientDomain: "chatgpt.com",
+        redirectHost: "chatgpt.com",
+        redirectIsLoopback: false,
+        scope: ["mcp:read", "mcp:write"],
+      },
+      "browser-bound-handle",
+    );
+    expect(html.match(/value="mcp:write"/g)).toHaveLength(1);
+    expect(html).toContain('checked value="mcp:write"');
+  });
+
+  it("does not offer write to a client that has not requested read", () => {
+    const html = renderConsentPage(
+      {
+        clientName: "Other",
+        redirectHost: "localhost",
+        redirectIsLoopback: true,
+        scope: ["unexpected"],
+      },
+      "browser-bound-handle",
+    );
+    expect(html).not.toContain('value="mcp:write"');
+  });
+});
+
 describe("professional consent page invariants", () => {
   it("renders a responsive self-contained page without scripts or third-party assets", () => {
     const html = renderConsentPage(
