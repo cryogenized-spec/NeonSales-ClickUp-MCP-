@@ -74,6 +74,7 @@ describe("Phase 4 official SDK integration", () => {
           ...[
             "clickup_tool_catalog",
             "connect_clickup_account",
+            "clickup_set_workspace_access",
             "create_scoped_task",
             "disconnect_clickup_account",
             "find_scoped_tasks",
@@ -88,11 +89,18 @@ describe("Phase 4 official SDK integration", () => {
       );
       for (const tool of tools.filter((t) => !OPERATIONAL_CATALOG_NAMES.includes(t.name))) {
         expect(tool.annotations?.readOnlyHint).toBe(
-          !["connect_clickup_account", "disconnect_clickup_account", "create_scoped_task"].includes(
+          ![
+            "connect_clickup_account",
+            "disconnect_clickup_account",
+            "create_scoped_task",
+            "clickup_set_workspace_access",
+          ].includes(
             tool.name,
           ),
         );
-        expect(tool.annotations?.destructiveHint).toBe(tool.name === "disconnect_clickup_account");
+        expect(tool.annotations?.destructiveHint).toBe(
+          tool.name === "disconnect_clickup_account" || tool.name === "clickup_set_workspace_access",
+        );
       }
       const diagnostic = await client.callTool({ name: "service_info", arguments: {} });
       expect(diagnostic.structuredContent).toMatchObject({
