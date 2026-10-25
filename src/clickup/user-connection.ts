@@ -60,6 +60,10 @@ export class ClickUpUserConnection {
     state.storage.sql.exec(
       "CREATE TABLE IF NOT EXISTS connection_authorization (id INTEGER PRIMARY KEY CHECK(id = 1), subject TEXT NOT NULL, workspace_exclusive INTEGER NOT NULL CHECK(workspace_exclusive IN (0,1)))",
     );
+    // Explicit, revocable per-user Workspace permission, never shared across staff.
+    state.storage.sql.exec(
+      "CREATE TABLE IF NOT EXISTS workspace_access (id INTEGER PRIMARY KEY CHECK(id = 1), subject TEXT NOT NULL, workspace_id TEXT NOT NULL, enabled_at_ms INTEGER NOT NULL)",
+    );
   }
 
   async fetch(request: Request): Promise<Response> {
@@ -116,6 +120,23 @@ export class ClickUpUserConnection {
         "SELECT subject,clickup_user_id,workspace_id,cipher,iv,connected_at_ms FROM connection WHERE id = 1",
       )
       .toArray()[0];
+    const verified = this.state.storage.sql
+      .exec<{ workspace_exclusive: number }>(
+        "SELECT workspace_exclusive FROM connection_authorization WHERE id = 1 AND subject = ?",
+        principal,
+      )
+      .toArray()[0];
+    const workspaceAccess = this.state.storage.sql
+      .exec<{ workspace_id: string }>(
+        "SELECT workspace_id FROM workspace_access WHERE id = 1 AND subject = ?",
+        principal,
+      )
+      .toArray()[0];
+    const exclusive = verified?.workspace_exclusive === 1;
+    const workspaceEnabled =
+      exclusive &&
+      stored?.subject === principal &&
+      workspaceAccess?.workspace_id === stored.workspace_id;
     if (route === "/status") {
       return Response.json(
         stored?.subject === principal
@@ -124,10 +145,36 @@ export class ClickUpUserConnection {
               clickupUserId: stored.clickup_user_id,
               workspaceId: stored.workspace_id,
               connectedAtMs: stored.connected_at_ms,
+              workspaceExclusive: exclusive,
+              workspaceEnabled,
             }
           : { connected: false },
         { headers: metadataHeaders() },
       );
+    }
+    if (route === "/workspace-access") {
+      const enabled = body["enabled"];
+      if (
+        !stored ||
+        stored.subject !== principal ||
+        body["workspaceId"] !== stored.workspace_id ||
+        typeof enabled !== "boolean"
+      ) {
+        return new Response(null, { status: 403 });
+      }
+      if (enabled && !exclusive) return new Response(null, { status: 403 });
+      this.state.storage.transactionSync(() => {
+        this.state.storage.sql.exec("DELETE FROM workspace_access WHERE subject = ?", principal);
+        if (enabled) {
+          this.state.storage.sql.exec(
+            "INSERT OR REPLACE INTO workspace_access(id,subject,workspace_id,enabled_at_ms) VALUES(1,?,?,?)",
+            principal,
+            stored.workspace_id,
+            now,
+          );
+        }
+      });
+      return Response.json({ workspaceEnabled: enabled }, { headers: metadataHeaders() });
     }
     if (route === "/disconnect") {
       this.state.storage.sql.exec("DELETE FROM connection WHERE subject = ?", principal);
@@ -135,6 +182,7 @@ export class ClickUpUserConnection {
         "DELETE FROM connection_authorization WHERE subject = ?",
         principal,
       );
+      this.state.storage.sql.exec("DELETE FROM workspace_access WHERE subject = ?", principal);
       this.state.storage.sql.exec("DELETE FROM pending WHERE subject = ?", principal);
       return Response.json({ disconnected: true }, { headers: metadataHeaders() });
     }
@@ -165,6 +213,8 @@ export class ClickUpUserConnection {
           ),
         );
         this.state.storage.transactionSync(() => {
+          // Reconnection must never silently carry forward an earlier broad grant.
+          this.state.storage.sql.exec("DELETE FROM workspace_access WHERE subject = ?", principal);
           this.state.storage.sql.exec(
             "INSERT OR REPLACE INTO connection(id,subject,clickup_user_id,workspace_id,cipher,iv,connected_at_ms) VALUES(1,?,?,?,?,?,?)",
             principal,
@@ -186,12 +236,6 @@ export class ClickUpUserConnection {
       }
     }
     if (route === "/credential") {
-      const verified = this.state.storage.sql
-        .exec<{ workspace_exclusive: number }>(
-          "SELECT workspace_exclusive FROM connection_authorization WHERE id = 1 AND subject = ?",
-          principal,
-        )
-        .toArray()[0];
       if (!stored || stored.subject !== principal) {
         return Response.json({ connected: false }, { headers: metadataHeaders() });
       }
@@ -212,7 +256,8 @@ export class ClickUpUserConnection {
             clickupUserId: stored.clickup_user_id,
             workspaceId: stored.workspace_id,
             accessToken: new TextDecoder().decode(raw),
-            workspaceExclusive: verified?.workspace_exclusive === 1,
+            workspaceExclusive: exclusive,
+            workspaceEnabled,
           },
           { headers: metadataHeaders() },
         );

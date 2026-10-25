@@ -83,6 +83,7 @@ describe("Official ClickUp MCP capability catalogue (model-facing only)", () => 
           ...[
             "clickup_tool_catalog",
             "connect_clickup_account",
+            "clickup_set_workspace_access",
             "create_scoped_task",
             "disconnect_clickup_account",
             "find_scoped_tasks",
@@ -116,7 +117,10 @@ describe("Official ClickUp MCP capability catalogue (model-facing only)", () => 
     try {
       const tools = (await client.listTools()).tools;
       const preview = tools.filter(
-        (tool) => tool.name.startsWith("clickup_") && tool.name !== "clickup_tool_catalog",
+        (tool) =>
+          tool.name.startsWith("clickup_") &&
+          tool.name !== "clickup_tool_catalog" &&
+          tool.name !== "clickup_set_workspace_access",
       );
       expect(preview).toHaveLength(48);
       for (const spec of CLICKUP_MODEL_TOOL_CATALOG) {

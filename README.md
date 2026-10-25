@@ -24,6 +24,7 @@ A private, cloud-hosted [Model Context Protocol](https://modelcontextprotocol.io
 | `connect_clickup_account` | Account operation | Return individual ClickUp authorization URL; no tokens to AI clients |
 | `get_clickup_connection_status` | Read | Show only your own connection |
 | `disconnect_clickup_account` | Account operation | Remove your local encrypted connection (revoke upstream in ClickUp separately) |
+| `clickup_set_workspace_access` | Write-authorized account operation | Explicitly enable or revoke Workspace-wide tools for your own authorized ClickUp account |
 | `find_scoped_tasks` | Read | Get bounded tasks in configured home List |
 | `get_scoped_task` | Read | Read known task ID after verifying its home List |
 | `get_attention_report` | Read | Bounded overdue/upcoming/stale-task metadata; clearly flags incompleteness |
@@ -31,7 +32,14 @@ A private, cloud-hosted [Model Context Protocol](https://modelcontextprotocol.io
 | `create_scoped_task` | Write | Create a task in the configured List under your own account |
 | `clickup_tool_catalog` | Read | Inspect proposed schemas for further ClickUp capabilities; **not** an operational API |
 
-**Security checkpoint (21 October 2026; PR #25 pending):** All **48** REST-backed ClickUp catalogue operations remain registered. In legacy single-List mode (the default), task-ID and current-task-time operations that cannot atomically enforce the List boundary now **fail closed** rather than advertise unsafe success; the original scoped List reads and list-bound creates remain available. The proposed `CLICKUP_RESOURCE_SCOPE=workspace` mode allows the full catalogue within the connected user's **single authorised ClickUp Workspace**, including cross-List moves, but requires new exclusive Workspace OAuth consent. This is a proposed **broader** permission policy, **not owner-approved or active**. See [PR #25 Workspace-scope release proposal](docs/PR25_WORKSPACE_SCOPE_PLAN.md), and [PR #25 security acceptance matrix](docs/PR25_SECURITY_GATE_2026-10-21.md). The change does not invent an atomic ClickUp List precondition; upstream cross-Workspace token enforcement still requires live proof. **Do not merge/deploy PR #25 as security-cleared without explicit scope-policy approval and live acceptance.**
+**Security checkpoint (25 October 2026):** All **48** catalogue operations remain registered. The default `CLICKUP_RESOURCE_SCOPE=list` blocks task-ID mutation endpoints that lack an atomic home-List precondition. The new `clickup_set_workspace_access` account tool does **not** bypass these protections: it lets the **currently authenticated person** explicitly opt in to Workspace authority only if (1) the owner separately allowlisted their numeric GitHub user ID, (2) their own ClickUp OAuth token was verified as authorized for exactly the configured Workspace, and (3) their MCP grant includes `mcp:write`. The change affects no other staff. Revocation takes immediate effect and reconnecting resets it.
+
+**Staging activation after review, merge and manual deployment:**
+1. Staging defaults `CLICKUP_WORKSPACE_GITHUB_IDS` to public repository-owner GitHub ID `256972168`. This is a non-secret staging allowlist for the owner only; the GitHub Actions environment variable `STAGING_WORKSPACE_GITHUB_IDS` may override it. Wrangler's `keep_vars` preserves existing dashboard-defined configuration.
+2. Call `get_clickup_connection_status`. `workspace_scope_approved` and `workspace_exclusive` must both be `true`. If exclusivity is false, reconnect to ClickUp and authorize **only** the approved Workspace.
+3. Explicitly call `clickup_set_workspace_access({ "workspace_id": "9012707978", "enabled": true })` for the owner. Check that `get_scoped_list` returns `resource_scope: "workspace"`. Do not run this tool without the owner's authorization.
+4. Exercise updates, comments and dependencies **on disposable records only**. Restore `enabled: false` to return to the single-List boundary. Separate AI-client confirmation remains necessary for risky writes and deletion. No existing tasks are automatically modified by changing access.
+
 
 Tools execute through the official `@modelcontextprotocol/server` v2 SDK and ClickUp REST API v2. Read operations require `mcp:read`; writes additionally require the explicitly consented `mcp:write` MCP OAuth scope. **This OAuth scope is not a duplicate client approval interface.** Users still control the AI client's own permission prompts.
 

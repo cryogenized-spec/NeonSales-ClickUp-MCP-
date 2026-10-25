@@ -13,6 +13,7 @@ function fakeSqlite() {
   let pending: { hash: string; expires: number; subject: string } | undefined;
   let account: Row | undefined;
   let authorization: { subject: string; exclusive: number } | undefined;
+  let workspaceAccess: { subject: string; workspaceId: string; at: number } | undefined;
   const exec = (sql: string, ...params: (string | number)[]) => {
     let values: unknown[] = [];
     if (sql.startsWith("CREATE TABLE")) {
@@ -31,6 +32,17 @@ function fakeSqlite() {
         values = [{ nonce_hash: pending.hash }];
         pending = undefined;
       }
+    } else if (sql.startsWith("SELECT workspace_id FROM workspace_access")) {
+      if (workspaceAccess && workspaceAccess.subject === params[0])
+        values = [{ workspace_id: workspaceAccess.workspaceId }];
+    } else if (sql.startsWith("INSERT OR REPLACE INTO workspace_access")) {
+      workspaceAccess = {
+        subject: String(params[0]),
+        workspaceId: String(params[1]),
+        at: Number(params[2]),
+      };
+    } else if (sql.startsWith("DELETE FROM workspace_access")) {
+      if (workspaceAccess?.subject === params[0]) workspaceAccess = undefined;
     } else if (sql.startsWith("SELECT workspace_exclusive FROM connection_authorization")) {
       if (authorization && authorization.subject === params[0]) {
         values = [{ workspace_exclusive: authorization.exclusive }];
@@ -62,7 +74,7 @@ function fakeSqlite() {
   const state = {
     storage: { sql: { exec }, transactionSync: (fn: () => unknown) => fn() },
   } as unknown as DurableObjectState;
-  return { state, stored: () => account };
+  return { state, stored: () => account, workspaceAccess: () => workspaceAccess };
 }
 const encryptedKey = btoa(String.fromCharCode(...new Uint8Array(32).fill(9)));
 
@@ -74,8 +86,8 @@ async function call(vault: ClickUpUserConnection, route: string, body: Record<st
       body: JSON.stringify(body),
     }),
   );
-  const data: Record<string, unknown> =
-    response.status === 503 ? {} : ((await response.json()) as Record<string, unknown>);
+  let data: Record<string, unknown> = {};
+  if (response.ok) data = (await response.json()) as Record<string, unknown>;
   return { status: response.status, data };
 }
 
@@ -117,6 +129,87 @@ describe("actual encrypted SQLite per-user token vault", () => {
     expect((await call(vault, "credential", { subject: "github:11" })).data).toEqual({
       connected: false,
     });
+  });
+
+  it("enables Workspace scope for just its verified subject, supports revocation and clears on reconnect", async () => {
+    const backing = fakeSqlite();
+    const vault = new ClickUpUserConnection(backing.state, { CLICKUP_TOKEN_KEY: encryptedKey });
+    const base = {
+      subject: "github:11",
+      accessToken: "synthetic-personal-token-for-tests",
+      clickupUserId: "707",
+      workspaceId: "999",
+      workspaceExclusive: true,
+    };
+    expect((await call(vault, "store", base)).data["stored"]).toBe(true);
+    expect((await call(vault, "status", { subject: "github:11" })).data).toMatchObject({
+      workspaceExclusive: true,
+      workspaceEnabled: false,
+    });
+    expect(
+      (
+        await call(vault, "workspace-access", {
+          subject: "github:11",
+          workspaceId: "888",
+          enabled: true,
+        })
+      ).status,
+    ).toBe(403);
+    expect(
+      (
+        await call(vault, "workspace-access", {
+          subject: "github:22",
+          workspaceId: "999",
+          enabled: true,
+        })
+      ).status,
+    ).toBe(403);
+    const enabled = await call(vault, "workspace-access", {
+      subject: "github:11",
+      workspaceId: "999",
+      enabled: true,
+    });
+    expect(enabled.data).toEqual({ workspaceEnabled: true });
+    expect(backing.workspaceAccess()?.workspaceId).toBe("999");
+    expect((await call(vault, "credential", { subject: "github:11" })).data).toMatchObject({
+      workspaceExclusive: true,
+      workspaceEnabled: true,
+    });
+    await call(vault, "workspace-access", {
+      subject: "github:11",
+      workspaceId: "999",
+      enabled: false,
+    });
+    expect(backing.workspaceAccess()).toBeUndefined();
+    await call(vault, "workspace-access", {
+      subject: "github:11",
+      workspaceId: "999",
+      enabled: true,
+    });
+    expect((await call(vault, "store", base)).data["stored"]).toBe(true);
+    expect(backing.workspaceAccess()).toBeUndefined();
+  });
+
+  it("refuses Workspace opt-in on non-exclusive OAuth tokens", async () => {
+    const vault = new ClickUpUserConnection(fakeSqlite().state, {
+      CLICKUP_TOKEN_KEY: encryptedKey,
+    });
+    await call(vault, "store", {
+      subject: "github:11",
+      accessToken: "synthetic-personal-token-for-tests",
+      clickupUserId: "707",
+      workspaceId: "999",
+      workspaceExclusive: false,
+    });
+    expect(
+      (
+        await call(vault, "workspace-access", {
+          subject: "github:11",
+          workspaceId: "999",
+          enabled: true,
+        })
+      ).status,
+    ).toBe(403);
   });
 
   it("atomically consumes a one-use state nonce and refuses replay or other user", async () => {
