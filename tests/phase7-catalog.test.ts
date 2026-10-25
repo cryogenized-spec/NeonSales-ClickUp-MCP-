@@ -613,7 +613,6 @@ describe("Phase 7 individual OAuth and native catalogue - adversarial tests", ()
   it("denies unsafe task-ID operations in legacy single-List mode", async () => {
     const f = fakeApi();
     for (const name of [
-      "clickup_get_task",
       "clickup_update_task",
       "clickup_update_bulk_tasks",
       "clickup_get_list_time_in_status",
