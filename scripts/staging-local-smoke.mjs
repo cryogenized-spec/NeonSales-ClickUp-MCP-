@@ -151,10 +151,10 @@ try {
   assert.equal(metadataResponse.status, 200, "resource metadata must be discoverable");
   const metadata = JSON.parse(metadataResponse.body);
   assert.equal(metadata.resource, origin + "/mcp");
-  // This MCP requires an explicit read+write grant during first-time consent.
-  // Per-tool write authorizations are still enforced on every mutation.
-  assert.deepEqual(metadata.scopes_supported, ["mcp:read", "mcp:write"]);
-  assert.match(challenge, /scope="mcp:read mcp:write"/, "first-time OAuth challenge must include both scopes");
+  // Baseline read scope remains least privilege; the consent page independently
+  // offers explicit, unchecked write permission if the client requests only read.
+  assert.deepEqual(metadata.scopes_supported, ["mcp:read"]);
+  assert.match(challenge, /scope="mcp:read"/, "first-time OAuth challenge needs read scope");
   assert.deepEqual(metadata.authorization_servers, [origin]);
   console.log("PASS local workerd: unauthenticated /mcp returns 401 and discoverable RFC 9728 metadata");
 
