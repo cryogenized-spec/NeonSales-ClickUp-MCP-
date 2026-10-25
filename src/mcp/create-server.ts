@@ -160,7 +160,8 @@ export function createServer(deps?: ReadDependencies): McpServer {
           workspace_id: {
             type: "string",
             pattern: "^[1-9]\\d{0,17}$",
-            description: "Exact owner-approved ClickUp Workspace ID, never inferred from task content.",
+            description:
+              "Exact owner-approved ClickUp Workspace ID, never inferred from task content.",
           },
           enabled: {
             type: "boolean",
