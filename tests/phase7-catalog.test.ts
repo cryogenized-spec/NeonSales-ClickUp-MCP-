@@ -575,6 +575,41 @@ describe("Phase 7 individual OAuth and native catalogue - adversarial tests", ()
     expect(output["folders"]).toHaveLength(1);
     expect(output["incomplete"]).toBe(false);
   });
+  it("reads one task in legacy List scope using its atomic home-List metadata", async () => {
+    const api = fakeApi();
+    const result = await runCatalogOperation(
+      "clickup_get_task",
+      { task_id: "abc123" },
+      makeListGrant(),
+      api as typeof fetch,
+    );
+    expect(result).toMatchObject({
+      id: "abc123",
+      list: { id: "12345" },
+    });
+    expect(api.mock.calls.map(([req]) => new URL(String(req)).pathname)).toEqual([
+      "/api/v2/task/abc123",
+      "/api/v2/list/12345",
+      "/api/v2/team/555/space",
+    ]);
+  });
+
+  it("rejects foreign-List task metadata before any further API request", async () => {
+    const api = vi.fn(async (req: RequestInfo | URL) =>
+      reply({ id: "foreign1", name: "Private", list: { id: "12346" } }),
+    );
+    await expect(
+      runCatalogOperation(
+        "clickup_get_task",
+        { task_id: "foreign1" },
+        makeListGrant(),
+        api as typeof fetch,
+      ),
+    ).rejects.toThrow("CLICKUP_SCOPE_OR_SCHEMA_REJECTED");
+    expect(api).toHaveBeenCalledTimes(1);
+    expect(String(api.mock.calls[0]?.[0])).toContain("/api/v2/task/foreign1");
+  });
+
   it("denies unsafe task-ID operations in legacy single-List mode", async () => {
     const f = fakeApi();
     for (const name of [
