@@ -351,7 +351,8 @@ export const OPERATIONAL_CATALOG_NAMES: readonly string[] = [
 // Preserve all 48 registrations, but execute this subset only after the owner
 // explicitly enables Workspace authority and exclusive one-Workspace OAuth.
 const WORKSPACE_SCOPE_OPERATIONS = new Set([
-  "clickup_get_task",
+  // A single GET /task/{id} includes its home List ID in that SAME response:
+  // unlike task-ID writes, this read can be verified without a TOCTOU gap.
   "clickup_update_task",
   "clickup_set_custom_field",
   "clickup_delete_task",
