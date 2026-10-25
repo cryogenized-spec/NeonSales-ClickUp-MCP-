@@ -70,6 +70,21 @@ describe("native ClickUp endpoints: no duplicate journal or server approval sett
     expect(outbound).toHaveBeenCalledTimes(1);
   });
 
+  it("preserves a requested due time instead of converting to date-only", async () => {
+    const due = 1793192400000;
+    const outbound = vi.fn(async (_url: RequestInfo | URL, init?: RequestInit) => {
+      const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
+      expect(body).toMatchObject({ due_date: due, due_date_time: true });
+      return json({ id: "gauntlet1", list: { id: "12345" } });
+    });
+    await createScopedTask(
+      grant,
+      { name: "Synthetic due-time regression", due_date_ms: due },
+      outbound as typeof fetch,
+    );
+    expect(outbound).toHaveBeenCalledTimes(1);
+  });
+
   it("binds the configured List to an actual Space in the approved Workspace", async () => {
     const outbound = vi.fn(async (url: RequestInfo | URL, init?: RequestInit) => {
       expect(init?.method).toBe("GET");

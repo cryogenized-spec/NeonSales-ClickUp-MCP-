@@ -8,7 +8,7 @@ import {
   catalogPage,
 } from "../src/mcp/tool-catalog.js";
 
-async function clientHarness(schemaPreview: boolean, fetcher: typeof fetch) {
+async function clientHarness(schemaPreview: boolean, fetcher: typeof fetch, write = false) {
   const handler = createProtocolHandler({
     bindings: { CLICKUP_SCHEMA_PREVIEW: "true" }, // cannot enable preview on its own
     schemaPreview,
@@ -21,7 +21,7 @@ async function clientHarness(schemaPreview: boolean, fetcher: typeof fetch) {
         authInfo: {
           token: "synthetic",
           clientId: "catalog-test",
-          scopes: ["mcp:read"],
+          scopes: write ? ["mcp:read", "mcp:write"] : ["mcp:read"],
           extra: { subject: "github:11" },
         },
       }),
@@ -42,7 +42,7 @@ describe("Official ClickUp MCP capability catalogue (model-facing only)", () => 
       expect(spec.title.trim().length).toBeGreaterThan(2);
       expect(spec.purpose.trim().length).toBeGreaterThan(40);
       expect(spec.example.trim().length).toBeGreaterThan(10);
-      expect(spec.status).toBe("schema_only");
+      expect(spec.status).toBe("rest_adapter");
       expect(spec.inputSchema.type).toBe("object");
       expect(spec.inputSchema.additionalProperties).toBe(false);
       expect(new Set(spec.inputSchema.required).size).toBe(spec.inputSchema.required.length);
@@ -65,7 +65,7 @@ describe("Official ClickUp MCP capability catalogue (model-facing only)", () => 
     expect(first.entries[0]).toMatchObject({
       name: "clickup_create_task",
       effect: "write",
-      status: "schema_only",
+      status: "rest_adapter",
       inputSchema: { type: "object", additionalProperties: false },
     });
     expect(catalogPage({ group: "tasks", page: 2, maxResults: 2 }).entries).toHaveLength(1);
@@ -95,6 +95,14 @@ describe("Official ClickUp MCP capability catalogue (model-facing only)", () => 
           ...OPERATIONAL_CATALOG_NAMES,
         ].sort(),
       );
+      const scopedRead = tools.find((tool) => tool.name === "get_scoped_task");
+      const taskRead = tools.find((tool) => tool.name === "clickup_get_task");
+      const catalog = tools.find((tool) => tool.name === "clickup_tool_catalog");
+      expect(scopedRead?.description).toContain("bounded description");
+      expect(taskRead?.description).toContain("policy-blocked");
+      expect(taskRead?.description).not.toContain("schema-only tool is disabled");
+      expect(catalog?.description).toContain("48 catalogue names");
+      expect(catalog?.description).not.toContain("Every listed schema_only capability");
       const answer = await client.callTool({
         name: "clickup_tool_catalog",
         arguments: { group: "relationships", include_schema: true },
@@ -103,6 +111,49 @@ describe("Official ClickUp MCP capability catalogue (model-facing only)", () => 
       expect(answer.structuredContent).toMatchObject({ status: "mixed", count: 4 });
       expect(JSON.stringify(answer.structuredContent)).toContain('"status":"operational"');
       expect(JSON.stringify(answer.structuredContent)).toContain("clickup_add_task_link");
+      expect(outbound).not.toHaveBeenCalled();
+    } finally {
+      await client.close();
+      await handler.close();
+    }
+  });
+
+  it("publishes scope requirements and rejects invalid List parents through tools/call", async () => {
+    const outbound = vi.fn(async () => Response.json({}));
+    const { client, handler } = await clientHarness(false, outbound as typeof fetch, true);
+    try {
+      const tools = (await client.listTools()).tools;
+      expect(tools.find((t) => t.name === "clickup_send_chat_message")?.description).toContain(
+        "CLICKUP_WORKSPACE_SCOPE_REQUIRED",
+      );
+      expect(
+        tools.find((t) => t.name === "clickup_update_document_page")?.annotations?.destructiveHint,
+      ).toBe(true);
+      const page = await client.callTool({
+        name: "clickup_tool_catalog",
+        arguments: { group: "docs", max_results: 2 },
+      });
+      expect(page.structuredContent).toMatchObject({
+        entries: [
+          {
+            name: "clickup_create_document",
+            requires_workspace_scope: true,
+            required_mcp_scopes: ["mcp:read", "mcp:write"],
+          },
+          {
+            name: "clickup_list_document_pages",
+            requires_workspace_scope: true,
+            required_mcp_scopes: ["mcp:read"],
+          },
+        ],
+      });
+      // With verified MCP write scope, schema errors precede callback activation checks.
+      const invalid = await client.callTool({
+        name: "clickup_create_list",
+        arguments: { name: "Missing parent" },
+      });
+      expect(invalid.isError).toBe(true);
+      expect(JSON.stringify(invalid)).not.toContain("CLICKUP_NOT_CONFIGURED");
       expect(outbound).not.toHaveBeenCalled();
     } finally {
       await client.close();

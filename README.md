@@ -1,5 +1,7 @@
 # NeonSales ClickUp MCP
 
+**Schema remediation candidate (25 October 2026 SAST):** See the [complete 48-tool contract register](docs/CLICKUP_TOOL_SCHEMA.md) for exact input limits, List/Workspace restrictions, destructive effects and partial-result behavior. This branch combines pending source corrections for review; it is not a deployment or evidence of live API acceptance.
+
 A private, cloud-hosted [Model Context Protocol](https://modelcontextprotocol.io/) server connecting authorized staff members to ClickUp through **their own individual ClickUp OAuth accounts**. The same remote MCP endpoint is intended for supported Claude and ChatGPT clients.
 
 > **Integration checkpoint — 12 October 2026 (SAST):** OAuth, 48 ClickUp REST-backed catalogue tool adapters, Codex security remediations, and cloud-only GitHub Actions deployment workflow are **merged into `main`**. Strict CI at commit `46c834c714c08aa1b13e2f026351292c0fcc9315` passed all checks. The owner previously connected the custom MCP from Claude to a Cloudflare-hosted staging endpoint; this is not evidence that the new 48 operations have been deployed or tested with real ClickUp credentials. **Staging deployment/CLI configuration and then hands-on Claude/ChatGPT + ClickUp acceptance remain.** No local always-on service, duplicate journal, rollback system or second tool-approval UI.
@@ -29,13 +31,13 @@ A private, cloud-hosted [Model Context Protocol](https://modelcontextprotocol.io
 | `get_attention_report` | Read | Bounded overdue/upcoming/stale-task metadata; clearly flags incompleteness |
 | `get_scoped_list` | Read | View authorized List name and valid status labels |
 | `create_scoped_task` | Write | Create a task in the configured List under your own account |
-| `clickup_tool_catalog` | Read | Inspect proposed schemas for further ClickUp capabilities; **not** an operational API |
+| `clickup_tool_catalog` | Read | Browse the 48 adapter schemas, effect classes and required OAuth/resource scopes; no API request |
 
 **Security checkpoint (21 October 2026; PR #25 pending):** All **48** REST-backed ClickUp catalogue operations remain registered. In legacy single-List mode (the default), task-ID and current-task-time operations that cannot atomically enforce the List boundary now **fail closed** rather than advertise unsafe success; the original scoped List reads and list-bound creates remain available. The proposed `CLICKUP_RESOURCE_SCOPE=workspace` mode allows the full catalogue within the connected user's **single authorised ClickUp Workspace**, including cross-List moves, but requires new exclusive Workspace OAuth consent. This is a proposed **broader** permission policy, **not owner-approved or active**. See [PR #25 Workspace-scope release proposal](docs/PR25_WORKSPACE_SCOPE_PLAN.md), and [PR #25 security acceptance matrix](docs/PR25_SECURITY_GATE_2026-10-21.md). The change does not invent an atomic ClickUp List precondition; upstream cross-Workspace token enforcement still requires live proof. **Do not merge/deploy PR #25 as security-cleared without explicit scope-policy approval and live acceptance.**
 
 Tools execute through the official `@modelcontextprotocol/server` v2 SDK and ClickUp REST API v2. Read operations require `mcp:read`; writes additionally require the explicitly consented `mcp:write` MCP OAuth scope. **This OAuth scope is not a duplicate client approval interface.** Users still control the AI client's own permission prompts.
 
-The separate **48-capability model-facing schema catalogue** is descriptive, but all 48 names also have REST-backed runtime adapters. Synthetic integration tests exercise the runtime; actual ClickUp API compatibility, permission semantics and client connections are still unverified. Do not present this as validated first-party ClickUp MCP parity.
+The shared **48-capability model-facing schema catalogue** defines the inputs used by all 48 REST-backed runtime registrations. Synthetic integration tests exercise the runtime; actual ClickUp API compatibility, permission semantics and client connections are still unverified. Do not present this as validated first-party ClickUp MCP parity.
 
 ## Deployment — cloud only
 
