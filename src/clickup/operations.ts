@@ -126,7 +126,7 @@ function bodyFromInput(raw: unknown, create: boolean): Record<string, unknown> {
     ...(description !== undefined ? { description } : {}),
     ...(status !== undefined ? { status } : {}),
     ...(priority !== undefined ? { priority } : {}),
-    ...(due !== undefined ? { due_date: due } : {}),
+    ...(due !== undefined ? { due_date: due, due_date_time: true } : {}),
     ...(create ? { check_required_custom_fields: true, notify_all: false } : {}),
   };
 }

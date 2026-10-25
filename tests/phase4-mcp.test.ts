@@ -41,7 +41,12 @@ describe("Phase 4 official SDK integration", () => {
     const outbound = vi.fn(async (url: RequestInfo | URL) => {
       const pathname = new URL(String(url)).pathname;
       if (pathname.endsWith("/list/12345"))
-        return Response.json({ id: "12345", space: { id: "765" } });
+        return Response.json({
+          id: "12345",
+          name: "Workshop",
+          statuses: [{ status: "Open" }],
+          space: { id: "765" },
+        });
       if (pathname.endsWith("/team/555/space")) return Response.json({ spaces: [{ id: "765" }] });
       return Response.json({ tasks: [] });
     });
@@ -102,6 +107,12 @@ describe("Phase 4 official SDK integration", () => {
         }),
       ).rejects.toThrow();
       expect(outbound).not.toHaveBeenCalled();
+      const scope = await client.callTool({ name: "get_scoped_list", arguments: {} });
+      expect(scope.structuredContent).toMatchObject({
+        name: "Workshop",
+        resource_scope: "list",
+        task_id_operations_enabled: false,
+      });
       const response = await client.callTool({
         name: "find_scoped_tasks",
         arguments: { max_results: 4 },
@@ -113,7 +124,8 @@ describe("Phase 4 official SDK integration", () => {
         incomplete: false,
         pages_scanned: 1,
       });
-      expect(outbound).toHaveBeenCalledTimes(3);
+      // Both read tools independently verify the home List and its Workspace.
+      expect(outbound).toHaveBeenCalledTimes(6);
     } finally {
       await client.close();
       await handler.close();

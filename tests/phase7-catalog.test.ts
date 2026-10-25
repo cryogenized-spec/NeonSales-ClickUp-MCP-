@@ -73,6 +73,38 @@ describe("Phase 7 individual OAuth and native catalogue - adversarial tests", ()
     expect(JSON.parse(String(calls[2]?.[1]?.body))).toMatchObject({ name: "Sales request" });
   });
 
+  it("preserves exact UTC milliseconds and time-enabled due dates for create, update and bulk", async () => {
+    // 15:00 South Africa local (UTC+02:00); never normalise to date-only 04:00.
+    const due = Date.parse("2026-10-28T13:00:00.000Z");
+    const requests = fakeApi();
+    await runCatalogOperation(
+      "clickup_create_task",
+      { list_id: "12345", new_task: { name: "Precise deadline", due_date_ms: due } },
+      makeGrant(),
+      requests as typeof fetch,
+    );
+    await runCatalogOperation(
+      "clickup_update_task",
+      { task_id: "abc123", changes: { due_date_ms: due } },
+      makeGrant(),
+      requests as typeof fetch,
+    );
+    await runCatalogOperation(
+      "clickup_create_bulk_tasks",
+      { list_id: "12345", tasks: [{ name: "Precise bulk deadline", due_date_ms: due }] },
+      makeGrant(),
+      requests as typeof fetch,
+    );
+    const writes = requests.mock.calls
+      .map(([, init]) => init)
+      .filter((init) => init?.method === "POST" || init?.method === "PUT");
+    expect(writes).toHaveLength(3);
+    for (const init of writes) {
+      const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
+      expect(body).toMatchObject({ due_date: due, due_date_time: true });
+    }
+  });
+
   it("refuses cross-workspace List configuration before a write reaches ClickUp", async () => {
     const api = fakeApi();
     await expect(
