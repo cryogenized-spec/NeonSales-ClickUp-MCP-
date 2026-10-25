@@ -41,7 +41,12 @@ describe("Phase 4 official SDK integration", () => {
     const outbound = vi.fn(async (url: RequestInfo | URL) => {
       const pathname = new URL(String(url)).pathname;
       if (pathname.endsWith("/list/12345"))
-        return Response.json({ id: "12345", name: "Workshop", statuses: [{ status: "Open" }], space: { id: "765" } });
+        return Response.json({
+          id: "12345",
+          name: "Workshop",
+          statuses: [{ status: "Open" }],
+          space: { id: "765" },
+        });
       if (pathname.endsWith("/team/555/space")) return Response.json({ spaces: [{ id: "765" }] });
       return Response.json({ tasks: [] });
     });
