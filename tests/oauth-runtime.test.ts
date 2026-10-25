@@ -4,7 +4,10 @@ import { handleOAuthRequest } from "../src/auth/oauth-runtime.js";
 
 const captures = vi.hoisted(() => ({
   requests: [] as { url: string; options: unknown }[],
-  providerSettings: [] as { requiredScopes?: readonly string[]; scopesSupported?: readonly string[] }[],
+  providerSettings: [] as {
+    requiredScopes?: readonly string[];
+    scopesSupported?: readonly string[];
+  }[],
 }));
 
 vi.mock("../src/mcp/handler.js", () => ({
@@ -104,7 +107,10 @@ describe("Codex P1 OAuth integration regressions", () => {
       origin,
     );
     expect(captures.providerSettings).toEqual([
-      { requiredScopes: ["mcp:read", "mcp:write"], scopesSupported: ["mcp:read", "mcp:write"] },
+      {
+        requiredScopes: ["mcp:read", "mcp:write"],
+        scopesSupported: ["mcp:read", "mcp:write"],
+      },
     ]);
   });
 
