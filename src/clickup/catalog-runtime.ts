@@ -175,20 +175,54 @@ async function folderInWorkspace(
   await inWorkspace(grant, f, obj(folder["space"])?.["id"]);
   return folder;
 }
-const taskBody = (a: Json, update = false) => ({
-  ...(typeof a["name"] === "string" ? { name: txt(a["name"], 180) } : {}),
-  ...(typeof a["description"] === "string" ? { description: txt(a["description"]) } : {}),
-  ...(typeof a["status"] === "string" ? { status: txt(a["status"], 80) } : {}),
-  ...(a["priority"] !== undefined ? { priority: a["priority"] } : {}),
-  ...(a["due_date_ms"] !== undefined ? { due_date: a["due_date_ms"] } : {}),
-  ...(Array.isArray(a["assignee_ids"])
-    ? {
-        assignees: update
-          ? { add: a["assignee_ids"].map(id).map(Number), rem: [] }
-          : a["assignee_ids"].map(id).map(Number),
-      }
-    : {}),
-});
+const taskBody = (a: Json, update = false): Json => {
+  const permitted = new Set([
+    "name",
+    "description",
+    "status",
+    "priority",
+    "due_date_ms",
+    "assignee_ids",
+  ]);
+  if (Object.keys(a).some((key) => !permitted.has(key)))
+    throw new ReadFailure("CLICKUP_INVALID_ARGUMENT");
+  for (const key of ["name", "description", "status"] as const) {
+    if (a[key] !== undefined && typeof a[key] !== "string")
+      throw new ReadFailure("CLICKUP_INVALID_ARGUMENT");
+  }
+  if (
+    a["priority"] !== undefined &&
+    (!Number.isInteger(a["priority"]) || Number(a["priority"]) < 1 || Number(a["priority"]) > 4)
+  )
+    throw new ReadFailure("CLICKUP_INVALID_ARGUMENT");
+  if (
+    a["due_date_ms"] !== undefined &&
+    (!Number.isSafeInteger(a["due_date_ms"]) ||
+      Number(a["due_date_ms"]) <= 0 ||
+      Number(a["due_date_ms"]) > 9_000_000_000_000)
+  )
+    throw new ReadFailure("CLICKUP_INVALID_ARGUMENT");
+  const assignees = a["assignee_ids"];
+  if (
+    assignees !== undefined &&
+    (!Array.isArray(assignees) ||
+      assignees.length > 12 ||
+      assignees.some((user) => !Number.isSafeInteger(user) || user <= 0))
+  )
+    throw new ReadFailure("CLICKUP_INVALID_ARGUMENT");
+  return {
+    ...(a["name"] !== undefined ? { name: txt(a["name"], 180) } : {}),
+    ...(a["description"] !== undefined ? { description: txt(a["description"]) } : {}),
+    ...(a["status"] !== undefined ? { status: txt(a["status"], 80) } : {}),
+    ...(a["priority"] !== undefined ? { priority: a["priority"] } : {}),
+    ...(a["due_date_ms"] !== undefined
+      ? { due_date: a["due_date_ms"], due_date_time: true }
+      : {}),
+    ...(Array.isArray(assignees)
+      ? { assignees: update ? { add: assignees, rem: [] } : assignees }
+      : {}),
+  };
+};
 async function members(grant: ReadGrant, f: typeof fetch): Promise<Json[]> {
   const d = await send(grant, f, "GET", v2("team"));
   const team = Array.isArray(d["teams"])
