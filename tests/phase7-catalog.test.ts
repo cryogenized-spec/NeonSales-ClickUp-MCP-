@@ -407,7 +407,7 @@ describe("Phase 7 individual OAuth and native catalogue - adversarial tests", ()
         const p = new URL(String(req)).pathname;
         if (p === "/api/v2/list/12345") return reply(fixture(p));
         if (p === "/api/v2/team/555/space") return reply(fixture(p));
-        if (p === "/api/v2/list/12345/task")
+        if (p === "/api/v2/list/12345/task" || p === "/api/v2/team/555/task")
           return reply(malformed === "tasks" ? {} : { tasks: [] });
         if (p === "/api/v3/workspaces/555/docs")
           return reply(malformed === "docs" ? {} : { docs: [] });
@@ -417,7 +417,7 @@ describe("Phase 7 individual OAuth and native catalogue - adversarial tests", ()
         runCatalogOperation(
           "clickup_search_workspace",
           { query: "Stocktake" },
-          makeListGrant(),
+          malformed === "docs" ? makeGrant() : makeListGrant(),
           f as typeof fetch,
         ),
       ).rejects.toThrow("CLICKUP_BAD_RESPONSE");
@@ -522,7 +522,7 @@ describe("Phase 7 individual OAuth and native catalogue - adversarial tests", ()
     const f = vi.fn(async (req: RequestInfo | URL) => {
       const p = new URL(String(req)).pathname;
       if (p === "/api/v2/list/12345") return reply(fixture(p));
-      if (p === "/api/v2/list/12345/task") return reply({ tasks: [] });
+      if (p === "/api/v2/team/555/task") return reply({ tasks: [] });
       if (p === "/api/v3/workspaces/555/docs") return reply({ docs: [] });
       if (p === "/api/v2/team/555/space") return reply({ spaces: [{ id: "777", name: "Sales" }] });
       if (p === "/api/v2/space/777/folder")
