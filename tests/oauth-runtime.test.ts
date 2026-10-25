@@ -4,6 +4,7 @@ import { handleOAuthRequest } from "../src/auth/oauth-runtime.js";
 
 const captures = vi.hoisted(() => ({
   requests: [] as { url: string; options: unknown }[],
+  providerSettings: [] as { requiredScopes?: readonly string[]; scopesSupported?: readonly string[] }[],
 }));
 
 vi.mock("../src/mcp/handler.js", () => ({
@@ -22,6 +23,7 @@ vi.mock("@cloudflare/workers-oauth-provider", () => ({
   OAuthProvider: class {
     private readonly config: {
       requiredScopes?: readonly string[];
+      scopesSupported?: readonly string[];
       resourceMetadata?: { scopes_supported?: readonly string[] };
       apiHandler: {
         fetch: (request: Request, env: OAuthEnv, context: unknown) => Promise<Response>;
@@ -30,6 +32,7 @@ vi.mock("@cloudflare/workers-oauth-provider", () => ({
 
     constructor(config: {
       requiredScopes?: readonly string[];
+      scopesSupported?: readonly string[];
       resourceMetadata?: { scopes_supported?: readonly string[] };
       apiHandler: {
         fetch: (request: Request, env: OAuthEnv, context: unknown) => Promise<Response>;
@@ -41,6 +44,10 @@ vi.mock("@cloudflare/workers-oauth-provider", () => ({
       ) {
         throw new Error("Cannot configure both requiredScopes and scopes_supported");
       }
+      captures.providerSettings.push({
+        requiredScopes: config.requiredScopes,
+        scopesSupported: config.scopesSupported,
+      });
       this.config = config;
     }
 
@@ -86,6 +93,19 @@ function verifiedContext(id: string, overrides: Record<string, unknown> = {}): T
 describe("Codex P1 OAuth integration regressions", () => {
   beforeEach(() => {
     captures.requests.length = 0;
+    captures.providerSettings.length = 0;
+  });
+
+  it("advertises read and write scopes for first-time browser consent", async () => {
+    await handleOAuthRequest(
+      new Request(origin + "/mcp", { method: "POST" }),
+      env,
+      verifiedContext("11"),
+      origin,
+    );
+    expect(captures.providerSettings).toEqual([
+      { requiredScopes: ["mcp:read", "mcp:write"], scopesSupported: ["mcp:read", "mcp:write"] },
+    ]);
   });
 
   it("constructs the pinned OAuth provider without conflicting resource scope settings", async () => {
