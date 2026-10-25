@@ -37,6 +37,8 @@
 
 | D-025 | 2026-10-21 | PROPOSED — NOT ACTIVATED | Make NeonSales Workspace (not a single List) the authority for the 48-operation catalogue **only after explicit owner acceptance**. Require one-Workspace ClickUp OAuth consent per staff member and preserve legacy List mode with fail-closed task-ID tools. | Resolves the incompatible cross-List requirements without claiming a nonexistent atomic List precondition; live ClickUp scope/permission and cross-Workspace move tests remain release gates. See [PR25_WORKSPACE_SCOPE_PLAN.md](PR25_WORKSPACE_SCOPE_PLAN.md). |
 
+| D-026 | 2026-10-25 | ACCEPTED (owner request to inspect and fix schemas) | Repair existing tool contracts and adapter mismatches while retaining all 48 names, individual OAuth, client-owned prompts and the existing resource boundary. Narrow erroneous Workspace metadata access in List mode; do not activate Workspace authority or deploy. | See [complete contract audit](CLICKUP_TOOL_SCHEMA.md) and [plan](superpowers/plans/2026-10-25-clickup-schema-audit.md). |
+
 ## Record an accepted decision
 
 Add a new row (or change PROPOSED → ACCEPTED) with the owner's actual review decision, date/time in SAST if known, trade-offs, and affected files. For changed decisions, mark original SUPERSEDED and link the replacement. Don't fabricate approval.

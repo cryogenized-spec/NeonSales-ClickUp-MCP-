@@ -105,13 +105,26 @@ async function send(
         method === "GET" ? "CLICKUP_BAD_RESPONSE" : "CLICKUP_WRITE_OUTCOME_UNKNOWN",
       );
     const result: unknown = JSON.parse(text);
+    // The documented v3 page_listing response is a top-level array, unlike v2.
+    if (method === "GET" && /^api\/v3\/workspaces\/[^/]+\/docs\/[^/]+\/page_listing\?/.test(path)) {
+      if (!Array.isArray(result) || result.some((page) => obj(page) === null))
+        throw new ReadFailure("CLICKUP_BAD_RESPONSE");
+      return { pages: result, max_page_depth: 4, incomplete: true };
+    }
     const data = obj(result);
     if (!data)
       throw new ReadFailure(
         method === "GET" ? "CLICKUP_BAD_RESPONSE" : "CLICKUP_WRITE_OUTCOME_UNKNOWN",
       );
-    if (method !== "GET" && method !== "DELETE" && Object.keys(data).length === 0)
-      throw new ReadFailure("CLICKUP_WRITE_OUTCOME_UNKNOWN");
+    if (method !== "GET" && method !== "DELETE" && Object.keys(data).length === 0) {
+      // These v2 endpoints document 200 {}. An acknowledgement is not read-back.
+      const acknowledged =
+        method === "POST" &&
+        (/^api\/v2\/task\/[^/]+\/(field\/[^/]+|tag\/[^/]+|dependency)$/.test(path) ||
+          /^api\/v2\/list\/[^/]+\/task\/[^/]+$/.test(path));
+      if (!acknowledged) throw new ReadFailure("CLICKUP_WRITE_OUTCOME_UNKNOWN");
+      return { source: "clickup-api-v2", accepted: true, read_back_verified: false };
+    }
     if (
       method === "POST" &&
       /\/list\/[^/]+\/task$/.test(path) &&
@@ -175,30 +188,37 @@ async function folderInWorkspace(
   await inWorkspace(grant, f, obj(folder["space"])?.["id"]);
   return folder;
 }
-const taskBody = (a: Json, update = false) => ({
-  ...(typeof a["name"] === "string" ? { name: txt(a["name"], 180) } : {}),
-  ...(typeof a["description"] === "string" ? { description: txt(a["description"]) } : {}),
-  ...(typeof a["status"] === "string" ? { status: txt(a["status"], 80) } : {}),
-  ...(a["priority"] !== undefined ? { priority: a["priority"] } : {}),
-  ...(a["due_date_ms"] !== undefined ? { due_date: a["due_date_ms"] } : {}),
-  ...(Array.isArray(a["assignee_ids"])
-    ? {
-        assignees: update
-          ? { add: a["assignee_ids"].map(id).map(Number), rem: [] }
-          : a["assignee_ids"].map(id).map(Number),
-      }
-    : {}),
-});
+const taskBody = (a: Json, update = false) => {
+  const body = {
+    ...(typeof a["name"] === "string" ? { name: txt(a["name"], 180) } : {}),
+    ...(typeof a["description"] === "string" ? { description: txt(a["description"]) } : {}),
+    ...(typeof a["status"] === "string" ? { status: txt(a["status"], 80) } : {}),
+    ...(a["priority"] !== undefined ? { priority: a["priority"] } : {}),
+    // ClickUp defaults timestamp-only due dates to date-only at 04:00 local time.
+    ...(a["due_date_ms"] !== undefined ? { due_date: a["due_date_ms"], due_date_time: true } : {}),
+    ...(Array.isArray(a["assignee_ids"])
+      ? {
+          assignees: update
+            ? { add: a["assignee_ids"].map(memberId), rem: [] }
+            : a["assignee_ids"].map(memberId),
+        }
+      : {}),
+  };
+  if (update && Object.keys(body).length === 0) throw new ReadFailure("CLICKUP_INVALID_ARGUMENT");
+  return body;
+};
+function memberId(value: unknown): number {
+  if (typeof value !== "string" || !/^[1-9]\d{0,14}$/.test(value))
+    throw new ReadFailure("CLICKUP_INVALID_ARGUMENT");
+  return Number(value);
+}
 async function members(grant: ReadGrant, f: typeof fetch): Promise<Json[]> {
   const d = await send(grant, f, "GET", v2("team"));
   const team = Array.isArray(d["teams"])
     ? d["teams"].map(obj).find((t) => String(t?.["id"]) === grant.workspaceId)
     : null;
   if (!team || !Array.isArray(team["members"])) throw new ReadFailure("CLICKUP_BAD_RESPONSE");
-  return team["members"]
-    .slice(0, 200)
-    .map((x: unknown) => obj(x) ?? {})
-    .map((x) => obj(x["user"]) ?? x);
+  return team["members"].map((x: unknown) => obj(x) ?? {}).map((x) => obj(x["user"]) ?? x);
 }
 const short = (d: Json, limit = 50): Json => {
   const keys = [
@@ -210,6 +230,10 @@ const short = (d: Json, limit = 50): Json => {
     "time_entries",
     "entries",
     "docs",
+    "data",
+    "pages",
+    "folders",
+    "lists",
   ];
   const arrays = keys.filter((k) => Array.isArray(d[k]));
   const truncated = arrays.some((k) => (d[k] as unknown[]).length > limit);
@@ -219,7 +243,11 @@ const short = (d: Json, limit = 50): Json => {
   return clip({
     ...d,
     ...Object.fromEntries(arrays.map((k) => [k, (d[k] as unknown[]).slice(0, limit)])),
-    incomplete: truncated || possibleMorePages || d["incomplete"] === true,
+    incomplete:
+      truncated ||
+      possibleMorePages ||
+      d["incomplete"] === true ||
+      (typeof d["next_cursor"] === "string" && d["next_cursor"].length > 0),
     first_page_only: true,
   }) as Json;
 };
@@ -351,6 +379,22 @@ export const OPERATIONAL_CATALOG_NAMES: readonly string[] = [
 // Preserve all 48 registrations, but execute this subset only after the owner
 // explicitly enables Workspace authority and exclusive one-Workspace OAuth.
 const WORKSPACE_SCOPE_OPERATIONS = new Set([
+  "clickup_get_workspace_hierarchy",
+  "clickup_create_list",
+  "clickup_create_list_in_folder",
+  "clickup_get_folder",
+  "clickup_create_folder",
+  "clickup_update_folder",
+  "clickup_get_workspace_members",
+  "clickup_find_member_by_name",
+  "clickup_resolve_assignees",
+  "clickup_get_chat_channels",
+  "clickup_send_chat_message",
+  "clickup_create_document",
+  "clickup_list_document_pages",
+  "clickup_get_document_pages",
+  "clickup_create_document_page",
+  "clickup_update_document_page",
   "clickup_get_task",
   "clickup_update_task",
   "clickup_set_custom_field",
@@ -377,13 +421,17 @@ const WORKSPACE_SCOPE_OPERATIONS = new Set([
   "clickup_get_list_time_in_status",
 ]);
 
+/** Same policy drives dispatch and model-facing availability metadata. */
+export const catalogRequiresWorkspace = (name: string): boolean =>
+  WORKSPACE_SCOPE_OPERATIONS.has(name);
+
 export async function runCatalogOperation(
   name: string,
   a: Json,
   g: ReadGrant,
   f: typeof fetch,
 ): Promise<Json> {
-  if (g.resourceScope !== "workspace" && WORKSPACE_SCOPE_OPERATIONS.has(name))
+  if (g.resourceScope !== "workspace" && catalogRequiresWorkspace(name))
     throw new ReadFailure("CLICKUP_WORKSPACE_SCOPE_REQUIRED");
   const W = id(g.workspaceId),
     N = count(a);
@@ -413,15 +461,33 @@ export async function runCatalogOperation(
       // data under this one-List grant, and fail closed on incomplete metadata.
       for (const candidate of tasks) {
         const t = obj(candidate);
-        if (!t || (!workspaceScope && String(obj(t["list"])?.["id"]) !== g.listId))
+        const homeList = obj(t?.["list"])?.["id"];
+        if (
+          !t ||
+          (typeof homeList !== "number" && typeof homeList !== "string") ||
+          !/^[1-9]\d{0,17}$/.test(String(homeList)) ||
+          (!workspaceScope && String(homeList) !== g.listId)
+        )
           throw new ReadFailure("CLICKUP_SCOPE_OR_SCHEMA_REJECTED");
       }
+      const matchedTasks = tasks.filter((t) => JSON.stringify(t).toLowerCase().includes(q));
+      if (!workspaceScope)
+        return {
+          source: "clickup-api-v2",
+          search_scope: "list",
+          tasks: clip(matchedTasks.slice(0, N)),
+          docs: [],
+          lists: [],
+          folders: [],
+          incomplete: tasks.length >= 100 || matchedTasks.length > N,
+        };
       const docs = await call("GET", v3("workspaces/" + W + "/docs?limit=50"));
       if (!Array.isArray(docs["docs"])) throw new ReadFailure("CLICKUP_BAD_RESPONSE");
       const d = docs["docs"];
       const hierarchySpaces = await spaces(g, f);
       const foundLists: unknown[] = [];
       const foundFolders: unknown[] = [];
+      let hierarchyIncomplete = false;
       // Bound hierarchy enumeration; explicitly disclose if the workspace is larger.
       for (const space of hierarchySpaces.slice(0, 5)) {
         const sid = id(space["id"]);
@@ -429,6 +495,7 @@ export async function runCatalogOperation(
         const listData = await call("GET", v2("space/" + sid + "/list?archived=false"));
         if (!Array.isArray(folderData["folders"]) || !Array.isArray(listData["lists"]))
           throw new ReadFailure("CLICKUP_BAD_RESPONSE");
+        hierarchyIncomplete ||= folderData["folders"].length > 10;
         foundFolders.push(...folderData["folders"]);
         foundLists.push(...listData["lists"]);
         for (const folder of folderData["folders"].slice(0, 10)) {
@@ -442,13 +509,17 @@ export async function runCatalogOperation(
       const match = (v: unknown) => JSON.stringify(v).toLowerCase().includes(q);
       return {
         source: "clickup-api",
+        search_scope: "workspace",
         tasks: clip(tasks.filter(match).slice(0, N)),
         docs: clip(d.filter(match).slice(0, N)),
         lists: clip(foundLists.filter(match).slice(0, N)),
         folders: clip(foundFolders.filter(match).slice(0, N)),
         incomplete:
           tasks.length >= 100 ||
+          matchedTasks.length > N ||
+          d.filter(match).length > N ||
           d.length >= 50 ||
+          hierarchyIncomplete ||
           hierarchySpaces.length > 5 ||
           foundLists.length > N ||
           foundFolders.length > N,
@@ -520,6 +591,7 @@ export async function runCatalogOperation(
     case "clickup_set_custom_field": {
       await task("task_id");
       const field = buildArgs(a, "field_value");
+      if (Object.keys(field).length !== 1) throw new ReadFailure("CLICKUP_INVALID_ARGUMENT");
       const value =
         field["text"] ??
         field["number"] ??
@@ -531,6 +603,7 @@ export async function runCatalogOperation(
       return short(
         await call("POST", v2("task/" + val(a, "task_id") + "/field/" + val(a, "field_id")), {
           value,
+          ...(field["timestamp_ms"] !== undefined ? { value_options: { time: true } } : {}),
         }),
       );
     }
@@ -757,6 +830,8 @@ export async function runCatalogOperation(
       };
     }
     case "clickup_create_list": {
+      if ((a["folder_id"] !== undefined) === (a["space_id"] !== undefined))
+        throw new ReadFailure("CLICKUP_INVALID_ARGUMENT");
       if (a["folder_id"] !== undefined) {
         await folder("folder_id");
         return call("POST", v2("folder/" + val(a, "folder_id") + "/list"), {
@@ -791,12 +866,15 @@ export async function runCatalogOperation(
     case "clickup_update_folder":
       await folder("folder_id");
       return call("PUT", v2("folder/" + val(a, "folder_id")), { name: txt(a["name"], 180) });
-    case "clickup_get_workspace_members":
+    case "clickup_get_workspace_members": {
+      const users = await members(g, f);
       return {
         source: "clickup-api-v2",
         workspace_id: g.workspaceId,
-        members: clip((await members(g, f)).slice(0, N)),
+        members: clip(users.slice(0, N)),
+        incomplete: users.length > N,
       };
+    }
     case "clickup_find_member_by_name": {
       const q = txt(a["email_or_name"], 160).toLowerCase();
       const found = (await members(g, f)).filter(
@@ -812,6 +890,7 @@ export async function runCatalogOperation(
         source: "clickup-api-v2",
         matches: clip(found.slice(0, 50)),
         ambiguous: found.length !== 1,
+        incomplete: found.length > 50,
       };
     }
     case "clickup_resolve_assignees": {
@@ -828,7 +907,12 @@ export async function runCatalogOperation(
               String(u["email"] ?? "").toLowerCase() === q ||
               String(u["username"] ?? "").toLowerCase() === q,
           );
-          return { query: x, matches: clip(hits), ambiguous: hits.length !== 1 };
+          return {
+            query: x,
+            matches: clip(hits),
+            ambiguous: hits.length !== 1,
+            incomplete: hits.length > 50,
+          };
         }),
       };
     }
@@ -847,7 +931,7 @@ export async function runCatalogOperation(
       const body: Json = { name: txt(a["name"], 180), create_page: true };
       if (a["folder_id"] !== undefined) {
         await folder("folder_id");
-        body["parent"] = { id: String(a["folder_id"]), type: "FOLDER" };
+        body["parent"] = { id: String(a["folder_id"]), type: 5 };
       }
       return call("POST", v3("workspaces/" + W + "/docs"), body);
     }
@@ -900,16 +984,20 @@ export async function runCatalogOperation(
         "GET",
         v2("list/" + val(a, "list_id") + "/task?page=0&subtasks=false&include_closed=true"),
       );
-      const ids = Array.isArray(tasks["tasks"])
-        ? tasks["tasks"]
-            .slice(0, N)
-            .map((x) => obj(x)?.["id"])
-            .filter((x) => x !== undefined)
-            .map(id)
-        : [];
-      if (ids.length === 0) return { source: "clickup-api-v2", tasks: [] };
-      const params = ids.map((x) => "task_ids=" + x).join("&");
-      return short(await call("GET", v2("task/bulk_time_in_status/task_ids?" + params)));
+      if (!Array.isArray(tasks["tasks"])) throw new ReadFailure("CLICKUP_BAD_RESPONSE");
+      const ids = tasks["tasks"].map((x) => {
+        const taskId = obj(x)?.["id"];
+        if (typeof taskId !== "string" || !/^[a-zA-Z0-9_-]{1,80}$/.test(taskId))
+          throw new ReadFailure("CLICKUP_BAD_RESPONSE");
+        return id(taskId);
+      });
+      if (ids.length === 0) return { source: "clickup-api-v2", tasks: [], incomplete: false };
+      const params = ids
+        .slice(0, N)
+        .map((x) => "task_ids=" + x)
+        .join("&");
+      const result = await call("GET", v2("task/bulk_time_in_status/task_ids?" + params));
+      return short({ ...result, incomplete: ids.length > N || ids.length >= 100 });
     }
     default:
       throw new ReadFailure("CLICKUP_TOOL_NOT_IMPLEMENTED");

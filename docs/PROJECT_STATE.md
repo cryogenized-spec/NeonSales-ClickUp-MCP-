@@ -1,3 +1,19 @@
+# 25 October 2026 SAST — Comprehensive ClickUp schema remediation candidate
+
+**Deliverable:** Reviewable Phase 7 contract corrections for all 48 catalogue tools and ten supporting registrations. Plan: [schema audit](superpowers/plans/2026-10-25-clickup-schema-audit.md); complete input/effect/resource-policy register and limitations: [tool contracts](CLICKUP_TOOL_SCHEMA.md).
+
+**Baseline:** main `0a2dcfcde130b34a02a76ae9ffc587dc3ce0b7a7`, plus PR #33 `689687b8c2cfed7a7a6a1556aa78139aef8a6da6` and unchanged code/test diffs from PR #34 `14cac2e`, #35 `d2c96cd`, #36 `060e0d9`. Local integration commit `c0556a3` preserves these fixes; no existing PR was merged or closed.
+
+**Confirmed fixes:** closed, bounded SDK schemas now reject empty patches/batches, ambiguous List parents/Custom Field variants, whitespace-only names, malformed IDs and unsafe numeric assignees; signed/fractional numeric fields remain valid. All 48 registrations remain. Sixteen additional Workspace metadata operations fail closed before HTTP in List mode, and List-mode text search no longer reads Workspace Docs/hierarchy. Descriptions and discovery expose scope requirements, additive assignees, Doc replacement and bounded time/search semantics. Fixed documented empty v2 write acknowledgements without claiming read-back, v3 page-list arrays, numeric Doc Folder parent type, time-entry data caps/cursors, member ambiguity beyond 200 results, and malformed time-in-status enumeration.
+
+**Fresh local evidence:** 274/274 Vitest across 16 files; format, ESLint, triple strict TypeScript, Wrangler dry-run build, repository policy and 9 Python regressions PASS; npm audit reports zero vulnerabilities. RED evidence: initial new contract suite had 39 expected failures; Doc array and five later API/response regressions separately reproduced before their fixes. Local workerd smoke FAILED before startup because this container cannot enumerate network interfaces (`uv_interface_addresses`, system error 1); do not waive it. GitHub's pinned Node 22/Ubuntu Strict CI must pass the unchanged final candidate, including the real workerd smoke. Local runtime was Node 24/npm 11, not the cloud toolchain.
+
+**Release boundary:** code and documentation only. No credential, resource grant, Workspace activation, live ClickUp record, deployment or main-branch merge changed. Existing cross-Workspace token enforcement and real client/native API acceptance remain separate live release gates.
+
+**Next:** verify exact-head Strict CI and CodeQL, perform independent focused code review, address confirmed findings, and leave a draft for owner-controlled merge/deployment. Historical checkpoints below are superseded where inconsistent.
+
+---
+
 # 24 October 2026 SAST — Live bridge diagnosis and Workspace search regression (PR #33)
 
 **Live ChatGPT custom MCP evidence:** Remote `service_info` returned `liveClickUp:false`; `get_clickup_connection_status` returned `connected:true` with the expected individual user and approved Workspace, but `get_scoped_list` and `find_scoped_tasks` both returned `CLICKUP_NOT_CONFIGURED`. The custom MCP OAuth boundary and encrypted ClickUp connection work, but live ClickUp REST access is **not** activated on the Cloudflare staging Worker. The production-active `CLICKUP_LIVE_ENABLED`, `CLICKUP_LIST_ID`, `CLICKUP_READ_GITHUB_IDS`, and `CLICKUP_RESOURCE_SCOPE` settings were **not** independently inspected; enabling or modifying them requires Cloudflare staging owner action and explicit List or Workspace authority approval. Independent first-party ClickUp reads confirmed the intended Workshop Action Register List is accessible and contains six tasks. No ClickUp writes.

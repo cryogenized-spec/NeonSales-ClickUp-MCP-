@@ -73,6 +73,37 @@ describe("Phase 7 individual OAuth and native catalogue - adversarial tests", ()
     expect(JSON.parse(String(calls[2]?.[1]?.body))).toMatchObject({ name: "Sales request" });
   });
 
+  it("retains exact due timestamps in catalogue create, update and bulk operations", async () => {
+    const due = 1793259000000;
+    const requests = fakeApi();
+    await runCatalogOperation(
+      "clickup_create_task",
+      { list_id: "12345", new_task: { name: "Time-sensitive", due_date_ms: due } },
+      makeGrant(),
+      requests as typeof fetch,
+    );
+    await runCatalogOperation(
+      "clickup_update_task",
+      { task_id: "abc123", changes: { due_date_ms: due } },
+      makeGrant(),
+      requests as typeof fetch,
+    );
+    await runCatalogOperation(
+      "clickup_create_bulk_tasks",
+      { list_id: "12345", tasks: [{ name: "Bulk time-sensitive", due_date_ms: due }] },
+      makeGrant(),
+      requests as typeof fetch,
+    );
+    const writes = requests.mock.calls
+      .map(([, init]) => init)
+      .filter((init) => init?.method === "POST" || init?.method === "PUT");
+    expect(writes).toHaveLength(3);
+    for (const init of writes) {
+      const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
+      expect(body).toMatchObject({ due_date: due, due_date_time: true });
+    }
+  });
+
   it("refuses cross-workspace List configuration before a write reaches ClickUp", async () => {
     const api = fakeApi();
     await expect(
@@ -401,14 +432,13 @@ describe("Phase 7 individual OAuth and native catalogue - adversarial tests", ()
     }
   });
 
-  it("rejects malformed granted-List task and Workspace Docs responses", async () => {
+  it("rejects malformed Workspace task and Docs responses", async () => {
     for (const malformed of ["tasks", "docs"]) {
       const f = vi.fn(async (req: RequestInfo | URL) => {
         const p = new URL(String(req)).pathname;
         if (p === "/api/v2/list/12345") return reply(fixture(p));
         if (p === "/api/v2/team/555/space") return reply(fixture(p));
-        if (p === "/api/v2/list/12345/task")
-          return reply(malformed === "tasks" ? {} : { tasks: [] });
+        if (p === "/api/v2/team/555/task") return reply(malformed === "tasks" ? {} : { tasks: [] });
         if (p === "/api/v3/workspaces/555/docs")
           return reply(malformed === "docs" ? {} : { docs: [] });
         return reply({ folders: [], lists: [] });
@@ -417,7 +447,7 @@ describe("Phase 7 individual OAuth and native catalogue - adversarial tests", ()
         runCatalogOperation(
           "clickup_search_workspace",
           { query: "Stocktake" },
-          makeListGrant(),
+          makeGrant(),
           f as typeof fetch,
         ),
       ).rejects.toThrow("CLICKUP_BAD_RESPONSE");
@@ -522,7 +552,7 @@ describe("Phase 7 individual OAuth and native catalogue - adversarial tests", ()
     const f = vi.fn(async (req: RequestInfo | URL) => {
       const p = new URL(String(req)).pathname;
       if (p === "/api/v2/list/12345") return reply(fixture(p));
-      if (p === "/api/v2/list/12345/task") return reply({ tasks: [] });
+      if (p === "/api/v2/team/555/task") return reply({ tasks: [] });
       if (p === "/api/v3/workspaces/555/docs") return reply({ docs: [] });
       if (p === "/api/v2/team/555/space") return reply({ spaces: [{ id: "777", name: "Sales" }] });
       if (p === "/api/v2/space/777/folder")
@@ -536,7 +566,7 @@ describe("Phase 7 individual OAuth and native catalogue - adversarial tests", ()
     const output = await runCatalogOperation(
       "clickup_search_workspace",
       { query: "Stocktake" },
-      makeListGrant(),
+      makeGrant(),
       f as typeof fetch,
     );
     expect(output["lists"]).toHaveLength(2);
