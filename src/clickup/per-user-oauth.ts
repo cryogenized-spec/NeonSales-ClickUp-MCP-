@@ -201,13 +201,72 @@ export async function clickUpConnectionStatus(auth: unknown, env: unknown): Prom
   const subject = verifiedSubject(auth, env);
   const settings = config(env);
   const result = await internalCall(staffStub(settings.binding, subject), "status", { subject });
+  const allowlist = obj(env)?.["CLICKUP_WORKSPACE_GITHUB_IDS"];
+  let workspaceApproved = false;
+  if (typeof allowlist === "string") {
+    try {
+      workspaceApproved = parseStaffAllowlist(allowlist).has(subject.slice(7));
+    } catch {
+      workspaceApproved = false;
+    }
+  }
   return result["connected"] === true
     ? {
         connected: true,
         clickup_user_id: result["clickupUserId"],
         workspace_id: result["workspaceId"],
+        workspace_exclusive: result["workspaceExclusive"] === true,
+        workspace_scope_approved: workspaceApproved,
+        workspace_scope_enabled: workspaceApproved && result["workspaceEnabled"] === true,
       }
     : { connected: false };
+}
+
+/** Only the requesting authenticated staff user can opt in; their ClickUp OAuth
+ * token must be exclusively bound to the configured Workspace AND the owner
+ * must separately approve their GitHub ID in the staging Worker allowlist. */
+export async function setClickUpWorkspaceAccess(
+  auth: unknown,
+  env: unknown,
+  workspaceId: string,
+  enabled: boolean,
+): Promise<Json> {
+  const subject = verifiedSubject(auth, env);
+  const scopes = obj(auth)?.["scopes"];
+  if (!Array.isArray(scopes) || !scopes.includes("mcp:write"))
+    throw new ReadFailure("CLICKUP_WRITE_SCOPE_REQUIRED");
+  const settings = config(env);
+  if (workspaceId !== settings.workspaceId || typeof enabled !== "boolean")
+    throw new ReadFailure("CLICKUP_SCOPE_OR_SCHEMA_REJECTED");
+  const allowlist = obj(env)?.["CLICKUP_WORKSPACE_GITHUB_IDS"];
+  if (typeof allowlist !== "string")
+    throw new ReadFailure("CLICKUP_WORKSPACE_OWNER_APPROVAL_REQUIRED");
+  let approved: ReadonlySet<string>;
+  try {
+    approved = parseStaffAllowlist(allowlist);
+  } catch {
+    throw new ReadFailure("CLICKUP_WORKSPACE_OWNER_APPROVAL_REQUIRED");
+  }
+  if (!approved.has(subject.slice(7)))
+    throw new ReadFailure("CLICKUP_WORKSPACE_OWNER_APPROVAL_REQUIRED");
+  const personal = await personalClickUpCredential(auth, env);
+  if (enabled && !personal.workspaceExclusive)
+    throw new ReadFailure("CLICKUP_WORKSPACE_RECONSENT_REQUIRED");
+  const result = await internalCall(staffStub(settings.binding, subject), "workspace-access", {
+    subject,
+    workspaceId,
+    enabled,
+  });
+  if (result["workspaceEnabled"] !== enabled)
+    throw new ReadFailure("CLICKUP_ACCOUNT_STORE_UNAVAILABLE");
+  return {
+    workspace_id: workspaceId,
+    workspace_scope_enabled: enabled,
+    resource_scope: enabled ? "workspace" : "list",
+    note: enabled
+      ? "Workspace-wide ClickUp operations are now enabled for this authenticated user only."
+      : "Per-user Workspace-wide authorization has been disabled.",
+  };
 }
 
 export async function disconnectClickUp(auth: unknown, env: unknown): Promise<Json> {
@@ -230,6 +289,7 @@ export async function personalClickUpCredential(
   clickupUserId: string;
   workspaceId: string;
   workspaceExclusive: boolean;
+  workspaceEnabled: boolean;
 }> {
   const subject = verifiedSubject(auth, env);
   const settings = config(env);
@@ -253,6 +313,7 @@ export async function personalClickUpCredential(
     clickupUserId: String(record["clickupUserId"]),
     workspaceId: settings.workspaceId,
     workspaceExclusive: record["workspaceExclusive"] === true,
+    workspaceEnabled: record["workspaceEnabled"] === true,
   };
 }
 
