@@ -124,7 +124,8 @@ describe("Phase 4 official SDK integration", () => {
         incomplete: false,
         pages_scanned: 1,
       });
-      expect(outbound).toHaveBeenCalledTimes(4);
+      // Both read tools independently verify the home List and its Workspace.
+      expect(outbound).toHaveBeenCalledTimes(6);
     } finally {
       await client.close();
       await handler.close();
