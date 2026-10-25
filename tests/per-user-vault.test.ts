@@ -86,8 +86,8 @@ async function call(vault: ClickUpUserConnection, route: string, body: Record<st
       body: JSON.stringify(body),
     }),
   );
-  const data: Record<string, unknown> =
-    !response.ok ? {} : ((await response.json()) as Record<string, unknown>);
+  let data: Record<string, unknown> = {};
+  if (response.ok) data = (await response.json()) as Record<string, unknown>;
   return { status: response.status, data };
 }
 
