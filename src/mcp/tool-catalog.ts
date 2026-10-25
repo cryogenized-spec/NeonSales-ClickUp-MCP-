@@ -299,7 +299,7 @@ export const CLICKUP_MODEL_TOOL_CATALOG: readonly ModelToolDefinition[] = [
     "Get Task",
     "tasks",
     "read",
-    "Retrieve a task by exact ID. Do not guess IDs. While this schema-only tool is disabled, use the implemented get_scoped_task for authorized home-List reads.",
+    "Retrieve a task by exact ID. Do not guess IDs. In legacy List scope, task-ID catalogue reads can be policy-blocked; use get_scoped_task for authorized home-List detail reads. Workspace mode requires separate owner approval.",
     "Show task details for a known task ID.",
     ["task_id"],
   ),
