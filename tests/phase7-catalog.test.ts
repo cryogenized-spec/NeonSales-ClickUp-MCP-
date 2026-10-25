@@ -550,8 +550,7 @@ describe("Phase 7 individual OAuth and native catalogue - adversarial tests", ()
       requests.push(url.pathname);
       if (url.pathname === "/api/v2/list/12345")
         return reply({ id: "12345", space: { id: "777" } });
-      if (url.pathname === "/api/v2/team/555/space")
-        return reply({ spaces: [{ id: "777" }] });
+      if (url.pathname === "/api/v2/team/555/space") return reply({ spaces: [{ id: "777" }] });
       if (url.pathname === "/api/v2/list/12345/task")
         return reply({ tasks: [{ id: "own1", name: "Stocktake", list: { id: "12345" } }] });
       throw Error("unexpected wider Workspace fetch: " + url.pathname);
@@ -647,7 +646,9 @@ describe("Phase 7 individual OAuth and native catalogue - adversarial tests", ()
     const create = CLICKUP_MODEL_TOOL_CATALOG.find((tool) => tool.name === "clickup_create_task")!;
     const draft = create.inputSchema.properties["new_task"]!;
     expect(draft.properties?.["assignee_ids"]?.items?.type).toBe("integer");
-    const custom = CLICKUP_MODEL_TOOL_CATALOG.find((tool) => tool.name === "clickup_set_custom_field")!;
+    const custom = CLICKUP_MODEL_TOOL_CATALOG.find(
+      (tool) => tool.name === "clickup_set_custom_field",
+    )!;
     expect(custom.inputSchema.properties["field_value"]?.properties?.["number"]?.type).toBe(
       "number",
     );
