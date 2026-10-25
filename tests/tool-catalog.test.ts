@@ -118,6 +118,40 @@ describe("Official ClickUp MCP capability catalogue (model-facing only)", () => 
     }
   });
 
+  it("publishes explicit OAuth scopes on every live read and write tool", async () => {
+    const outbound = vi.fn(async () => Response.json({ tasks: [] }));
+    const { client, handler } = await clientHarness(false, outbound as typeof fetch);
+    try {
+      const listed = (await client.listTools()).tools;
+      const getSecurity = (name: string) => {
+        const tool = listed.find((entry) => entry.name === name);
+        expect(tool).toBeDefined();
+        return (tool as unknown as { securitySchemes?: unknown }).securitySchemes;
+      };
+      const readScheme = [{ type: "oauth2", scopes: ["mcp:read"] }];
+      const writeScheme = [{ type: "oauth2", scopes: ["mcp:read", "mcp:write"] }];
+      for (const name of [
+        "get_scoped_list",
+        "get_scoped_task",
+        "find_scoped_tasks",
+        "get_attention_report",
+        "get_clickup_connection_status",
+        "connect_clickup_account",
+        "clickup_tool_catalog",
+      ])
+        expect(getSecurity(name)).toEqual(readScheme);
+      expect(getSecurity("create_scoped_task")).toEqual(writeScheme);
+      for (const spec of CLICKUP_MODEL_TOOL_CATALOG)
+        expect(getSecurity(spec.name)).toEqual(
+          spec.effect === "read" ? readScheme : writeScheme,
+        );
+      expect(outbound).not.toHaveBeenCalled();
+    } finally {
+      await client.close();
+      await handler.close();
+    }
+  });
+
   it("registers all 48 exact schemas through official SDK only in isolated explicit preview", async () => {
     const outbound = vi.fn(async () => Response.json({ tasks: [] }));
     const { client, handler } = await clientHarness(true, outbound as typeof fetch);
