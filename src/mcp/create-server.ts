@@ -11,6 +11,7 @@ import {
   beginClickUpOAuth,
   clickUpConnectionStatus,
   disconnectClickUp,
+  setClickUpWorkspaceAccess,
 } from "../clickup/per-user-oauth.js";
 import { OPERATIONAL_CATALOG_NAMES, runCatalogOperation } from "../clickup/catalog-runtime.js";
 import { createAttentionReport } from "../reports/attention.js";
@@ -140,6 +141,49 @@ export function createServer(deps?: ReadDependencies): McpServer {
       try {
         return toolSuccess(
           await clickUpConnectionStatus(extra.http?.authInfo, dependencies.bindings),
+        );
+      } catch (error) {
+        return toolError(error);
+      }
+    },
+  );
+
+  server.registerTool(
+    "clickup_set_workspace_access",
+    {
+      description:
+        "Explicitly enable or disable Workspace-wide ClickUp operations for YOUR connected account. Requires mcp:write, exact approved Workspace ID, separately owner-allowlisted GitHub identity and an OAuth token exclusively authorized for this one Workspace. This expands access to tasks and other ClickUp resources your own token permits, including updates, comments, dependencies and deletion; other staff remain List-restricted. No task is changed by this tool.",
+      scopeChallenge: requireScopes("mcp:read", "mcp:write"),
+      inputSchema: fromJsonSchema<{ workspace_id: string; enabled: boolean }>({
+        type: "object",
+        properties: {
+          workspace_id: {
+            type: "string",
+            pattern: "^[1-9]\\d{0,17}$",
+            description: "Exact owner-approved ClickUp Workspace ID, never inferred from task content.",
+          },
+          enabled: {
+            type: "boolean",
+            description: "True explicitly enables broader access; false revokes your prior opt-in.",
+          },
+        },
+        required: ["workspace_id", "enabled"],
+        additionalProperties: false,
+      }),
+      annotations: { readOnlyHint: false, destructiveHint: true },
+    },
+    async (args, extra) => {
+      try {
+        // Server-side write authorization remains mandatory even if the client
+        // omits or ignores tool confirmation metadata.
+        await requireWriteGrant(extra.http?.authInfo, dependencies.bindings);
+        return toolSuccess(
+          await setClickUpWorkspaceAccess(
+            extra.http?.authInfo,
+            dependencies.bindings,
+            args.workspace_id,
+            args.enabled,
+          ),
         );
       } catch (error) {
         return toolError(error);
