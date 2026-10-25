@@ -79,7 +79,13 @@ export function handleOAuthRequest(
     tokenEndpoint: "/oauth/token",
     clientRegistrationEndpoint: "/oauth/register",
     scopesSupported: ["mcp:read", "mcp:write"],
-    requiredScopes: ["mcp:read"],
+    // The ChatGPT MCP client cannot currently open our per-tool step-up browser
+    // flow reliably. Request BOTH scopes during initial interactive consent so
+    // a newly authorized token can use create/update tools without a later
+    // authorization handoff. The consent page still allows explicit refusal;
+    // every mutating tool remains protected by its own scope challenge and
+    // requireWriteGrant. This is advertised-only, not an authorization bypass.
+    requiredScopes: ["mcp:read", "mcp:write"],
     resourceMetadata: {
       resource: origin + "/mcp",
       authorization_servers: [origin],
