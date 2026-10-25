@@ -87,7 +87,7 @@ async function call(vault: ClickUpUserConnection, route: string, body: Record<st
     }),
   );
   const data: Record<string, unknown> =
-    response.status === 503 ? {} : ((await response.json()) as Record<string, unknown>);
+    !response.ok ? {} : ((await response.json()) as Record<string, unknown>);
   return { status: response.status, data };
 }
 
