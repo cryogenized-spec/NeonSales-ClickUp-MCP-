@@ -83,6 +83,7 @@ describe("Official ClickUp MCP capability catalogue (model-facing only)", () => 
           ...[
             "clickup_tool_catalog",
             "connect_clickup_account",
+            "clickup_set_workspace_access",
             "create_scoped_task",
             "disconnect_clickup_account",
             "find_scoped_tasks",
